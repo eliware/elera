@@ -410,6 +410,12 @@ The deployment must preserve stable PVC identity, prevent two members from
 sharing underlying storage, reject stale or wrong-node mounts, and refuse to
 reuse an old member's datadir without explicit recovery authorization.
 
+The release package must include the exact StorageClass, provisioner, binding
+mode, volume mode, XFS creation and mount options, local-PV discovery and node
+affinity, device identity, backing-disk/RAID/LUN type, snapshot policy, and
+online-expansion or downtime procedure. A Docker named volume is not a
+production-equivalent storage test.
+
 ## 14. Image and release requirements
 
 - Use Node.js 26 or newer and native ESM.
