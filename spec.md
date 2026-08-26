@@ -23,7 +23,7 @@ The project includes:
 - A container image with pinned, reproducible dependencies.
 - A standard `node:26-bookworm-slim` runtime base, pinned by digest for
   releases in the same manner as the other Eliware projects.
-  - Documentation for configuration, operations, upgrade, and compatibility.
+- Documentation for configuration, operations, upgrade, and compatibility.
 
 Production migration, backup, restore, cutover, and rollback procedures are
 documented separately in the shared operations repository.
@@ -173,10 +173,13 @@ result immediately. The HTTP path must not create an independent database
 check for every caller.
 
 The MariaDB server package and Galera provider must be selected explicitly for
-the image. The target MariaDB version for this project is `12.3.1`. MariaDB
-and Galera packages will come from MariaDB's official Debian Bookworm
-repository rather than Debian's potentially older MariaDB packages. Debian
-repositories may still provide ordinary base-system dependencies.
+the image. The currently selected MariaDB target is `12.3.3`, with the
+matching `galera-4` package. MariaDB `12.3.1` is not available from the
+official Bookworm package source used by this project and is not the current
+build target. MariaDB and Galera packages will come from MariaDB's official
+Debian Bookworm repository rather than Debian's potentially older MariaDB
+packages. Debian repositories may still provide ordinary base-system
+dependencies.
 
 The image build must use explicit build arguments or equivalent pinned package
 versions for the MariaDB series, MariaDB server, and `galera-4`; it must never
@@ -334,6 +337,16 @@ three-node fixture identifies exactly one explicit bootstrap node through
 Compose configuration. This is test-fixture orchestration only; the application
 must not expose or perform automatic production bootstrap logic. Each topology
 uses isolated named volumes and development-only credentials.
+
+Before any production migration, the final candidate image must be used to
+stand up an isolated three-node cluster locally. A controlled copy of all
+required production schemas and data must be imported, along with the access
+catalog and protected credential material needed to recreate users and grants.
+Local instances of affected applications must connect using test Secret
+mappings and pass representative authentication, reads, writes, migrations,
+and failure/restart checks. Production endpoints and plaintext production
+secrets must never be used in the repository or written to logs. This is a
+release and migration gate, not an optional smoke test.
 
 No MariaDB/Galera compatibility matrix is currently certified. The intended
 future matrix is:
