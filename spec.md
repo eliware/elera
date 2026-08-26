@@ -643,6 +643,22 @@ previous image/configuration is restored, and no member is promoted solely
 because it restarted. Node drain, XCP host loss, local-PV replacement, stale
 attachment, and member rejoin require the recovery procedure.
 
+Configuration rollout is versioned and deliberate. Each approved ConfigMap or
+Secret revision has an immutable name or version identifier, and the
+StatefulSet records that identifier in its pod template. Updating a mounted
+file is not treated as a live MariaDB or supervisor reload. Under `OnDelete`,
+an operator must replace members one at a time in the reviewed order, wait for
+the member to return to the required state, and verify that its reported
+configuration version matches the promoted revision before proceeding. A
+rollout is incomplete while any running member reports the previous revision.
+The exact checksum/version mechanism and replacement commands are deployment
+artifacts to be defined later.
+
+If replacement, version convergence, readiness, or quorum fails, promotion is
+paused and the prior known-good revision remains the traffic baseline. No
+automatic rollback, bootstrap, scale change, or runtime reload is inferred
+from a failed rollout.
+
 The intended StatefulSet uses `podManagementPolicy: OrderedReady`, a
 controlled rollout strategy, hard anti-affinity or topology spread across
 distinct XCP hosts, and a PodDisruptionBudget that preserves quorum. It must
