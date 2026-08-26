@@ -1,0 +1,9 @@
+version: 1
+
+on:
+  push:
+    deployments:
+      - target: dev
+        cwd: /opt/galera
+        commands:
+          - git pull --ff-only
