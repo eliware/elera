@@ -435,8 +435,14 @@ Logs must help an operator distinguish an unreachable database, rejected
 credentials, a failed query, a non-Primary component, state transfer, and a
 supervisor failure without revealing secrets.
 
-Prometheus metrics are deferred from the initial release; structured logs are
-the required diagnostic output.
+The image does not need to provide Prometheus metrics in the initial release.
+Metrics and threshold alerts are collected externally: a reviewed MariaDB
+exporter supplies database and `wsrep` metrics; Kubernetes metrics supply pod,
+PVC, scheduling, and restart state; VyOS/HAProxy statistics supply backend and
+routing state; and `db-backups` supplies backup, restore, catalog, and
+credential-reconciliation results. The exact collector deployments remain
+GitOps artifacts. Structured logs remain the image's required diagnostic output
+and must not be treated as a substitute for historical metrics.
 
 The deployment observability contract must distinguish database health,
 application readiness, Galera quorum, backup health, and access
