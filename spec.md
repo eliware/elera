@@ -129,6 +129,16 @@ the complete Galera health model in section 5 is satisfied. During startup,
 shutdown, restart, joining, donor activity, state transfer, desynchronization,
 query failure, or a non-Primary component it returns a non-success status.
 
+Traffic eligibility is separate. `/readyz/read` requires the complete Galera
+readiness model. `/readyz/write` additionally requires
+`read_only=OFF`, `wsrep_reject_queries=OFF`, `wsrep_local_state=4`,
+`wsrep_desync=OFF`, an adequate Primary component size, and an explicit
+deployment-controlled writer designation. A node is never a writer merely
+because it is reachable, Synced, or Primary. The deployment must ensure that
+no more than one node is designated for the single-writer traffic class.
+
+`/metrics` is observability-only and must never be used as a routing decision.
+
 ### Diagnostic status
 
 Detailed status may be exposed through a non-console diagnostic response or
@@ -161,6 +171,11 @@ The health query must retrieve at least:
 - `wsrep_local_state_comment`
 - `wsrep_ready`
 - `wsrep_cluster_status`
+
+Writer checks must also retrieve and validate `read_only`,
+`wsrep_reject_queries`, `wsrep_local_state`, `wsrep_desync`, and the component
+size. Query errors and unexpected values fail closed for the affected traffic
+class.
 
 Performance/statistics checks may additionally retrieve Galera queue and flow
 control values, but performance scoring must not override the hard readiness
@@ -413,6 +428,12 @@ The image must:
 
 The image must not require an init container to download a checker, an external
 Node runtime, a MySQL client on the host, or a web console.
+
+The intended VyOS integration is direct HTTP from each router to a per-node
+health endpoint on the dedicated health port, restricted by NetworkPolicy and
+firewall rules to the router/checking sources. It is not a TCP-only check, a
+metrics check, or a command executed on VyOS. The exact URL, response contract,
+source addresses, and timeout are versioned in the migration network artifact.
 
 ### Kubernetes expectations
 
