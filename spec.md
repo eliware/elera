@@ -145,6 +145,14 @@ deployment-controlled writer designation. A node is never a writer merely
 because it is reachable, Synced, or Primary. The deployment must ensure that
 no more than one node is designated for the single-writer traffic class.
 
+The writer designation is an explicit per-member GitOps value, rendered only
+for the currently approved writer and changed through a reviewed failover or
+recovery operation. It is not derived from pod ordinal, IP address, startup
+order, or MariaDB reachability. A writer transition must remove the old
+designation, verify its traffic is fenced, then apply and verify the new one.
+Conflicting or missing designations make every `/readyz/write` response
+unhealthy.
+
 `/metrics` is observability-only and must never be used as a routing decision.
 
 ### Diagnostic status
@@ -449,6 +457,12 @@ future matrix is:
 - MariaDB 10.11 + Galera 4
 - MariaDB 11.4 + Galera 4
 - The production MariaDB/Galera version selected for migration
+
+Two-member operation is tolerated for reads only when both members are Primary
+and read-eligible under the approved policy. It is not a supported
+single-writer state unless the explicit writer designation and quorum policy
+both pass. Conflicting writer designations, loss of quorum, or uncertain
+partition state remove all writer eligibility and require operator recovery.
 
 Two ready Primary members may continue serving temporarily for continuity, but
 this is degraded operation and must alert. Fewer than two ready members is a
