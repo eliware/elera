@@ -161,7 +161,8 @@ without requiring Rust, Node.js, or a MySQL client on VyOS.
 
 The normal operational contract is:
 
-- HTTP success from `/readyz` means the backend may be considered eligible.
+- HTTP success from the traffic-class endpoint means the backend may be
+  considered eligible for that class.
 - Any timeout, connection failure, non-success HTTP response, malformed body,
   or unavailable endpoint means the backend is down.
 
@@ -580,8 +581,9 @@ state. Callers use:
 
 ```text
 GET /healthz  -> 200 and `ok\n` when the supervisor is alive
-GET /readyz   -> 200 and `ready\n` only when the local node is ready
-GET /readyz   -> 503 and `not ready\n` otherwise
+GET /readyz/read  -> 200 and `ready\n` only when read-eligible
+GET /readyz/write -> 200 and `ready\n` only when write-eligible
+Either endpoint -> 503 and `not ready\n` otherwise
 ```
 
 The endpoint response must remain stable for Kubernetes probes and VyOS

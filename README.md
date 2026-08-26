@@ -38,10 +38,11 @@ image.
 
 ## Operations
 
-`/healthz` will represent supervisor liveness. `/readyz` will return success
-only when MariaDB is reachable and Galera is `Synced`, `wsrep_ready=ON`, and in
-the `Primary` component. Health endpoints must not expose credentials or
-provide cluster-bootstrap controls.
+`/healthz` will represent supervisor liveness. `/readyz/read` will return
+success only when MariaDB is reachable and Galera is `Synced`,
+`wsrep_ready=ON`, and in the `Primary` component. `/readyz/write` will also
+require the node's explicit write-eligibility policy. Health endpoints must
+not expose credentials or provide cluster-bootstrap controls.
 
 ## Local Docker topologies
 
