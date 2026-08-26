@@ -55,6 +55,23 @@ require a separate design and strong access controls.
 The container entrypoint is the Node.js supervisor. MariaDB runs as a child
 process in the foreground/non-daemon mode supported by the selected image.
 
+The production security context must run initialization and normal operation
+without root. The target runtime identity is fixed UID/GID `999:999` (the
+image's MariaDB service identity), with no Linux capabilities, a read-only
+root filesystem, and only `/var/lib/mysql`, `/run/mysqld`, and an explicit
+temporary path writable. Kubernetes must use the RuntimeDefault seccomp
+profile and the cluster's enforced AppArmor baseline. MariaDB initialization
+must work under this identity; privileged initialization is a release failure.
+
+The initial Kubernetes resource baseline is 500m CPU and 2 GiB memory requests,
+2 CPU and 4 GiB memory limits, and 1 GiB ephemeral-storage request/2 GiB
+limit. These are starting values to be load-tested and adjusted before
+production approval, not substitutes for workload validation. The deployment
+must also specify MariaDB memory settings, file-descriptor/`ulimit` values,
+startup grace, and termination grace. The MariaDB memory budget must remain
+below the container memory limit with room for Galera, connections, and OS
+buffers.
+
 The supervisor is responsible for:
 
 1. Validating configuration before starting external processes.
@@ -314,6 +331,12 @@ Tests must cover, with dependency injection where possible:
 
 Live integration tests must be opt-in and use supplied test endpoints or a
 disposable test cluster. They must never contain production credentials.
+
+Storage testing is mandatory. The three-node test must use the production
+storage class or a documented representative equivalent and exercise volume
+mode, filesystem behavior, fsync durability, latency, disk pressure, disk-full
+handling, volume replacement, recovery, and Kubernetes rescheduling. A
+container-only test is insufficient.
 
 ## 14. Image and release requirements
 
