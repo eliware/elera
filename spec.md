@@ -186,6 +186,10 @@ resolution from the official MariaDB repository. Manually vendoring every
 `.deb` is not required unless reproducibility or repository availability later
 demands it.
 
+Every node must have a unique, explicitly configured `server_id`. The image
+must fail closed when binary logging is enabled without a valid node identity;
+it must not silently default every member to `server_id=1`.
+
 ## 9. Configuration
 
 Configuration is supplied by the deployment environment or a protected secret
@@ -212,6 +216,11 @@ The initial configuration includes:
 - `GALERA_QUERY_TIMEOUT_MS`
 - `PORT` for the HTTP service
 
+Galera node identity settings include `server_id`, `GALERA_NODE_NAME`, and
+`GALERA_NODE_ADDRESS`. The deployment must provide a distinct identity for
+each StatefulSet member. Node identity is deployment configuration; the image
+must not derive a production identity from an unsafe shared default.
+
 Configuration is validated before MariaDB or the HTTP service performs external
 work. Invalid or missing required settings fail closed with a clear, redacted
 diagnostic.
@@ -220,6 +229,10 @@ diagnostic.
 
 - Never log passwords, connection URLs containing passwords, secret files, or
   private TLS key material.
+- Never render `wsrep_sst_auth`, database passwords, or other credentials into
+  world-readable generated MariaDB configuration. Secret material must be
+  supplied through protected files or environment handling with documented
+  permissions and must not be copied into ordinary ConfigMaps.
 - Keep administrative capabilities out of the probe interface.
 - Bind the service according to the deployment network policy and expose only
   the required port.
@@ -448,3 +461,28 @@ separate approved design changes them.
 The image release must provide the exact image digest, supported architecture,
 configuration reference, required ports, required volume paths, probe
 definitions, and any migration notes needed for the GitOps change.
+
+Production deployment must reference an immutable image digest, not only a
+mutable image tag. The release process must make the digest available to the
+GitOps change and record how it was verified.
+
+The effective MariaDB and Galera configuration required for production must be
+represented in GitOps-managed configuration or explicitly documented Secret
+references. Image-generated defaults may provide safe base defaults, but they
+must not hide safety-critical cluster, identity, logging, replication, or
+authentication settings.
+
+The release acceptance checklist must include:
+
+- unique `server_id` on every member;
+- no plaintext credentials in rendered ConfigMaps or ordinary configuration;
+- immutable image digest and exact package versions;
+- explicit Primary-component readiness validation;
+- per-node restart, donor/state-transfer, desynchronization, isolation, and
+  Non-Primary tests;
+- monitoring that distinguishes individual-node loss, quorum risk, total
+  outage, health-service failure, and Galera state failure.
+
+Backend identity and node UUID validation remain intentionally delegated to
+deployment configuration and networking. That delegation must be documented;
+it is not a claim that the image independently verifies endpoint identity.

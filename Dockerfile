@@ -1,0 +1,17 @@
+FROM node:26-bookworm-slim
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y mariadb-server galera-4 \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /run/mysqld /var/lib/mysql \
+    && chown -R mysql:mysql /run/mysqld /var/lib/mysql
+
+COPY docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh
+
+VOLUME ["/var/lib/mysql"]
+EXPOSE 3306 4444 4567 4568
+
+ENTRYPOINT ["/usr/local/bin/mariadb-entrypoint.sh"]
