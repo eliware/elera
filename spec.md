@@ -99,6 +99,12 @@ within five minutes, with delays of approximately 1, 2, and 5 seconds. After
 that limit the process exits non-zero and Kubernetes owns the next restart
 decision. A clean MariaDB exit is not treated as readiness.
 
+Acceptance requires exit code 0 only for intentional shutdown, a non-zero
+code for startup failure, unexpected child failure, restart exhaustion, or
+shutdown timeout, and no in-place restart after the retry budget is exhausted.
+Lifecycle logs contain timestamp, event, child exit status, restart count,
+severity, and redacted reason; log backpressure must not deadlock shutdown.
+
 ## 5. Health model
 
 The database is ready for traffic only when all of the following are true:
@@ -123,6 +129,15 @@ The service exposes a minimal HTTP interface. It does not serve a web console.
 Version one is HTTP-only. HTTPS, certificate reload, client-certificate
 validation, and VyOS HTTPS behavior are deferred capabilities and must not be
 assumed to be available.
+
+The canonical endpoint contract is `/healthz` for supervisor liveness,
+`/readyz/read` for read eligibility, and `/readyz/write` for writer
+eligibility. Kubernetes uses `/healthz` for liveness and `/readyz/read` for
+readiness unless a reviewed single-writer workload explicitly selects
+`/readyz/write`; VyOS HAProxy uses the traffic-class endpoint matching its
+frontend. Connection, response, and body timeouts are bounded and every
+timeout, non-2xx response, malformed body, unavailable MariaDB, non-Primary
+state, or failed query is ineligible.
 
 ### `/healthz`
 
@@ -295,7 +310,8 @@ The initial configuration includes:
 - `MARIADB_HOST`
 - `MARIADB_PORT` (default `3306`)
 - `MARIADB_USER`
-- `MARIADB_PASSWORD`
+- Secret-file references for `MARIADB_PASSWORD` and SST credentials; secret
+  values are not ordinary configuration variables
 - `MARIADB_DATABASE`
 - `GALERA_QUERY_TIMEOUT_MS`
 - `PORT` for the HTTP service
