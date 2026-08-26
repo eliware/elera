@@ -241,6 +241,10 @@ Every node must have a unique, explicitly configured `server_id`. The image
 must fail closed when binary logging is enabled without a valid node identity;
 it must not silently default every member to `server_id=1`.
 
+The build must record repository metadata, exact package versions, and package
+checksums or snapshot identity. A release cannot promote packages resolved
+from an unrecorded moving index.
+
 The release must test binary logging and unique identity on every member.
 
 ## 9. Configuration
@@ -396,6 +400,13 @@ reuse an old member's datadir without explicit recovery authorization.
 - Artifact/image signing and deployment-side signature verification are planned
   follow-up improvements.
 
+Before production release, CI must generate an SBOM, scan the image and
+dependencies for vulnerabilities, scan source and artifacts for secrets or
+malware, verify lockfiles, record base-image provenance, and attach the exact
+source commit, package metadata, image digest, and test results. Signing or a
+signed attestation is required before production promotion unless explicitly
+risk-accepted.
+
 ## 15. Compatibility and migration
 
 ### Local test topologies
@@ -432,6 +443,11 @@ quorum-risk condition. A non-Primary member is never ready.
 Compatibility certification requires representative data, application queries,
 and an approved operational migration procedure. Those migration and rollback
 steps are intentionally maintained outside this image repository.
+
+The first release excludes automatic MariaDB major-version upgrades, automatic
+production bootstrap or disaster-recovery promotion, cross-region replication,
+online schema-migration orchestration, automatic grant repair without
+approval, and application-level data reconciliation.
 
 ## 16. Deployment compatibility contract
 
