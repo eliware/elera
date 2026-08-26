@@ -162,13 +162,26 @@ deployment-controlled writer designation. A node is never a writer merely
 because it is reachable, Synced, or Primary. The deployment must ensure that
 no more than one node is designated for the single-writer traffic class.
 
-The writer designation is an explicit per-member GitOps value, rendered only
-for the currently approved writer and changed through a reviewed failover or
-recovery operation. It is not derived from pod ordinal, IP address, startup
-order, or MariaDB reachability. A writer transition must remove the old
-designation, verify its traffic is fenced, then apply and verify the new one.
-Conflicting or missing designations make every `/readyz/write` response
-unhealthy.
+The writer authority is a durable, versioned GitOps record rendered to each
+member. The record contains the Galera cluster identity, exactly one designated
+stable member identity, a monotonically increasing generation, approval
+metadata, and an expiration/lease deadline. The implementation mechanism
+(controller, Argo workflow, or reviewed generated resource) is a tracked
+placeholder, but it must not be a pod annotation, ordinal convention, HAProxy
+preference, or database-local guess.
+
+`/readyz/write` reads the local rendered authority record and validates its
+cluster identity, member identity, generation, lease, and approval state before
+checking MariaDB write eligibility. Missing, expired, malformed, conflicting,
+or stale authority makes the node unhealthy. A node must never become
+writer-ready merely because it is Synced, Primary, or reachable.
+
+A writer transition is a fenced generation change: revoke the old generation,
+prove router, application/session, and database-level fencing, then publish the
+new generation and verify both routers observe exactly one writer. The old and
+new generations must not overlap as valid. If GitOps, Argo, the authority
+consumer, or either router cannot converge, writer traffic fails closed and
+manual recovery is required.
 
 `/metrics` is observability-only and must never be used as a routing decision.
 
@@ -666,6 +679,7 @@ GALERA_CLUSTER_NAME
 GALERA_CLUSTER_ADDRESS
 GALERA_NODE_NAME
 GALERA_NODE_ADDRESS
+GALERA_WRITER_AUTHORITY_FILE
 GALERA_BOOTSTRAP
 GALERA_QUERY_TIMEOUT_MS
 PORT
