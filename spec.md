@@ -28,6 +28,11 @@ The project includes:
 Production migration, backup, restore, cutover, and rollback procedures are
 documented separately in the shared operations repository.
 
+Application account provisioning, credential rotation, grant reconciliation,
+backup, restore, and controlled cluster orchestration belong to the separate
+`galera-cli` project. This image does not expose administrative APIs for those
+operations.
+
 ## 3. Explicit exclusions
 
 The project will not initially include:
