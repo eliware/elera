@@ -10,6 +10,14 @@ and HAProxy running on VyOS.
 The container owns the database process and exposes simple health endpoints so
 Kubernetes and VyOS do not need a language runtime or database client library.
 
+The supervisor is intentionally colocated with MariaDB so Kubernetes and the
+external router use one versioned, per-node process and health contract. A
+sidecar or separate health service would add another lifecycle, network path,
+and deployment artifact. This tradeoff is accepted only if the supervisor is
+small and non-administrative: if it or its HTTP service fails while MariaDB is
+healthy, liveness and traffic eligibility fail until Kubernetes restarts the
+pod.
+
 ## 2. Scope
 
 The project includes:
@@ -177,6 +185,9 @@ Writer checks must also retrieve and validate `read_only`,
 size. Query errors and unexpected values fail closed for the affected traffic
 class.
 
+Health checks must use read-only SQL inspection. They must not use application
+write queries, mutation probes, or unsafe transactions.
+
 Performance/statistics checks may additionally retrieve Galera queue and flow
 control values, but performance scoring must not override the hard readiness
 requirements.
@@ -229,6 +240,8 @@ demands it.
 Every node must have a unique, explicitly configured `server_id`. The image
 must fail closed when binary logging is enabled without a valid node identity;
 it must not silently default every member to `server_id=1`.
+
+The release must test binary logging and unique identity on every member.
 
 ## 9. Configuration
 
@@ -352,6 +365,12 @@ storage class or a documented representative equivalent and exercise volume
 mode, filesystem behavior, fsync durability, latency, disk pressure, disk-full
 handling, volume replacement, recovery, and Kubernetes rescheduling. A
 container-only test is insufficient.
+
+DBA validation must compare source and restored clusters using schema and
+configuration checksums, table/row counts, object counts, and representative
+business queries. It must verify tables, indexes, constraints, views,
+triggers, routines, functions, events, character sets, collations, and
+application-required SQL modes.
 
 The intended production storage topology is one independent node-local XFS
 volume per Galera member, with each volume in a distinct failure domain.
