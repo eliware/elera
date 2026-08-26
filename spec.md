@@ -379,13 +379,27 @@ diagnostic.
   trust roots, rotation, and VyOS client behavior before implementation.
 
 SST credentials use a Kubernetes Secret mounted as a dedicated 0600 file
-readable only by the MariaDB service identity. The supervisor passes only the
-file location or non-secret option reference; it never places the credential in
-arguments, generated ordinary configuration, logs, diagnostics, health
-responses, or crash reports. Rotation is tested as a controlled credential
-reload/reconciliation operation, not an automatic simultaneous cluster
-restart. Recovery must have an independent Secret/key path when Kubernetes is
-unavailable.
+readable only by the MariaDB service identity. The selected SST provider must
+support consuming that file, or an equivalent protected descriptor, directly;
+the implementation must not convert the value into a command argument,
+environment variable, ordinary generated configuration, or world-readable
+file. A provider that requires plaintext `wsrep_sst_auth` in any of those
+locations fails the production candidate gate.
+
+The deployment supplies only a nonsecret credential-file path such as
+`GALERA_SST_CREDENTIAL_FILE`. The supervisor validates ownership, mode, and
+path before starting MariaDB and passes only the path/provider option. Root or
+health credentials follow the same file-only production contract. File reads,
+startup failures, diagnostics, core output, health responses, and logs are
+redacted and must not reveal values. Rotation is a controlled provider-
+supported reload or member-at-a-time restart, never an automatic simultaneous
+cluster restart. Recovery must have an independent Secret/key path when
+Kubernetes is unavailable.
+
+Acceptance must inspect `/proc`, process arguments and environments, rendered
+configuration, Kubernetes Events, logs, diagnostics, and crash output; verify
+UID/GID 999 access and mode 0600; test startup with missing/malformed files;
+and test rotation plus SST on the exact candidate image and provider.
 
 ## 11. Lifecycle and failure behavior
 
@@ -707,6 +721,7 @@ GALERA_CLUSTER_ADDRESS
 GALERA_NODE_NAME
 GALERA_NODE_ADDRESS
 GALERA_WRITER_AUTHORITY_FILE
+GALERA_SST_CREDENTIAL_FILE
 GALERA_BOOTSTRAP
 GALERA_QUERY_TIMEOUT_MS
 PORT
