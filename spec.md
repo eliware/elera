@@ -342,6 +342,13 @@ supervisor failure without revealing secrets.
 Prometheus metrics are deferred from the initial release; structured logs are
 the required diagnostic output.
 
+The deployment observability contract must distinguish database health,
+application readiness, Galera quorum, backup health, and access
+reconciliation health. The dashboard and alerts must cover cluster size,
+Primary status, node state, replication lag, conflicts, flow control, SST/IST,
+disk pressure, backup age, restore verification, restart loops, and credential
+reconciliation.
+
 ## 13. Testing requirements
 
 Tests must cover, with dependency injection where possible:
@@ -443,6 +450,10 @@ quorum-risk condition. A non-Primary member is never ready.
 Compatibility certification requires representative data, application queries,
 and an approved operational migration procedure. Those migration and rollback
 steps are intentionally maintained outside this image repository.
+
+The migration must define measurable RTO and RPO targets for the database and
+each dependent application, plus thresholds for replication lag, backup age,
+restore duration, state transfer, disk/inode pressure, and alert delivery.
 
 The first release excludes automatic MariaDB major-version upgrades, automatic
 production bootstrap or disaster-recovery promotion, cross-region replication,
