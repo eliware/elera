@@ -1,0 +1,27 @@
+{
+  "name": "@eliware/galera",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MariaDB Galera container supervisor and health service",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "node src/main.mjs",
+    "check": "node --check src/main.mjs",
+    "test": "eliware-test",
+    "lint": "eliware-test --lint",
+    "audit": "npm audit --omit=dev --audit-level=moderate"
+  },
+  "dependencies": {
+    "@eliware/common": "2.0.0",
+    "@eliware/mysql": "2.0.0"
+  },
+  "devDependencies": {
+    "@eliware/test": "2.0.0"
+  },
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true
+  }
+}
