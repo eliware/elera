@@ -274,8 +274,9 @@ Debian Bookworm repository rather than Debian's potentially older MariaDB
 packages. Debian repositories may still provide ordinary base-system
 dependencies.
 
-MariaDB 12.3.3 with its matching Galera 4 provider is the intended production
-target, pending compatibility certification. The 10.6, 10.11, and 11.4
+MariaDB 12.3.3 with its matching Galera 4 provider is the candidate production
+target, pending compatibility certification and a version-selection decision.
+The 10.6, 10.11, and 11.4
 combinations are exploratory compatibility targets, not alternative approved
 production versions. The selected pair's support and lifecycle status must be
 revalidated at each release.
