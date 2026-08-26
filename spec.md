@@ -220,9 +220,14 @@ stale result limit   15 seconds
 shutdown grace       30 seconds
 ```
 
-The health monitor runs in the background and `/readyz` returns the cached
-result immediately. The HTTP path must not create an independent database
-check for every caller.
+The health monitor runs in the background and `/readyz/read` and
+`/readyz/write` return cached results immediately. The HTTP path must not
+create an independent database check for every caller.
+
+The health states are distinct: database healthy means MariaDB is reachable
+and reports valid status; read-eligible additionally satisfies the read policy;
+writer-eligible additionally satisfies the single-writer policy. A write health
+check is read-only and never performs an application mutation.
 
 The MariaDB server package and Galera provider must be selected explicitly for
 the image. The currently selected MariaDB target is `12.3.3`, with the
@@ -278,6 +283,13 @@ supervisor policy are represented as ConfigMap keys or explicit environment
 variables. Credentials are never stored in a ConfigMap; they are supplied from
 a Kubernetes Secret using `secretKeyRef` or a mounted secret file.
 
+Mandatory production settings are declared in GitOps, including cluster name
+and address, node name/address, unique `server_id`, storage identity, resource
+limits, security context, probe timings, and traffic role. Safe image defaults
+are limited to protocol defaults such as ports, polling intervals, and log
+format. Image defaults must not supply cluster identity, credentials, bootstrap
+authority, storage paths, or production resource policy.
+
 The initial configuration includes:
 
 - `MARIADB_HOST`
@@ -319,6 +331,15 @@ diagnostic.
   client validation must be specified and tested before HTTPS is enabled.
 - Any future external HTTPS requirement must specify certificate validation,
   trust roots, rotation, and VyOS client behavior before implementation.
+
+SST credentials use a Kubernetes Secret mounted as a dedicated 0600 file
+readable only by the MariaDB service identity. The supervisor passes only the
+file location or non-secret option reference; it never places the credential in
+arguments, generated ordinary configuration, logs, diagnostics, health
+responses, or crash reports. Rotation is tested as a controlled credential
+reload/reconciliation operation, not an automatic simultaneous cluster
+restart. Recovery must have an independent Secret/key path when Kubernetes is
+unavailable.
 
 ## 11. Lifecycle and failure behavior
 
