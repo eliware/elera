@@ -2,6 +2,13 @@
 
 ## 1. Purpose
 
+This document is authoritative only for the `galera` image and supervisor
+runtime contract. The shared migration plan owns production procedures,
+acceptance evidence, and rollback; `db-backups/spec.md` owns backup, restore,
+access, and recovery-tool behavior; and `docs/proposal.md` owns scope,
+decisions, and approval boundaries. Those documents must not be redefined by
+this specification.
+
 `galera` is a purpose-built MariaDB/Galera container image and Node.js
 supervisor for Eliware infrastructure. It replaces the current legacy,
 unmaintained MariaDB image and provides a controlled interface for Kubernetes
