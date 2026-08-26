@@ -3,6 +3,10 @@ FROM node:26-bookworm-slim
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
+    && apt-get install --no-install-recommends -y ca-certificates curl gnupg \
+    && curl -fsSL https://r.mariadb.com/downloads/mariadb_repo_setup \
+       | bash -s -- --mariadb-server-version=12.3.3 --os-type=debian --os-version=bookworm \
+    && apt-get update \
     && apt-get install --no-install-recommends -y mariadb-server galera-4 \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /run/mysqld /var/lib/mysql \
