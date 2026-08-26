@@ -225,6 +225,12 @@ Debian Bookworm repository rather than Debian's potentially older MariaDB
 packages. Debian repositories may still provide ordinary base-system
 dependencies.
 
+MariaDB 12.3.3 with its matching Galera 4 provider is the intended production
+target, pending compatibility certification. The 10.6, 10.11, and 11.4
+combinations are exploratory compatibility targets, not alternative approved
+production versions. The selected pair's support and lifecycle status must be
+revalidated at each release.
+
 The image build must use explicit build arguments or equivalent pinned package
 versions for the MariaDB series, MariaDB server, and `galera-4`; it must never
 use an unversioned `latest` install. Updating versions is an intentional source
@@ -521,6 +527,14 @@ The image must support Kubernetes:
 - Secret-provided credentials;
 - a read-only configuration mount;
 - separate writable data and temporary/runtime locations.
+
+The Kubernetes defaults are `runAsNonRoot: true`, UID/GID `999:999`,
+`fsGroup: 999`, `allowPrivilegeEscalation: false`, all capabilities dropped,
+`readOnlyRootFilesystem: true`, RuntimeDefault seccomp, and the enforced
+AppArmor baseline. Writable mounts are limited to data, runtime, and temporary
+paths. The service account has no permissions beyond those explicitly required
+by the deployment, and NetworkPolicy permits only approved client,
+router-check, monitoring, and inter-member traffic.
 
 The intended StatefulSet uses `podManagementPolicy: OrderedReady`, a
 controlled rollout strategy, hard anti-affinity or topology spread across
