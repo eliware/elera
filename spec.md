@@ -537,20 +537,30 @@ future matrix is:
 - The production MariaDB/Galera version selected for migration
 
 The initial release requires all three members to be Primary and read-eligible
-for normal read or write traffic. Two-member read service is deliberately not
-supported until a separate DBA and application-owner design defines session
-semantics, a degraded-mode timeout, and routing safeguards. Conflicting writer
-designations, loss of quorum, or uncertain partition state remove all writer
-eligibility and require operator recovery.
+for normal application traffic. Degraded application traffic is not supported
+in the initial release:
+
+| Validated state | Read traffic | Write traffic |
+|---|---|---|
+| Three Primary, read-eligible members; one valid writer authority | Allowed | Only the designated writer |
+| Two members, whether Primary or Non-Primary | Blocked | Blocked |
+| One member or no validated Primary component | Blocked | Blocked |
+| Quorum restoration/state transfer in progress | Blocked for affected members | Blocked for affected members |
+
+Two-member service requires a separate DBA and application-owner design,
+implementation, and acceptance review. Conflicting writer designations, loss
+of quorum, or uncertain partition state remove all writer eligibility and
+require operator recovery.
 
 Writer checks also require `super_read_only=OFF` and an explicit single-writer
 role. If all members are read-ready but none is writer-ready, writer traffic is
 down and applications must not restart as writers. If all writer backends fail,
 HAProxy must fail closed rather than fall back to the read backend.
 
-Two ready Primary members may continue serving temporarily for continuity, but
-this is degraded operation and must alert. Fewer than two ready members is a
-quorum-risk condition. A non-Primary member is never ready.
+Fewer than three validated members is a degraded/quorum-risk condition and
+must alert. A non-Primary member is never ready. Quorum restoration does not
+automatically reopen application traffic; the full three-member policy and
+writer authority must be revalidated.
 
 Compatibility certification requires representative data, application queries,
 and an approved operational migration procedure. Those migration and rollback
