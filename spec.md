@@ -245,7 +245,7 @@ writer-eligible additionally satisfies the single-writer policy. A write health
 check is read-only and never performs an application mutation.
 
 The MariaDB server package and Galera provider must be selected explicitly for
-the image. The currently selected MariaDB target is `12.3.3`, with the
+the image. The proposed, uncertified MariaDB target is `12.3.3`, with the
 matching `galera-4` package. MariaDB `12.3.1` is not available from the
 official Bookworm package source used by this project and is not the current
 build target. MariaDB and Galera packages will come from MariaDB's official
@@ -281,6 +281,10 @@ checksums or snapshot identity. A release cannot promote packages resolved
 from an unrecorded moving index.
 
 The release must test binary logging and unique identity on every member.
+
+The compatibility matrix must record MariaDB, Galera, Debian/base image, SST
+method, IST behavior, authentication plugins, TLS policy, application results,
+and upgrade/downgrade limitations before this target can be certified.
 
 ## 9. Configuration
 
@@ -467,8 +471,9 @@ production-equivalent storage test.
 
 Production promotion requires successful verification of the image signature or
 attestation. If signing infrastructure is unavailable, promotion stops; an
-exception requires written approval from DevOps and the CEO and is not a
-normal follow-up option.
+exception requires written approval from DevOps and the CEO, must name an
+expiry no longer than the maintenance window, and cannot become a standing
+release process.
 
 Before production release, CI must generate an SBOM, scan the image and
 dependencies for vulnerabilities, scan source and artifacts for secrets or
@@ -511,6 +516,11 @@ and read-eligible under the approved policy. It is not a supported
 single-writer state unless the explicit writer designation and quorum policy
 both pass. Conflicting writer designations, loss of quorum, or uncertain
 partition state remove all writer eligibility and require operator recovery.
+
+Writer checks also require `super_read_only=OFF` and an explicit single-writer
+role. If all members are read-ready but none is writer-ready, writer traffic is
+down and applications must not restart as writers. If all writer backends fail,
+HAProxy must fail closed rather than fall back to the read backend.
 
 Two ready Primary members may continue serving temporarily for continuity, but
 this is degraded operation and must alert. Fewer than two ready members is a
