@@ -462,8 +462,13 @@ production-equivalent storage test.
 - Publish deployable images with a `vX.Y.Z` tag and immutable SHA-256 digest.
 - Record exact source tag, image digest, target architecture, test results,
   compatibility notes, and rollback instructions.
-- Artifact/image signing and deployment-side signature verification are planned
-  follow-up improvements.
+- Artifact/image signing and deployment-side signature verification are
+  production release requirements.
+
+Production promotion requires successful verification of the image signature or
+attestation. If signing infrastructure is unavailable, promotion stops; an
+exception requires written approval from DevOps and the CEO and is not a
+normal follow-up option.
 
 Before production release, CI must generate an SBOM, scan the image and
 dependencies for vulnerabilities, scan source and artifacts for secrets or
@@ -592,6 +597,15 @@ AppArmor baseline. Writable mounts are limited to data, runtime, and temporary
 paths. The service account has no permissions beyond those explicitly required
 by the deployment, and NetworkPolicy permits only approved client,
 router-check, monitoring, and inter-member traffic.
+
+The StatefulSet contract uses `podManagementPolicy: OrderedReady`,
+`updateStrategy: OnDelete` for the initial production migration, and a
+quorum-preserving PDB with `minAvailable: 2`. Argo may not automatically roll
+the StatefulSet during the initial cutover; image, ConfigMap, and Secret
+changes require explicit reviewed promotion. A failed rollout is paused, the
+previous image/configuration is restored, and no member is promoted solely
+because it restarted. Node drain, XCP host loss, local-PV replacement, stale
+attachment, and member rejoin require the recovery procedure.
 
 The intended StatefulSet uses `podManagementPolicy: OrderedReady`, a
 controlled rollout strategy, hard anti-affinity or topology spread across
