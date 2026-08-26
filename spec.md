@@ -145,12 +145,14 @@ Liveness endpoint. It answers whether the supervisor process and HTTP server are
 alive. It must not claim that MariaDB is ready merely because the supervisor is
 running.
 
-### `/readyz`
+### Base readiness semantics
 
 Readiness endpoint. It returns HTTP success only when MariaDB is reachable and
 the complete Galera health model in section 5 is satisfied. During startup,
 shutdown, restart, joining, donor activity, state transfer, desynchronization,
 query failure, or a non-Primary component it returns a non-success status.
+There is no generic `/readyz` routing endpoint in the production contract;
+callers must select `/readyz/read` or `/readyz/write` explicitly.
 
 Traffic eligibility is separate. `/readyz/read` requires the complete Galera
 readiness model. `/readyz/write` additionally requires
