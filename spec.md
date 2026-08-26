@@ -510,6 +510,25 @@ The image must support Kubernetes:
 - a read-only configuration mount;
 - separate writable data and temporary/runtime locations.
 
+The intended StatefulSet uses `podManagementPolicy: OrderedReady`, a
+controlled rollout strategy, hard anti-affinity or topology spread across
+distinct XCP hosts, and a PodDisruptionBudget that preserves quorum. It must
+define startup, liveness, and readiness timings, `fsGroup`/ownership behavior,
+termination grace sufficient for a graceful Galera leave, PVC expansion, and
+disk-pressure response. Resource and security settings must be rendered and
+validated in GitOps CI.
+
+Kubernetes may restart a failed member under the bounded supervisor policy,
+but must not infer bootstrap or force recovery from readiness failure. One or
+two failed members, quorum loss, host outage, PVC loss/corruption, failed
+SST/IST, non-Primary state, and stale data must have explicit operator
+handling. Readiness must remove unsafe members from traffic without creating
+an automatic recovery loop.
+
+Bootstrap/recovery requires a separate Argo overlay and an auditable Job or
+`galera-cli` invocation. It must confirm cluster identity, stopped writers,
+authoritative data, and a single in-progress recovery operation.
+
 ### Configuration compatibility
 
 The replacement must provide a documented mapping from the current deployment
