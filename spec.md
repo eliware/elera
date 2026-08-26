@@ -241,6 +241,12 @@ The health monitor runs in the background and `/readyz/read` and
 `/readyz/write` return cached results immediately. The HTTP path must not
 create an independent database check for every caller.
 
+Only one poll may run at a time; overlapping polls are coalesced. A failed or
+timed-out poll immediately replaces any prior healthy result. A result older
+than 15 seconds is unhealthy. Shutdown clears readiness immediately, and a
+supervisor or HTTP-service restart starts unhealthy until a fresh poll passes.
+MariaDB restart, state transition, or query failure also clears the cache.
+
 The health states are distinct: database healthy means MariaDB is reachable
 and reports valid status; read-eligible additionally satisfies the read policy;
 writer-eligible additionally satisfies the single-writer policy. A write health
@@ -301,8 +307,12 @@ existing data directory.
 The Kubernetes deployment is ConfigMap-friendly: ordinary non-secret settings
 such as ports, database host, database name, timeout values, logging level, and
 supervisor policy are represented as ConfigMap keys or explicit environment
-variables. Credentials are never stored in a ConfigMap; they are supplied from
-a Kubernetes Secret using `secretKeyRef` or a mounted secret file.
+variables. Credentials are never stored in a ConfigMap or supplied as
+production environment values. Production credentials are mounted as
+protected files; environment variables may contain only nonsecret file paths
+or identifiers. If a file reference and a legacy secret-valued environment
+variable are both present, the file is authoritative and a conflict fails
+closed.
 
 Mandatory production settings are declared in GitOps, including cluster name
 and address, node name/address, unique `server_id`, storage identity, resource
@@ -316,8 +326,8 @@ The initial configuration includes:
 - `MARIADB_HOST`
 - `MARIADB_PORT` (default `3306`)
 - `MARIADB_USER`
-- Secret-file references for `MARIADB_PASSWORD` and SST credentials; secret
-  values are not ordinary configuration variables
+- Secret-file references for the root and SST credentials; secret values are
+  not production environment variables or ordinary configuration variables
 - `MARIADB_DATABASE`
 - `GALERA_QUERY_TIMEOUT_MS`
 - `PORT` for the HTTP service
@@ -513,11 +523,12 @@ future matrix is:
 - MariaDB 11.4 + Galera 4
 - The production MariaDB/Galera version selected for migration
 
-Two-member operation is tolerated for reads only when both members are Primary
-and read-eligible under the approved policy. It is not a supported
-single-writer state unless the explicit writer designation and quorum policy
-both pass. Conflicting writer designations, loss of quorum, or uncertain
-partition state remove all writer eligibility and require operator recovery.
+The initial release requires all three members to be Primary and read-eligible
+for normal read or write traffic. Two-member read service is deliberately not
+supported until a separate DBA and application-owner design defines session
+semantics, a degraded-mode timeout, and routing safeguards. Conflicting writer
+designations, loss of quorum, or uncertain partition state remove all writer
+eligibility and require operator recovery.
 
 Writer checks also require `super_read_only=OFF` and an explicit single-writer
 role. If all members are read-ready but none is writer-ready, writer traffic is
@@ -645,9 +656,7 @@ settings to the new image. The following settings are required or supported by
 the image contract:
 
 ```text
-MARIADB_ROOT_PASSWORD
 MARIADB_USER
-MARIADB_PASSWORD
 MARIADB_DATABASE
 MARIADB_HOST
 MARIADB_PORT
@@ -662,6 +671,11 @@ GALERA_QUERY_TIMEOUT_MS
 PORT
 LOG_LEVEL
 ```
+
+`MARIADB_ROOT_PASSWORD` and `MARIADB_PASSWORD` are legacy development/test
+inputs only and are not production-supported. The production contract uses
+secret-file references. They must never appear in rendered manifests, process
+environments, command arguments, logs, or diagnostics.
 
 `GALERA_BOOTSTRAP` is false by default. If enabled, it is an explicit request
 to start a new component and must not be inferred or persisted automatically.
