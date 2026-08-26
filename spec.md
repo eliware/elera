@@ -353,6 +353,18 @@ mode, filesystem behavior, fsync durability, latency, disk pressure, disk-full
 handling, volume replacement, recovery, and Kubernetes rescheduling. A
 container-only test is insufficient.
 
+The intended production storage topology is one independent node-local XFS
+volume per Galera member, with each volume in a distinct failure domain.
+MariaDB's live datadir must not use Gluster by default; Gluster is reserved for
+configuration or shared operational/application data unless a separate
+performance and failure analysis approves it. The selected StorageClass,
+provisioner, mount options, IOPS, latency, throughput, and replica behavior
+must be recorded and tested.
+
+The deployment must preserve stable PVC identity, prevent two members from
+sharing underlying storage, reject stale or wrong-node mounts, and refuse to
+reuse an old member's datadir without explicit recovery authorization.
+
 ## 14. Image and release requirements
 
 - Use Node.js 26 or newer and native ESM.
