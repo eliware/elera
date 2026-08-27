@@ -1,5 +1,26 @@
 # Release notes
 
+## 0.1.3 — Kubernetes runtime-path separation
+
+Patch release aligning the supervisor image with read-only ConfigMap mounts in
+Kubernetes.
+
+### Runtime and deployment
+
+- Move writable supervisor state and generated MariaDB configuration to
+  `/run/elera`.
+- Keep `/etc/elera` available for static, potentially read-only configuration.
+- Prepare `/run/elera` with ownership `100:101` in both image Dockerfiles.
+- Add Kubernetes-style regression coverage proving runtime state is separate
+  from static configuration.
+- Preserve fail-closed data-directory and explicit-bootstrap safeguards from
+  `0.1.2`.
+
+The next Kubernetes candidate must mount `/run/elera` as writable runtime
+storage, such as an `emptyDir`, before deployment. SBOM, vulnerability,
+signature, digest-verification, and real Galera/Kubernetes lifecycle evidence
+remain release-gate artifacts.
+
 ## 0.1.2 — fail-closed data-directory hardening
 
 Patch release focused on preventing accidental MariaDB initialization or

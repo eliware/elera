@@ -72,7 +72,7 @@ documented. Every sprint ends with an interoperability smoke test.
 
 ### Sprint 2 implementation evidence
 
-- The standalone lab generates `/etc/elera/mariadb.cnf` from the validated intent
+- The standalone lab generates `/run/elera/mariadb.cnf` from the validated intent
   before launching MariaDB and reports `/readyz` 200 after SQL recovery.
 - Repeated initialization applies succeed without duplicate-user/database errors.
 - Intent plan/apply/verify endpoints return stable hashes; unsafe membership

@@ -61,7 +61,7 @@ const health = createHealthService({
   log,
 });
 const intentState = createIntentState({
-  stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? "/etc/elera",
+  stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? "/run/elera",
 });
 const memoryObservationStore = createObservationStore();
 const observationStore = process.env.ELERA_OBSERVATION_STATE_PATH

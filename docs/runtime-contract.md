@@ -7,10 +7,13 @@ by that identity:
 
 - `/var/lib/mysql` — persistent MariaDB data;
 - `/run/mysqld` — MariaDB runtime sockets and state;
-- `/etc/elera` — generated supervisor configuration.
+- `/run/elera` — writable supervisor runtime state and generated MariaDB
+  configuration.
+- `/etc/elera` — optional static configuration input; ConfigMap mounts may be
+  read-only.
 
-The root filesystem is currently not read-only because `/etc/elera` is
-generated at startup. The persistent data directory must be a mounted,
+The root filesystem can be read-only when `/run/elera` is provided as a writable
+runtime mount. The persistent data directory must be a mounted,
 dedicated filesystem in production. A missing, read-only, non-directory, empty
 without bootstrap, partially initialized, stale, or otherwise suspicious data
 directory causes startup to fail closed.
@@ -42,6 +45,11 @@ and the local readiness policy is satisfied; otherwise it returns `503`.
   checks performed by the supervisor.
 - Shutdown: SIGTERM drains admission, lets active work complete within the
   configured timeout, then sends SIGTERM to MariaDB and exits.
+
+`ELERA_CONFIG_STATE_DIR` overrides the default runtime directory `/run/elera`.
+The supervisor writes `active.intent.json`, `last-known-good.intent.json`, and
+`mariadb.cnf` there. Startup fails if that directory is unavailable or
+unwritable.
 
 `ELERA_BOOTSTRAP=false` never runs `mariadb-install-db`, erases data, or
 reinitializes a directory. A non-empty directory without the MariaDB `mysql`
