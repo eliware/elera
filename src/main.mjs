@@ -11,15 +11,17 @@ import { createGaleraBootstrap, waitForSql } from './lifecycle/startup.mjs';
 import { createBootstrapCredentialLease } from './credentials/bootstrap.mjs';
 import { loadIntent } from './intent/model.mjs';
 import { createIntentState } from './intent/state.mjs';
+import { planIntent } from './intent/model.mjs';
 
 const config = loadSupervisorConfig();
 const dbEnv = { ...process.env, MYSQL_HOST: '127.0.0.1', MYSQL_PORT: '3306', MYSQL_USER: process.env.MARIADB_USER ?? 'root', MYSQL_PASSWORD: process.env.MARIADB_PASSWORD ?? '', MYSQL_DATABASE: process.env.MARIADB_DATABASE ?? 'mysql' };
 let db; let drained = false; let shuttingDown = false; let restarting = false; let bootstrapMaria;
+let applyIntent = (intent) => intentState.apply(intent);
 const servers = [];
 const errors = registerHandlers({ log, events: ['uncaughtException', 'unhandledRejection', 'warning'] });
 const health = createHealthService({ db: { query: (...args) => db.query(...args) }, timeoutMs: config.timeoutMs, galera: config.galera, log });
 const intentState = createIntentState({ stateDir: process.env.GALERA_CONFIG_STATE_DIR ?? '/etc/galera' });
-const control = createControlApi({ db: { query: (...args) => db.query(...args) }, getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), intentState), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
+const control = createControlApi({ db: { query: (...args) => db.query(...args) }, getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
 const probes = createProbeServer({ getStatus: () => health.status(), controlHandler: (request, response) => control.handler(request, response), log });
 servers.push(probes);
 
@@ -34,6 +36,7 @@ async function main() {
   await intentState.apply(initialIntent);
   const args = mariaDbArguments({ ...config, intentConfigPath: intentState.paths.renderedPath });
   mariaProcess = createMariaDbProcess({ args, log, onUnexpectedExit: (code) => { if (!restarting && !shuttingDown) process.exit(code ?? 1); } });
+  applyIntent = async (desired) => { const active = loadIntent(process.env); const plan = planIntent(desired, active); if (plan.change === 'unsafe') throw Object.assign(new Error(plan.reason), { statusCode: 409, code: 'UNSAFE_INTENT_CHANGE' }); const result = await intentState.apply(desired); if (plan.change === 'reload') mariaProcess.child?.kill('SIGHUP'); if (plan.change === 'restart') { restarting = true; try { await mariaProcess.stop(config.timeoutMs); await mariaProcess.start(args); } finally { restarting = false; } } return result; };
   mariaProcess.start().catch((error) => { log.error('Failed to start mariadbd', { error }); void signals.shutdown('mariadbd-error'); });
   bootstrapMaria = createGaleraBootstrap({ processController: mariaProcess, args, health, timeoutMs: config.timeoutMs, log, isBusy: () => restarting, setBusy: (value) => { restarting = value; } });
   db = await createDbFromEnvironment({ env: dbEnv, log });

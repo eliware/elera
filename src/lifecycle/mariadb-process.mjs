@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 export function createMariaDbProcess({ args, log, onUnexpectedExit }) {
   let child; let stopping = false;
   const start = (nextArgs = args) => new Promise((resolve, reject) => {
+    stopping = false;
     child = spawn('mariadbd', nextArgs, { stdio: 'inherit' });
     child.once('error', reject);
     child.once('spawn', () => resolve(child));
