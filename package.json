@@ -12,11 +12,12 @@
     "check": "node --check src/main.mjs",
     "test": "eliware-test",
     "lint": "eliware-test --lint",
-    "audit": "npm audit --omit=dev --audit-level=moderate"
+    "audit": "npm audit --omit=dev --audit-level=moderate",
+    "pack": "npm pack --dry-run"
   },
   "dependencies": {
     "@eliware/common": "2.0.0",
-    "@eliware/mysql": "2.0.0"
+    "@eliware/galera-lib": "file:../galera-lib"
   },
   "devDependencies": {
     "@eliware/test": "2.0.0"

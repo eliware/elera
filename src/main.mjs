@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { closeDb, createDb } from '@eliware/mysql';
+import { createDbFromEnvironment } from '@eliware/galera-lib';
 import { log, registerHandlers, registerSignals } from '@eliware/common';
 import { loadSupervisorConfig, mariaDbArguments } from './config.mjs';
 import { createHealthService } from './health.mjs';
@@ -19,7 +19,7 @@ const probes = createProbeServer({ getStatus: () => health.status(), controlHand
 servers.push(probes);
 
 async function closeServer(server) { if (server.listening) await new Promise((resolve) => server.close(resolve)); }
-async function shutdown(signal) { if (shuttingDown) { log.warn('Shutdown already in progress', { signal }); return; } shuttingDown = true; log.info('Supervisor shutting down', { signal }); await Promise.all(servers.map(closeServer)); await closeDb(db).catch((error) => log.error('Database pool close failed', { error })); errors.removeHandlers(); }
+async function shutdown(signal) { if (shuttingDown) { log.warn('Shutdown already in progress', { signal }); return; } shuttingDown = true; log.info('Supervisor shutting down', { signal }); await Promise.all(servers.map(closeServer)); await db?.close?.().catch((error) => log.error('Database pool close failed', { error })); errors.removeHandlers(); }
 const signals = registerSignals({ log, shutdownHook: shutdown, exitCode: 0 });
 
 async function main() {
@@ -28,7 +28,7 @@ async function main() {
   const args = mariaDbArguments(config);
   startMaria(args).catch((error) => { log.error('Failed to start mariadbd', { error }); void signals.shutdown('mariadbd-error'); });
   bootstrapMaria = async () => { if (restarting) throw Object.assign(new Error('bootstrap already in progress'), { statusCode: 409 }); const current = await health.status().catch(() => ({ ready: false })); if (current.ready) throw Object.assign(new Error('node is already ready; bootstrap refused'), { statusCode: 409 }); restarting = true; log.warn('Restarting MariaDB for Galera bootstrap'); mariadbd.kill('SIGTERM'); await new Promise((resolve) => mariadbd.once('exit', resolve)); const bootstrapArgs = [...args.filter((arg) => arg !== '--wsrep-new-cluster'), '--wsrep-new-cluster']; startMaria(bootstrapArgs).catch((error) => { log.error('Galera bootstrap MariaDB failed', { error }); }); restarting = false; };
-  db = await createDb({ env: dbEnv, log });
+  db = await createDbFromEnvironment({ env: dbEnv, log });
   probes.listen(config.httpPort, '0.0.0.0', () => log.info('HTTP listener started', { port: config.httpPort }));
   servers.push(listenAgent({ port: config.agentPort, performance: false, timeoutMs: config.timeoutMs, getStatus: () => health.status(), isDrained: () => drained, log }));
   servers.push(listenAgent({ port: config.performancePort, performance: true, timeoutMs: config.timeoutMs, getStatus: () => health.status(), isDrained: () => drained, log }));

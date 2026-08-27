@@ -11,3 +11,5 @@ on:
       - npm run check
       - npm test
       - npm run lint
+      - npm run audit
+      - npm run pack
