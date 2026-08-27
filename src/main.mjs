@@ -11,6 +11,7 @@ import { createEleraBootstrap, waitForSql } from './lifecycle/startup.mjs';
 import { createBootstrapCredentialLease } from './credentials/bootstrap.mjs';
 import { createMetadataService } from './metadata/service.mjs';
 import { createLifecycleManager } from './cluster/lifecycle.mjs';
+import { createObservationStore } from './cluster/observation-store.mjs';
 import { loadIntent } from './intent/model.mjs';
 import { createIntentState } from './intent/state.mjs';
 import { planIntent } from './intent/model.mjs';
@@ -25,7 +26,7 @@ const servers = [];
 const errors = registerHandlers({ log, events: ['uncaughtException', 'unhandledRejection', 'warning'] });
 const health = createHealthService({ db: { query: (...args) => db.query(...args), health: (...args) => db.health(...args) }, timeoutMs: config.timeoutMs, elera: config.elera, log });
 const intentState = createIntentState({ stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? '/etc/elera' });
-const control = createControlApi({ db: { query: (...args) => db.query(...args) }, metadata: createMetadataService({ query: (...args) => db.query(...args) }), lifecycle: createLifecycleManager({ status: () => health.status(), operations: { bootstrap: () => bootstrapMaria?.() }, environment: process.env }), getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
+const control = createControlApi({ db: { query: (...args) => db.query(...args) }, metadata: createMetadataService({ query: (...args) => db.query(...args) }), observationStore: createObservationStore(), lifecycle: createLifecycleManager({ status: () => health.status(), operations: { bootstrap: () => bootstrapMaria?.() }, environment: process.env }), getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
 const probes = createProbeServer({ getStatus: () => health.status(), controlHandler: (request, response) => control.handler(request, response), log });
 servers.push(probes);
 
