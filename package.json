@@ -12,7 +12,6 @@
     "check": "node --check src/main.mjs",
     "contracts": "node scripts/verify-contracts.mjs",
     "test": "eliware-test",
-    "test:ci": "eliware-test --coveragePathIgnorePatterns=elera-lib",
     "lint": "eliware-test --lint",
     "audit": "npm audit --omit=dev --audit-level=moderate",
     "pack": "npm pack --dry-run"
@@ -25,6 +24,9 @@
     "@eliware/test": "2.0.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1"
+  },
+  "jest": {
+    "coveragePathIgnorePatterns": ["/elera-lib/"]
   },
   "allowScripts": {
     "unrs-resolver@1.12.2": true
