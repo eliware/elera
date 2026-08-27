@@ -50,6 +50,8 @@ services:
       ELERA_NODE_NAME: elera-1
       ELERA_NODE_ADDRESS: elera-1
       ELERA_BOOTSTRAP: "true"
+      ELERA_PEERS: http://elera-2:8080,http://elera-3:8080
+      ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3307:3306", "8081:8080", "33061:33060", "33071:33070"]
     volumes: [elera-1-data:/var/lib/mysql]
     healthcheck: *probe
@@ -68,6 +70,8 @@ services:
       ELERA_NODE_NAME: elera-2
       ELERA_NODE_ADDRESS: elera-2
       ELERA_BOOTSTRAP: "false"
+      ELERA_PEERS: http://elera-1:8080,http://elera-3:8080
+      ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3308:3306", "8082:8080", "33062:33060", "33072:33070"]
     volumes: [elera-2-data:/var/lib/mysql]
     depends_on: [elera-1]
@@ -87,6 +91,8 @@ services:
       ELERA_NODE_NAME: elera-3
       ELERA_NODE_ADDRESS: elera-3
       ELERA_BOOTSTRAP: "false"
+      ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
+      ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3309:3306", "8083:8080", "33063:33060", "33073:33070"]
     volumes: [elera-3-data:/var/lib/mysql]
     depends_on: [elera-1]
