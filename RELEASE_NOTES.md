@@ -1,5 +1,29 @@
 # Release notes
 
+## 0.1.4 — hardened local and Kubernetes-style startup validation
+
+Unreleased patch release containing the locally verified follow-up hardening
+for the next image candidate.
+
+### Runtime safety
+
+- Require `MARIADB_ROOT_PASSWORD` for explicit first initialization.
+- Keep all Compose services at `ELERA_BOOTSTRAP=false` by default so a local
+  `.env` cannot silently enable initialization.
+- Preserve fail-closed handling for empty, suspicious, stale, or initialized
+  MariaDB data directories.
+
+### Tests and validation
+
+- Add regression coverage for the entrypoint bootstrap contract.
+- Add regression coverage for read-only static configuration and writable
+  runtime mounts.
+- Add Compose coverage for the non-bootstrap default.
+- Verify the image with UID/GID `100:101`, a read-only root filesystem, and a
+  read-only `/etc/elera/supervisor.yaml` mount.
+- Verify explicit initialization followed by a non-bootstrap restart against
+  the existing data volume.
+
 ## 0.1.3 — Kubernetes runtime-path separation
 
 Patch release aligning the supervisor image with read-only ConfigMap mounts in

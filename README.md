@@ -37,7 +37,7 @@ The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Elera is
 enabled with `ELERA=1`.
 
-This `0.1.3` release is a development and Docker-lab baseline. Production
+This `0.1.4` release is a development and Docker-lab baseline. Production
 deployment still requires the Kubernetes manifests, NetworkPolicies, secret
 delivery, and operational acceptance checks described in the feature
 checklist.
@@ -86,7 +86,7 @@ ownership for the persistent data volume with `fsGroup`. Kubernetes deployments
 must provide writable `/run/elera` runtime storage separately from any
 read-only `/etc/elera` ConfigMap mount.
 
-See [the runtime contract](docs/runtime-contract.md) and [release evidence](docs/release-evidence-0.1.3.md)
+See [the runtime contract](docs/runtime-contract.md) and [release evidence](docs/release-evidence-0.1.4.md)
 for the startup safety rules, filesystem requirements, and release-evidence
 status.
 
