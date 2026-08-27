@@ -21,6 +21,6 @@ COPY elera/src /app/src
 RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh
 
 VOLUME ["/var/lib/mysql"]
-EXPOSE 3306 4444 4567 4568 8080 33060 33070
+EXPOSE 3306 4444 4567 4568 8080
 
 ENTRYPOINT ["/usr/local/bin/mariadb-entrypoint.sh"]

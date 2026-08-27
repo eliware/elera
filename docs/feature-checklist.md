@@ -273,14 +273,21 @@ repositories pass strict 100×4 coverage with zero lint warnings.
 
 ### CLI and operations
 
-- [ ] Provide migration diagnostics and rollback checks.
+- [x] Provide migration diagnostics and rollback checks for the HTTP-only Docker migration path.
 - [ ] Verify graceful drains while changing VyOS routing.
 
 ### VyOS interoperability
 
-- [ ] Configure HAProxy as an HTTP-only supervisor load balancer.
-- [ ] Validate `/healthz`, `/readyz`, WebSocket upgrades/timeouts, and stateless API failover.
+- [x] Configure HAProxy as an HTTP-only supervisor load balancer.
+- [x] Validate `/healthz`, `/readyz`, WebSocket upgrades/timeouts, and stateless API failover at the Docker/integration-test layer.
 - [ ] Remove MySQL HAProxy frontends, `agent-check`, `elera-check.exe`, installer, and systemd units.
+
+Docker-only Sprint 10 evidence: Compose configuration validates, the supervisor
+image builds successfully, all three direct supervisor HTTP ports and the
+HAProxy VIP respond to `/healthz`, and HAProxy uses one-second HTTP readiness
+checks with no SQL backend or agent-check listener. Kubernetes NetworkPolicies,
+StatefulSet behavior, persistent-volume lifecycle, and pod disruption testing
+are intentionally deferred to the Kubernetes deployment phase.
 
 ## Sprint 11 — Application migration and release
 

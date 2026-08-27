@@ -224,7 +224,7 @@ passwords, bearer tokens, age private keys, or plaintext artifacts.
 - [ ] Remove MySQL backends from VyOS HAProxy.
 - [ ] Configure VyOS HAProxy as HTTP-only supervisor load balancer.
 - [ ] Remove VyOS `agent-check` configuration.
-- [ ] Remove TCP listeners `33060` and `33070` from the supervisor.
-- [ ] Remove `elera-check.exe` from VyOS.
+- [x] Remove TCP listeners `33060` and `33070` from the supervisor.
+- [x] Remove `elera-check.exe` from VyOS.
 - [ ] Remove VyOS Elera checker systemd units and installer.
 - [ ] Remove VyOS checker environment and post-commit rewrite logic.
