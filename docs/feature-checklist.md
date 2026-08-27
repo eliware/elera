@@ -199,7 +199,7 @@ same bundle version through a supervisor endpoint.
 ### `elera-lib`
 
 - [ ] Open an authenticated WebSocket stream through the HTTP VIP.
-- [ ] Apply versioned route, writer, reader, drain, recovery, and credential events.
+- [ ] Apply versioned route, writer, reader, drain, and recovery events; never transport SQL or dump data over the stream.
 - [ ] Reconnect with backoff; use REST bundle refresh when unavailable.
 - [ ] Detect event gaps and resynchronize by bundle version.
 - [ ] Stop new work, finish active transactions, and recycle affected pools during drain.
@@ -219,7 +219,7 @@ same bundle version through a supervisor endpoint.
 
 ### `elera-lib`
 
-- [ ] Provide generic streaming and verification hooks for native dump/restore commands.
+- [ ] Provide generic SQL connection quiesce and verification hooks without exposing supervisor- or CLI-specific dump/restore orchestration.
 - [ ] Verify credentials, privileges, schema, data, and application access without JSON dump transport.
 
 ### Supervisor
@@ -254,7 +254,7 @@ same bundle version through a supervisor endpoint.
 
 ### Supervisor and `elera-lib`
 
-- [ ] Remove transitional agent-check listeners `33060`/`33070` after HTTP routing is validated.
+- [ ] Remove the transitional agent-check listeners `33060`/`33070`; they are not part of the target architecture.
 - [ ] Validate direct application-to-node `3306` access and NetworkPolicies.
 
 ### CLI and operations
