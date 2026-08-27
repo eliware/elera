@@ -13,4 +13,5 @@ describe('supervisor configuration', () => {
   });
   test('rejects invalid ports', () => { expect(() => loadSupervisorConfig({ GALERA_HTTP_PORT: '0' })).toThrow('GALERA_HTTP_PORT'); });
   test('uses Galera defaults when enabled without optional values', () => { const args = mariaDbArguments(loadSupervisorConfig({ GALERA: '1' })); expect(args).toEqual(expect.arrayContaining(['--wsrep-on=ON', '--wsrep-cluster-address=gcomm://', '--wsrep-node-address=127.0.0.1'])); });
+  test('supports generated intent configuration', () => { expect(mariaDbArguments({ ...loadSupervisorConfig({}), intentConfigPath: '/etc/galera/mariadb.cnf' })[0]).toBe('--defaults-extra-file=/etc/galera/mariadb.cnf'); });
 });

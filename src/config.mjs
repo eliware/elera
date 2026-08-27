@@ -8,7 +8,7 @@ export function loadSupervisorConfig(environment = process.env) {
 }
 
 export function mariaDbArguments(config) {
-  const args = [`--datadir=${config.dataDir}`, '--user=mysql', '--bind-address=0.0.0.0', '--binlog-format=ROW'];
+  const args = [...(config.intentConfigPath ? [`--defaults-extra-file=${config.intentConfigPath}`] : []), `--datadir=${config.dataDir}`, '--user=mysql', '--bind-address=0.0.0.0', '--binlog-format=ROW'];
   if (config.galera) { if (config.environment.GALERA_BOOTSTRAP === 'true') args.push('--wsrep-new-cluster'); args.push('--wsrep-on=ON', '--wsrep-provider=/usr/lib/galera/libgalera_smm.so', `--wsrep-cluster-name=${config.environment.GALERA_CLUSTER_NAME ?? 'local-galera'}`, `--wsrep-cluster-address=${config.environment.GALERA_CLUSTER_ADDRESS ?? 'gcomm://'}`, `--wsrep-node-name=${config.environment.GALERA_NODE_NAME ?? 'galera'}`, `--wsrep-node-address=${config.environment.GALERA_NODE_ADDRESS ?? '127.0.0.1'}`); }
   return args;
 }

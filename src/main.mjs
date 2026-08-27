@@ -30,7 +30,9 @@ const signals = registerSignals({ log, shutdownHook: shutdown, exitCode: 0 });
 
 async function main() {
   log.info('Galera supervisor starting', { galera: config.galera, httpPort: config.httpPort, agentPort: config.agentPort, performancePort: config.performancePort });
-  const args = mariaDbArguments(config);
+  const initialIntent = loadIntent(process.env);
+  await intentState.apply(initialIntent);
+  const args = mariaDbArguments({ ...config, intentConfigPath: intentState.paths.renderedPath });
   mariaProcess = createMariaDbProcess({ args, log, onUnexpectedExit: (code) => { if (!restarting && !shuttingDown) process.exit(code ?? 1); } });
   mariaProcess.start().catch((error) => { log.error('Failed to start mariadbd', { error }); void signals.shutdown('mariadbd-error'); });
   bootstrapMaria = createGaleraBootstrap({ processController: mariaProcess, args, health, timeoutMs: config.timeoutMs, log, isBusy: () => restarting, setBusy: (value) => { restarting = value; } });
