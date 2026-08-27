@@ -6,13 +6,14 @@ export const createClusterHandoff = ({
   spawnProcess = spawn,
   exit = () => {},
   onExit = () => {},
+  bootstrapCluster = false,
 } = {}) => () => new Promise((resolve, reject) => {
   const child = spawnProcess(command, {
     env: {
       ...environment,
       ELERA_PENDING_INIT: "false",
       ELERA_BOOTSTRAP: "false",
-      ELERA_CLUSTER_BOOTSTRAP: "true",
+      ELERA_CLUSTER_BOOTSTRAP: bootstrapCluster ? "true" : "false",
     },
     stdio: "inherit",
   });

@@ -29,6 +29,19 @@ test("pending initialization accepts the explicit authenticated bootstrap reques
   expect(onInitialized).toHaveBeenCalledTimes(1);
 });
 
+test("pending initialization accepts an explicit authenticated join request", async () => {
+  const initialize = jest.fn().mockResolvedValue(undefined);
+  const onInitialized = jest.fn();
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, initialize, onInitialized }));
+  const port = await listen(server);
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/join`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ confirm: true }) });
+  expect(response.status).toBe(202);
+  expect(await response.json()).toEqual({ ok: true, operation: "cluster.join", status: "completed" });
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(initialize).toHaveBeenCalledTimes(1);
+  expect(onInitialized).toHaveBeenCalledWith("join");
+});
+
 test("pending initialization requires explicit confirmation and valid JSON", async () => {
   const initialize = jest.fn();
   ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, initialize }));

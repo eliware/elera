@@ -12,9 +12,9 @@ export const startPendingInitRuntime = ({
 } = {}) => {
   const errorHandlers = registerHandlers({ events: ["uncaughtException", "unhandledRejection"] });
   let shuttingDown = false;
-  const handoff = createClusterHandoff({ environment, spawnProcess, exit });
-  const pending = createPendingInitServer({ environment, log: logger, onInitialized: () => new Promise((resolve, reject) => {
-    close(pending.server, () => handoff().then(resolve, reject));
+  const handoff = (bootstrapCluster) => createClusterHandoff({ environment, spawnProcess, exit, bootstrapCluster });
+  const pending = createPendingInitServer({ environment, log: logger, onInitialized: (operation) => new Promise((resolve, reject) => {
+    close(pending.server, () => handoff(operation === "bootstrap")().then(resolve, reject));
   }) });
   const shutdown = () => {
     if (shuttingDown) return;

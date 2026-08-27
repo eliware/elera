@@ -5,12 +5,21 @@ test("cluster handoff disables pending data initialization and enables one-shot 
   const child = { once: jest.fn((event, callback) => { if (event === "exit") callback(0, null); }) };
   const spawnProcess = jest.fn(() => child);
   const exit = jest.fn();
-  await createClusterHandoff({ environment: { ROOT_TOKEN: "secret" }, spawnProcess, exit })();
+  await createClusterHandoff({ environment: { ROOT_TOKEN: "secret" }, spawnProcess, exit, bootstrapCluster: true })();
   expect(spawnProcess).toHaveBeenCalledWith("/usr/local/bin/mariadb-entrypoint.sh", expect.objectContaining({
     env: expect.objectContaining({ ELERA_PENDING_INIT: "false", ELERA_BOOTSTRAP: "false", ELERA_CLUSTER_BOOTSTRAP: "true" }),
     stdio: "inherit",
   }));
   expect(exit).toHaveBeenCalledWith(0);
+});
+
+test("cluster join handoff does not enable one-shot Galera bootstrap", async () => {
+  const child = { once: jest.fn((event, callback) => { if (event === "exit") callback(0, null); }) };
+  const spawnProcess = jest.fn(() => child);
+  await createClusterHandoff({ spawnProcess })();
+  expect(spawnProcess).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+    env: expect.objectContaining({ ELERA_CLUSTER_BOOTSTRAP: "false" }),
+  }));
 });
 
 test("cluster handoff maps a terminating signal to a failure exit", async () => {
