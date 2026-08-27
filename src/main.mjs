@@ -14,12 +14,14 @@ import { createIntentState } from './intent/state.mjs';
 import { planIntent } from './intent/model.mjs';
 
 const config = loadSupervisorConfig();
-const dbEnv = { ...process.env, MYSQL_HOST: '127.0.0.1', MYSQL_PORT: '3306', MYSQL_USER: process.env.MARIADB_USER ?? 'root', MYSQL_PASSWORD: process.env.MARIADB_PASSWORD ?? '', MYSQL_DATABASE: process.env.MARIADB_DATABASE ?? 'mysql' };
+// Supervisor control-plane SQL uses the bootstrap root credential; application credentials
+// are leased separately and must never be used for provisioning or reconciliation.
+const dbEnv = { ...process.env, MYSQL_HOST: '127.0.0.1', MYSQL_PORT: '3306', MYSQL_USER: 'root', MYSQL_PASSWORD: process.env.MARIADB_ROOT_PASSWORD ?? '', MYSQL_DATABASE: process.env.MARIADB_DATABASE ?? 'mysql' };
 let db; let drained = false; let shuttingDown = false; let restarting = false; let bootstrapMaria;
 let applyIntent = (intent) => intentState.apply(intent);
 const servers = [];
 const errors = registerHandlers({ log, events: ['uncaughtException', 'unhandledRejection', 'warning'] });
-const health = createHealthService({ db: { query: (...args) => db.query(...args) }, timeoutMs: config.timeoutMs, galera: config.galera, log });
+const health = createHealthService({ db: { query: (...args) => db.query(...args), health: (...args) => db.health(...args) }, timeoutMs: config.timeoutMs, galera: config.galera, log });
 const intentState = createIntentState({ stateDir: process.env.GALERA_CONFIG_STATE_DIR ?? '/etc/galera' });
 const control = createControlApi({ db: { query: (...args) => db.query(...args) }, getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
 const probes = createProbeServer({ getStatus: () => health.status(), controlHandler: (request, response) => control.handler(request, response), log });

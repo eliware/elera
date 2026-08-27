@@ -54,21 +54,32 @@ documented. Every sprint ends with an interoperability smoke test.
 
 ### `galera-lib`
 
-- [ ] Add generic administrative SQL and transaction-safe migration primitives.
+- [x] Add generic administrative SQL and transaction-safe migration primitives.
 - [ ] Keep supervisor and CLI policy out of the public library API.
 
 ### Supervisor
 
-- [ ] Validate intent and atomically render standardized MariaDB/Galera files.
-- [ ] Retain a last-known-good rendered copy and leave active state unchanged on failure.
-- [ ] Reconcile config changes and expose desired/effective/status plus plan/apply operations.
-- [ ] Make standalone first boot idempotent and reject unsafe bootstrap changes.
+- [x] Validate intent and atomically render standardized MariaDB/Galera files.
+- [x] Retain a last-known-good rendered copy and leave active state unchanged on failure.
+- [x] Reconcile config changes and expose desired/effective/status plus plan/apply operations.
+- [x] Make standalone first boot idempotent and reject unsafe bootstrap changes.
 
 ### CLI and interoperability
 
-- [ ] Add config inspection, plan, apply, and verify commands.
-- [ ] Run first boot from supervisor intent against standalone Docker MariaDB.
+- [x] Add config inspection, plan, apply, and verify commands.
+- [x] Run first boot from supervisor intent against standalone Docker MariaDB.
 - [ ] Verify no-op, reload, restart, invalid-config, and rollback behavior across all three repos.
+
+### Sprint 2 implementation evidence
+
+- The standalone lab generates `/etc/galera/mariadb.cnf` from the validated intent
+  before launching MariaDB and reports `/readyz` 200 after SQL recovery.
+- Repeated initialization applies succeed without duplicate-user/database errors.
+- Intent plan/apply/verify endpoints return stable hashes; unsafe membership
+  changes are rejected with `409 UNSAFE_INTENT_CHANGE`.
+- Supervisor, `galera-lib`, and `galera-cli` test suites and lint pass; reload,
+  restart, invalid-input, and write-failure integration coverage remains the
+  final Sprint 2 gate.
 
 ## Sprint 3 — `elera_meta` metadata foundation
 
