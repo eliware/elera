@@ -12,7 +12,7 @@ export async function initializePendingData({ environment = process.env, log = c
       try { await run("mariadb-admin", [`--socket=${socket}`, "ping", "--silent"]); break; }
       catch (error) { if (attempts === 59) throw error; await sleep(1000); }
     }
-    await execute({ socket, sql: initializationSql(environment.MARIADB_ROOT_PASSWORD) });
+    await execute({ socket, sql: initializationSql({ rootPassword: environment.MARIADB_ROOT_PASSWORD, database: environment.MARIADB_DATABASE, user: environment.MARIADB_USER, password: environment.MARIADB_PASSWORD }) });
   } finally { server.kill("SIGTERM"); await new Promise((resolve) => server.once("exit", resolve)); }
   log.info?.("Explicit pending initialization completed");
 }

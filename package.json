@@ -39,7 +39,7 @@
     },
     "dependencies": {
         "@eliware/common": "2.0.0",
-        "@eliware/elera-lib": "0.1.1",
+        "@eliware/elera-lib": "0.1.2",
         "ws": "^8.21.3"
     },
     "devDependencies": {
