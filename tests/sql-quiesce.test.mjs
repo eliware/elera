@@ -14,3 +14,8 @@ test('drains tracked work and provides a settle window for direct SQL sessions',
 test('requires a drain manager', () => {
   expect(() => createSqlQuiesce()).toThrow('drain manager is required');
 });
+
+test('uses the default settle timer', async () => {
+  const drain = createDrainManager();
+  await expect(createSqlQuiesce({ drain, timeoutMs: 0 }).begin()).resolves.toEqual({ drained: true, settled: true });
+});
