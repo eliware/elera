@@ -27,6 +27,7 @@ import { createRoutingEventSnapshot } from "./routing/event-snapshot.mjs";
 import { createRoutingStream } from "./api/routing-stream.mjs";
 import { createDrainManager } from "./lifecycle/drain-manager.mjs";
 import { createSqlDrainIntegration } from "./lifecycle/sql-routing.mjs";
+import { createDrainPropagation } from "./cluster/drain-propagation.mjs";
 
 const config = loadSupervisorConfig();
 // Supervisor control-plane SQL uses the bootstrap root credential; application credentials
@@ -125,6 +126,12 @@ const drain = createDrainManager({
     });
   },
 });
+const clusterDrain = createDrainPropagation({
+  drain,
+  peers: (process.env.ELERA_PEERS ?? "").split(","),
+  token: process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN,
+  log,
+});
 const control = createControlApi({
   db: { query: (...args) => db.query(...args) },
   metadata,
@@ -139,7 +146,7 @@ const control = createControlApi({
     operations: createClusterOperations({
       query: (...args) => db.query(...args),
       processController: { start: (...args) => mariaProcess?.start?.(...args) },
-      setDrain: (value) => (value ? drain.begin() : drain.end()),
+      setDrain: (value) => clusterDrain.set(value),
     }),
     environment: process.env,
   }),
@@ -149,7 +156,7 @@ const control = createControlApi({
     active: drain.active(),
     ...health.cacheInfo(),
   }),
-  setDrain: (value) => (value ? drain.begin() : drain.end()),
+  setDrain: (value, propagated) => clusterDrain.set(value, propagated),
   bootstrap: () => bootstrapMaria?.(),
   getActiveIntent: Object.assign(() => loadIntent(process.env), {
     ...intentState,
