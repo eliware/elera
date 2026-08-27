@@ -35,7 +35,7 @@ services:
       retries: 30
       start_period: 20s
 
-  elera-1:
+  elera-0:
     profiles: [cluster, lab]
     env_file:
       - path: .env
@@ -44,18 +44,39 @@ services:
       context: ..
       dockerfile: elera/Dockerfile.dev
     image: eliware/elera:local
+    hostname: elera-0
+    environment:
+      <<: *single-env
+      ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
+      ELERA: "1"
+      ELERA_NODE_NAME: elera-0
+      ELERA_NODE_ADDRESS: elera-0
+      ELERA_BOOTSTRAP: "true"
+      ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
+      ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
+    ports: ["3307:3306", "8081:8080"]
+    volumes: [elera-0-data:/var/lib/mysql]
+    healthcheck: *probe
+
+  elera-1:
+    profiles: [cluster, lab]
+    env_file:
+      - path: .env
+        required: false
+    image: eliware/elera:local
     hostname: elera-1
     environment:
       <<: *single-env
-      ELERA_CLUSTER_ADDRESS: gcomm://elera-1,elera-2,elera-3
+      ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
       ELERA: "1"
       ELERA_NODE_NAME: elera-1
       ELERA_NODE_ADDRESS: elera-1
-      ELERA_BOOTSTRAP: "true"
-      ELERA_PEERS: http://elera-2:8080,http://elera-3:8080
+      ELERA_BOOTSTRAP: "false"
+      ELERA_PEERS: http://elera-0:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
-    ports: ["3307:3306", "8081:8080"]
+    ports: ["3308:3306", "8082:8080"]
     volumes: [elera-1-data:/var/lib/mysql]
+    depends_on: [elera-0]
     healthcheck: *probe
 
   elera-2:
@@ -67,48 +88,27 @@ services:
     hostname: elera-2
     environment:
       <<: *single-env
-      ELERA_CLUSTER_ADDRESS: gcomm://elera-1,elera-2,elera-3
+      ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
       ELERA: "1"
       ELERA_NODE_NAME: elera-2
       ELERA_NODE_ADDRESS: elera-2
       ELERA_BOOTSTRAP: "false"
-      ELERA_PEERS: http://elera-1:8080,http://elera-3:8080
-      ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
-    ports: ["3308:3306", "8082:8080"]
-    volumes: [elera-2-data:/var/lib/mysql]
-    depends_on: [elera-1]
-    healthcheck: *probe
-
-  elera-3:
-    profiles: [cluster, lab]
-    env_file:
-      - path: .env
-        required: false
-    image: eliware/elera:local
-    hostname: elera-3
-    environment:
-      <<: *single-env
-      ELERA_CLUSTER_ADDRESS: gcomm://elera-1,elera-2,elera-3
-      ELERA: "1"
-      ELERA_NODE_NAME: elera-3
-      ELERA_NODE_ADDRESS: elera-3
-      ELERA_BOOTSTRAP: "false"
-      ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
+      ELERA_PEERS: http://elera-0:8080,http://elera-1:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3309:3306", "8083:8080"]
-    volumes: [elera-3-data:/var/lib/mysql]
-    depends_on: [elera-1]
+    volumes: [elera-2-data:/var/lib/mysql]
+    depends_on: [elera-0]
     healthcheck: *probe
 
   haproxy:
     profiles: [cluster, lab]
     image: haproxy:3.0-alpine
     depends_on:
+      elera-0:
+        condition: service_started
       elera-1:
         condition: service_started
       elera-2:
-        condition: service_started
-      elera-3:
         condition: service_started
     ports: ["8088:8080"]
     volumes:
@@ -126,11 +126,11 @@ services:
       dockerfile: elera/docker/backup-dev.Dockerfile
     image: eliware/elera-backup-dev:local
     depends_on:
+      elera-0:
+        condition: service_started
       elera-1:
         condition: service_started
       elera-2:
-        condition: service_started
-      elera-3:
         condition: service_started
       backup-nas:
         condition: service_started
@@ -139,7 +139,7 @@ services:
       ELERA_API_TOKEN: root_token_here
       ELERA_DATABASE: app
       ELERA_IDENTITY: backup-dev
-      ELERA_CLUSTER_SQL_HOSTS: elera-1,elera-2,elera-3
+      ELERA_CLUSTER_SQL_HOSTS: elera-0,elera-1,elera-2
       ELERA_RESTORE_VERIFY_HOST: elera-single
       ELERA_RESTORE_VERIFY_PORT: "3306"
     volumes:
@@ -159,8 +159,8 @@ services:
 
 volumes:
   elera-single-data:
+  elera-0-data:
   elera-1-data:
   elera-2-data:
-  elera-3-data:
   backup-dev-state:
   backup-nas-data:
