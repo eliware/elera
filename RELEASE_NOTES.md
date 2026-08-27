@@ -1,5 +1,19 @@
 # Release notes
 
+## 0.1.1 — non-root container hardening
+
+Patch release focused on reducing container privileges while preserving the
+existing supervisor and MariaDB startup behavior.
+
+### Security and runtime
+
+- Run the production and development images as the non-root `mysql` user.
+- Pre-create and assign ownership of `/run/mysqld`, `/var/lib/mysql`, and
+  `/etc/elera` during image construction.
+- Use MariaDB normal root authentication during first-time datadir setup so
+  initialization can complete without an operating-system root process.
+- Document the non-root runtime and persistent-volume ownership requirements.
+
 ## 0.1.0 — baseline supervisor
 
 Initial development release of the Elera MariaDB supervisor container and

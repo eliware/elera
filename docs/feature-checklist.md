@@ -33,7 +33,7 @@ documented. Every sprint ends with an interoperability smoke test.
 
 ### Sprint 1 certification evidence
 
-- Production image builds from the workspace parent context with the sibling
+- Production image builds from the Elera repository context with the published
   `@eliware/elera-lib@0.1.0` resolved from npm.
 - The standalone supervisor exposes `/healthz` before MariaDB is ready and
   issues an advertised `elera-single:3306` bundle to remote consumers.

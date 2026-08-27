@@ -2,7 +2,7 @@
     "name": "@eliware/elera",
     "version": "0.1.0",
     "private": true,
-    "description": "MariaDB Elera container supervisor with health, readiness, routing, and cluster control APIs",
+    "description": "Non-root MariaDB and Galera container supervisor with health, readiness, routing, and cluster control APIs",
     "keywords": [
         "eliware",
         "elera",
@@ -11,7 +11,9 @@
         "galera",
         "supervisor",
         "kubernetes",
-        "routing"
+        "routing",
+        "high-availability",
+        "non-root"
     ],
     "repository": {
         "type": "git",
