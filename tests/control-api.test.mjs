@@ -11,12 +11,12 @@ describe('control API', () => {
     const queries = [];
     const db = { query: async (sql) => { queries.push(sql); if (sql.includes('SHOW GRANTS')) return [[{ grant: 'GRANT USAGE ON *.* TO `app`@`%`' }]]; if (sql.includes('mysql.user')) return [[{ User: 'app', Host: '%', plugin: 'mysql_native_password', account_locked: 'N', password_expired: 'N' }]]; return [[]]; } };
     let drained = false; let bootstrapped = false;
-    const api = createControlApi({ db, getStatus: async () => ({ ready: false, values: { wsrep_local_state_comment: 'Joining' } }), getTraffic: () => ({ drained }), setDrain: (value) => { drained = value; }, bootstrap: async () => { bootstrapped = true; }, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '1', MARIADB_DATABASE: 'app', MARIADB_USER: 'app' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
+    const api = createControlApi({ db, getStatus: async () => ({ ready: false, values: { wsrep_local_state_comment: 'Joining' } }), getTraffic: () => ({ drained }), setDrain: (value) => { drained = value; }, bootstrap: async () => { bootstrapped = true; }, environment: { ROOT_TOKEN: 'root_token_here', ELERA: '1', MARIADB_DATABASE: 'app', MARIADB_USER: 'app' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
     const call = async (method, url, body) => { const out = response(); await api.handler(request(method, url, body), out); return { out, value: JSON.parse(out.body) }; };
     expect((await call('GET', '/api/v1/status')).out.status).toBe(200);
-    expect((await call('GET', '/api/v1/config')).value.data.galera).toBe(true);
+    expect((await call('GET', '/api/v1/config')).value.data.elera).toBe(true);
     expect((await call('GET', '/api/v1/config/intent')).value.data.intent.kind).toBe('SupervisorIntent');
-    expect((await call('POST', '/api/v1/config/plan', { routing: { healthIntervalMs: 1000 }, cluster: { name: 'x', members: [{ name: 'x', address: 'x' }] }, mariadb: { port: 3306 }, drain: { queryTimeoutMs: 1 }, apiVersion: 'galera.eliware.dev/v1alpha1', kind: 'SupervisorIntent' })).value.data.change).toBe('restart');
+    expect((await call('POST', '/api/v1/config/plan', { routing: { healthIntervalMs: 1000 }, cluster: { name: 'x', members: [{ name: 'x', address: 'x' }] }, mariadb: { port: 3306 }, drain: { queryTimeoutMs: 1 }, apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent' })).value.data.change).toBe('restart');
     const leaseApi = createControlApi({ db, getStatus: async () => ({}), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here' }, leaseCredentials: async () => ({ database: 'app', identity: 'runtime', username: 'app', password: 'secret', routes: { primary: [{ host: 'sql0', port: 3306 }], balanced: [{ host: 'sql0', port: 3306 }] }, expiresAt: '2099-01-01T00:00:00Z' }), log: { error: jest.fn() } });
     const leaseOut = response(); await leaseApi.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime' }), leaseOut); expect(leaseOut.status).toBe(200);
     expect((await call('GET', '/api/v1/initialization')).out.status).toBe(200);
@@ -38,7 +38,7 @@ describe('control API', () => {
     expect(queries.length).toBeGreaterThan(5);
   });
   test('rejects missing auth and unsafe mutations', async () => {
-    const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: true, values: {} }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '0' }, log: { error: jest.fn() } });
+    const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: true, values: {} }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', ELERA: '0' }, log: { error: jest.fn() } });
     const unauth = response(); await api.handler(request('GET', '/api/v1/status', undefined, null), unauth); expect(unauth.status).toBe(401);
     const noConfirm = response(); await api.handler(request('POST', '/api/v1/cluster/bootstrap', {}), noConfirm); expect(noConfirm.status).toBe(409);
     const badGrant = response(); await api.handler(request('POST', '/api/v1/accounts/import', { confirm: true, accounts: [{ user: 'bad name', grants: [] }] }), badGrant); expect(badGrant.status).toBe(400);
@@ -46,13 +46,13 @@ describe('control API', () => {
     const invalidLease = response(); await api.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime', routes: ['unknown'] }), invalidLease); expect(invalidLease.status).toBe(400);
   });
   test('translates route failures and rejects unavailable bootstrap', async () => {
-    const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => { throw new Error('status unavailable'); }, getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '0' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
+    const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => { throw new Error('status unavailable'); }, getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', ELERA: '0' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
     const out = response(); await api.handler(request('GET', '/api/v1/cluster/status'), out); expect(out.status).toBe(500);
-    const noBootstrap = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: false }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '1' }, log: { error: jest.fn() } });
+    const noBootstrap = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: false }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', ELERA: '1' }, log: { error: jest.fn() } });
     const unavailable = response(); await noBootstrap.handler(request('POST', '/api/v1/cluster/bootstrap', { confirm: true }), unavailable); expect(unavailable.status).toBe(503);
   });
   test('plans and applies safe intent changes while rejecting unsafe ones', async () => {
-    const intent = { apiVersion: 'galera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'x', members: [{ name: 'x', address: 'x' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } };
+    const intent = { apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'x', members: [{ name: 'x', address: 'x' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } };
     const state = Object.assign(() => intent, { apply: async value => ({ hash: value.mariadb.port }) });
     const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({}), getTraffic: () => ({}), setDrain: () => {}, getActiveIntent: state, environment: { ROOT_TOKEN: 'root_token_here' }, log: { error: jest.fn() } });
     const out = response(); await api.handler(request('POST', '/api/v1/config/apply', { confirm: true, intent }), out); expect(out.status).toBe(200);

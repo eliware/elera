@@ -10,8 +10,8 @@ test('creates a local bootstrap bundle for CLI SQL smoke tests', () => {
 });
 
 test('uses an explicitly advertised host for remote consumers', () => {
-  const bundle = createBootstrapCredentialLease({ GALERA_ADVERTISED_HOST: 'galera-single' })({ database: 'app', identity: 'smoke' });
-  expect(bundle.routes.primary[0].host).toBe('galera-single');
+  const bundle = createBootstrapCredentialLease({ ELERA_ADVERTISED_HOST: 'elera-single' })({ database: 'app', identity: 'smoke' });
+  expect(bundle.routes.primary[0].host).toBe('elera-single');
 });
 
 test('fills safe local defaults when bootstrap environment is incomplete', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 import * as common from '@eliware/common';
-import * as mysql from '@eliware/galera-lib';
+import * as mysql from '@eliware/elera-lib';
 
 describe('shared dependencies', () => {
   test('expose the required APIs', () => {

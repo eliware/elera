@@ -1,13 +1,13 @@
-# Galera Ecosystem Feature Checklist
+# Elera Ecosystem Feature Checklist
 
-Work proceeds as parallel vertical slices across `galera-lib`, the supervisor,
-and `galera-cli`. Check an item only when it is implemented, tested, and
+Work proceeds as parallel vertical slices across `elera-lib`, the supervisor,
+and `elera-cli`. Check an item only when it is implemented, tested, and
 documented. Every sprint ends with an interoperability smoke test.
 
 ## Sprint 0 — Repository and contract baseline [complete]
 
 - [x] Bootstrap all three Node.js 26/ESM repositories with CI, Knit, licenses, and tests.
-- [x] Establish local linking between supervisor, `galera-cli`, and `galera-lib`.
+- [x] Establish local linking between supervisor, `elera-cli`, and `elera-lib`.
 - [x] Define `/api/v1`, response envelopes, error handling, and initial scope vocabulary.
 - [x] Establish `elera_meta` as the authoritative metadata database name.
 - [x] Add machine-readable schemas and shared contract fixtures to all three repositories.
@@ -23,7 +23,7 @@ documented. Every sprint ends with an interoperability smoke test.
 ### Supervisor
 
 - [x] Start and own MariaDB as PID child with bounded startup and graceful shutdown.
-- [x] Use `galera-lib` for the local SQL connection.
+- [x] Use `elera-lib` for the local SQL connection.
 - [x] Provide `/healthz` and `/readyz` with one-second cached health checks.
 
 ### CLI and interoperability
@@ -34,10 +34,10 @@ documented. Every sprint ends with an interoperability smoke test.
 ### Sprint 1 certification evidence
 
 - Production image builds from the workspace parent context with the sibling
-  `galera-lib` included.
+  `elera-lib` included.
 - The standalone supervisor exposes `/healthz` before MariaDB is ready and
-  issues an advertised `galera-single:3306` bundle to remote consumers.
-- `galera-cli sql-smoke` passes from the separate `backup-dev` container through
+  issues an advertised `elera-single:3306` bundle to remote consumers.
+- `elera-cli sql-smoke` passes from the separate `backup-dev` container through
   the supervisor lease endpoint to MariaDB.
 - Local tests pass at 100×4 coverage with zero lint warnings; the pushed
   supervisor CI run passed on both Ubuntu and Windows.
@@ -52,14 +52,14 @@ documented. Every sprint ends with an interoperability smoke test.
 - [ ] Keep tokens, passwords, TLS inputs, and other sensitive values in separate GitOps Secrets.
 - [ ] Define desired/active hashes and change classes: no-op, reload, restart, or unsafe.
 
-### `galera-lib`
+### `elera-lib`
 
 - [x] Add generic administrative SQL and transaction-safe migration primitives.
 - [ ] Keep supervisor and CLI policy out of the public library API.
 
 ### Supervisor
 
-- [x] Validate intent and atomically render standardized MariaDB/Galera files.
+- [x] Validate intent and atomically render standardized MariaDB/Elera files.
 - [x] Retain a last-known-good rendered copy and leave active state unchanged on failure.
 - [x] Reconcile config changes and expose desired/effective/status plus plan/apply operations.
 - [x] Make standalone first boot idempotent and reject unsafe bootstrap changes.
@@ -72,12 +72,12 @@ documented. Every sprint ends with an interoperability smoke test.
 
 ### Sprint 2 implementation evidence
 
-- The standalone lab generates `/etc/galera/mariadb.cnf` from the validated intent
+- The standalone lab generates `/etc/elera/mariadb.cnf` from the validated intent
   before launching MariaDB and reports `/readyz` 200 after SQL recovery.
 - Repeated initialization applies succeed without duplicate-user/database errors.
 - Intent plan/apply/verify endpoints return stable hashes; unsafe membership
   changes are rejected with `409 UNSAFE_INTENT_CHANGE`.
-- Supervisor, `galera-lib`, and `galera-cli` test suites and lint pass; reload,
+- Supervisor, `elera-lib`, and `elera-cli` test suites and lint pass; reload,
   restart, invalid-input, and write-failure coverage is exercised by the
   reconciliation, API, CLI, and state-layer tests.
 
@@ -85,12 +85,12 @@ documented. Every sprint ends with an interoperability smoke test.
 
 Sprint 2 is complete. The contract, supervisor rendering/reconciliation,
 standalone first boot, generic library primitives, CLI workflows, and their
-verification gates are implemented and tested. Galera cluster formation and
+verification gates are implemented and tested. Elera cluster formation and
 metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 ## Sprint 3 — `elera_meta` metadata foundation
 
-### `galera-lib`
+### `elera-lib`
 
 - [ ] Support generic schema migration, transaction, and verification operations.
 
@@ -103,13 +103,13 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 - [ ] Implement `init`, metadata initialize, and metadata verify commands.
 - [ ] Require root-token confirmation for first-boot mutations.
-- [ ] Verify repeated initialization on standalone and Galera nodes.
+- [ ] Verify repeated initialization on standalone and Elera nodes.
 
-## Sprint 4 — Galera lifecycle, observations, and quorum
+## Sprint 4 — Elera lifecycle, observations, and quorum
 
-### `galera-lib`
+### `elera-lib`
 
-- [ ] Accept supervisor-selected direct node sets without embedding Galera policy.
+- [ ] Accept supervisor-selected direct node sets without embedding Elera policy.
 - [ ] Preserve safe failover only within a valid, versioned route bundle.
 
 ### Supervisor
@@ -122,12 +122,12 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 ### CLI and interoperability
 
 - [ ] Implement cluster status, bootstrap, join, leave, and recovery commands.
-- [ ] Bootstrap and inspect a three-node Docker Galera cluster.
+- [ ] Bootstrap and inspect a three-node Docker Elera cluster.
 - [ ] Verify topology and direct `3306` connectivity from every supervisor.
 
 ## Sprint 5 — Managed databases, identities, and scoped credentials
 
-### `galera-lib`
+### `elera-lib`
 
 - [ ] Accept credential leases through a generic injected provider.
 - [ ] Replace credentials and recycle pools without logging secrets.
@@ -146,7 +146,7 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 ## Sprint 6 — Routing decisions and REST bundles
 
-### `galera-lib`
+### `elera-lib`
 
 - [ ] Consume bundles containing credentials, database, ordered writer candidates, and reader candidates.
 - [ ] Send writes only to assigned writer candidates and reads to permitted readers.
@@ -167,7 +167,7 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 ## Sprint 7 — WebSocket events and graceful draining
 
-### `galera-lib`
+### `elera-lib`
 
 - [ ] Open an authenticated WebSocket stream through the HTTP VIP.
 - [ ] Apply versioned route, writer, reader, drain, recovery, and credential events.
@@ -188,7 +188,7 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 ## Sprint 8 — Reconciliation and metadata-first restore
 
-### `galera-lib`
+### `elera-lib`
 
 - [ ] Provide generic streaming and verification hooks for native dump/restore commands.
 - [ ] Verify credentials, privileges, schema, data, and application access without JSON dump transport.
@@ -206,7 +206,7 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 ## Sprint 9 — GitOps hardening and optional encrypted artifacts
 
-### `galera-lib`
+### `elera-lib`
 
 - [ ] Materialize short-lived credentials and artifacts with deterministic cleanup.
 - [ ] Never expose age keys or plaintext secret material through logs or generic library APIs.
@@ -223,7 +223,7 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 ## Sprint 10 — VyOS HTTP migration and legacy removal
 
-### Supervisor and `galera-lib`
+### Supervisor and `elera-lib`
 
 - [ ] Remove transitional agent-check listeners `33060`/`33070` after HTTP routing is validated.
 - [ ] Validate direct application-to-node `3306` access and NetworkPolicies.
@@ -237,13 +237,13 @@ metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 - [ ] Configure HAProxy as an HTTP-only supervisor load balancer.
 - [ ] Validate `/healthz`, `/readyz`, WebSocket upgrades/timeouts, and stateless API failover.
-- [ ] Remove MySQL HAProxy frontends, `agent-check`, `galera-check.exe`, installer, and systemd units.
+- [ ] Remove MySQL HAProxy frontends, `agent-check`, `elera-check.exe`, installer, and systemd units.
 
 ## Sprint 11 — Application migration and release
 
 ### All repositories
 
-- [ ] Migrate an internal application from `@eliware/mysql` to generic `@eliware/galera-lib`.
+- [ ] Migrate an internal application from `@eliware/mysql` to generic `@eliware/elera-lib`.
 - [ ] Validate writer assignment, reader failover, supervisor failure, event-stream fallback, and graceful drains.
 - [ ] Replace local links with released package versions and verify package/image contents.
 

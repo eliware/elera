@@ -1,31 +1,31 @@
-name: eliware-galera
+name: eliware-elera
 
 services:
-  galera-single:
+  elera-single:
     profiles: [single, lab]
     env_file:
       - path: .env
         required: false
     build:
       context: ..
-      dockerfile: galera/Dockerfile.dev
-    image: eliware/galera:local
-    hostname: galera-single
+      dockerfile: elera/Dockerfile.dev
+    image: eliware/elera:local
+    hostname: elera-single
     environment: &single-env
       ROOT_TOKEN: ${ROOT_TOKEN:-root_token_here}
-      GALERA_ADVERTISED_HOST: galera-single
+      ELERA_ADVERTISED_HOST: elera-single
       MARIADB_ROOT_PASSWORD: dev-root-password
       MARIADB_DATABASE: app
       MARIADB_USER: healthcheck
       MARIADB_PASSWORD: dev-healthcheck-password
-      GALERA_CLUSTER_NAME: local-galera
-      GALERA: "0"
-      GALERA_CLUSTER_ADDRESS: gcomm://
-      GALERA_NODE_NAME: galera-single
-      GALERA_NODE_ADDRESS: galera-single
-      GALERA_HTTP_PORT: "8080"
+      ELERA_CLUSTER_NAME: local-elera
+      ELERA: "0"
+      ELERA_CLUSTER_ADDRESS: gcomm://
+      ELERA_NODE_NAME: elera-single
+      ELERA_NODE_ADDRESS: elera-single
+      ELERA_HTTP_PORT: "8080"
     ports: ["3306:3306", "8080:8080", "33060:33060", "33070:33070"]
-    volumes: [galera-single-data:/var/lib/mysql]
+    volumes: [elera-single-data:/var/lib/mysql]
     healthcheck: &probe
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 5s
@@ -33,74 +33,74 @@ services:
       retries: 30
       start_period: 20s
 
-  galera-1:
+  elera-1:
     profiles: [cluster, lab]
     env_file:
       - path: .env
         required: false
     build:
       context: ..
-      dockerfile: galera/Dockerfile.dev
-    image: eliware/galera:local
-    hostname: galera-1
+      dockerfile: elera/Dockerfile.dev
+    image: eliware/elera:local
+    hostname: elera-1
     environment:
       <<: *single-env
-      GALERA_CLUSTER_ADDRESS: gcomm://galera-1,galera-2,galera-3
-      GALERA: "1"
-      GALERA_NODE_NAME: galera-1
-      GALERA_NODE_ADDRESS: galera-1
-      GALERA_BOOTSTRAP: "true"
+      ELERA_CLUSTER_ADDRESS: gcomm://elera-1,elera-2,elera-3
+      ELERA: "1"
+      ELERA_NODE_NAME: elera-1
+      ELERA_NODE_ADDRESS: elera-1
+      ELERA_BOOTSTRAP: "true"
     ports: ["3307:3306", "8081:8080", "33061:33060", "33071:33070"]
-    volumes: [galera-1-data:/var/lib/mysql]
+    volumes: [elera-1-data:/var/lib/mysql]
     healthcheck: *probe
 
-  galera-2:
+  elera-2:
     profiles: [cluster, lab]
     env_file:
       - path: .env
         required: false
-    image: eliware/galera:local
-    hostname: galera-2
+    image: eliware/elera:local
+    hostname: elera-2
     environment:
       <<: *single-env
-      GALERA_CLUSTER_ADDRESS: gcomm://galera-1,galera-2,galera-3
-      GALERA: "1"
-      GALERA_NODE_NAME: galera-2
-      GALERA_NODE_ADDRESS: galera-2
-      GALERA_BOOTSTRAP: "false"
+      ELERA_CLUSTER_ADDRESS: gcomm://elera-1,elera-2,elera-3
+      ELERA: "1"
+      ELERA_NODE_NAME: elera-2
+      ELERA_NODE_ADDRESS: elera-2
+      ELERA_BOOTSTRAP: "false"
     ports: ["3308:3306", "8082:8080", "33062:33060", "33072:33070"]
-    volumes: [galera-2-data:/var/lib/mysql]
-    depends_on: [galera-1]
+    volumes: [elera-2-data:/var/lib/mysql]
+    depends_on: [elera-1]
     healthcheck: *probe
 
-  galera-3:
+  elera-3:
     profiles: [cluster, lab]
     env_file:
       - path: .env
         required: false
-    image: eliware/galera:local
-    hostname: galera-3
+    image: eliware/elera:local
+    hostname: elera-3
     environment:
       <<: *single-env
-      GALERA_CLUSTER_ADDRESS: gcomm://galera-1,galera-2,galera-3
-      GALERA: "1"
-      GALERA_NODE_NAME: galera-3
-      GALERA_NODE_ADDRESS: galera-3
-      GALERA_BOOTSTRAP: "false"
+      ELERA_CLUSTER_ADDRESS: gcomm://elera-1,elera-2,elera-3
+      ELERA: "1"
+      ELERA_NODE_NAME: elera-3
+      ELERA_NODE_ADDRESS: elera-3
+      ELERA_BOOTSTRAP: "false"
     ports: ["3309:3306", "8083:8080", "33063:33060", "33073:33070"]
-    volumes: [galera-3-data:/var/lib/mysql]
-    depends_on: [galera-1]
+    volumes: [elera-3-data:/var/lib/mysql]
+    depends_on: [elera-1]
     healthcheck: *probe
 
   haproxy:
     profiles: [cluster, lab]
     image: haproxy:3.0-alpine
     depends_on:
-      galera-1:
+      elera-1:
         condition: service_started
-      galera-2:
+      elera-2:
         condition: service_started
-      galera-3:
+      elera-3:
         condition: service_started
     ports: ["8088:8080"]
     volumes:
@@ -115,25 +115,25 @@ services:
     profiles: [backup-test, lab]
     build:
       context: ..
-      dockerfile: galera/docker/backup-dev.Dockerfile
-    image: eliware/galera-backup-dev:local
+      dockerfile: elera/docker/backup-dev.Dockerfile
+    image: eliware/elera-backup-dev:local
     depends_on:
-      galera-1:
+      elera-1:
         condition: service_started
-      galera-2:
+      elera-2:
         condition: service_started
-      galera-3:
+      elera-3:
         condition: service_started
       backup-nas:
         condition: service_started
     environment:
-      GALERA_API_ENDPOINT: http://haproxy:8080
-      GALERA_API_TOKEN: root_token_here
-      GALERA_DATABASE: app
-      GALERA_IDENTITY: backup-dev
-      GALERA_CLUSTER_SQL_HOSTS: galera-1,galera-2,galera-3
-      GALERA_RESTORE_VERIFY_HOST: galera-single
-      GALERA_RESTORE_VERIFY_PORT: "3306"
+      ELERA_API_ENDPOINT: http://haproxy:8080
+      ELERA_API_TOKEN: root_token_here
+      ELERA_DATABASE: app
+      ELERA_IDENTITY: backup-dev
+      ELERA_CLUSTER_SQL_HOSTS: elera-1,elera-2,elera-3
+      ELERA_RESTORE_VERIFY_HOST: elera-single
+      ELERA_RESTORE_VERIFY_PORT: "3306"
     volumes:
       - backup-dev-state:/lab
     command: ["sleep", "infinity"]
@@ -142,17 +142,17 @@ services:
     profiles: [backup-test, lab]
     build:
       context: ..
-      dockerfile: galera/docker/backup-nas.Dockerfile
-    image: eliware/galera-backup-nas:local
+      dockerfile: elera/docker/backup-nas.Dockerfile
+    image: eliware/elera-backup-nas:local
     ports: ["2222:22"]
     volumes:
       - backup-nas-data:/srv/backups
       - backup-dev-state:/lab:ro
 
 volumes:
-  galera-single-data:
-  galera-1-data:
-  galera-2-data:
-  galera-3-data:
+  elera-single-data:
+  elera-1-data:
+  elera-2-data:
+  elera-3-data:
   backup-dev-state:
   backup-nas-data:

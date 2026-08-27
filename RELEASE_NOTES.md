@@ -2,4 +2,4 @@
 
 ## 0.1.0
 
-- Initial MariaDB/Galera supervisor container and control API scaffold.
+- Initial MariaDB/Elera supervisor container and control API scaffold.

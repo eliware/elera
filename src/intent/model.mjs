@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 export function validateIntent(intent) {
   const errors = [];
-  if (!intent || intent.apiVersion !== 'galera.eliware.dev/v1alpha1') errors.push('apiVersion must be galera.eliware.dev/v1alpha1');
+  if (!intent || intent.apiVersion !== 'elera.eliware.dev/v1alpha1') errors.push('apiVersion must be elera.eliware.dev/v1alpha1');
   if (intent?.kind !== 'SupervisorIntent') errors.push('kind must be SupervisorIntent');
   if (!intent?.cluster?.name || !Array.isArray(intent.cluster.members) || intent.cluster.members.length === 0) errors.push('cluster.name and at least one cluster member are required');
   if (!Number.isInteger(intent?.mariadb?.port) || intent.mariadb.port < 1 || intent.mariadb.port > 65535) errors.push('mariadb.port must be a valid TCP port');
@@ -25,8 +25,8 @@ export function planIntent(desired, active) {
 }
 
 export function defaultIntent(environment = process.env) {
-  const host = environment.GALERA_ADVERTISED_HOST ?? '127.0.0.1';
-  return { apiVersion: 'galera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: environment.GALERA_CLUSTER_NAME ?? 'local-galera', members: [{ name: environment.GALERA_NODE_NAME ?? 'galera', address: host, port: 3306 }] }, mariadb: { port: 3306, dataDir: environment.MARIADB_DATA_DIR ?? '/var/lib/mysql', binlogFormat: 'ROW' }, routing: { healthIntervalMs: 1000, weights: {} }, drain: { queryTimeoutMs: Number(environment.GALERA_QUERY_TIMEOUT_MS ?? 5000), shutdownTimeoutMs: Number(environment.GALERA_SHUTDOWN_TIMEOUT_MS ?? 30000) } };
+  const host = environment.ELERA_ADVERTISED_HOST ?? '127.0.0.1';
+  return { apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: environment.ELERA_CLUSTER_NAME ?? 'local-elera', members: [{ name: environment.ELERA_NODE_NAME ?? 'elera', address: host, port: 3306 }] }, mariadb: { port: 3306, dataDir: environment.MARIADB_DATA_DIR ?? '/var/lib/mysql', binlogFormat: 'ROW' }, routing: { healthIntervalMs: 1000, weights: {} }, drain: { queryTimeoutMs: Number(environment.ELERA_QUERY_TIMEOUT_MS ?? 5000), shutdownTimeoutMs: Number(environment.ELERA_SHUTDOWN_TIMEOUT_MS ?? 30000) } };
 }
 
 export function loadIntent(environment = process.env) {

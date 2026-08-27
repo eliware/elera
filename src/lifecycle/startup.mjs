@@ -7,14 +7,14 @@ export async function waitForSql({ health, timeoutMs, delayMs = 250, log }) {
   return false;
 }
 
-export function createGaleraBootstrap({ processController, args, health, timeoutMs, log, isBusy, setBusy }) {
+export function createEleraBootstrap({ processController, args, health, timeoutMs, log, isBusy, setBusy }) {
   return async function bootstrap() {
     if (isBusy()) throw Object.assign(new Error('bootstrap already in progress'), { statusCode: 409 });
     const current = await health.status().catch(() => ({ ready: false }));
     if (current.ready) throw Object.assign(new Error('node is already ready; bootstrap refused'), { statusCode: 409 });
     setBusy(true);
     try {
-      log.warn('Restarting MariaDB for Galera bootstrap');
+      log.warn('Restarting MariaDB for Elera bootstrap');
       await processController.stop(timeoutMs);
       const bootstrapArgs = [...args.filter((arg) => arg !== '--wsrep-new-cluster'), '--wsrep-new-cluster'];
       await processController.start(bootstrapArgs);

@@ -7,17 +7,17 @@ RUN apt-get update \
     && curl -fsSL https://r.mariadb.com/downloads/mariadb_repo_setup \
        | bash -s -- --mariadb-server-version=12.3.3 --os-type=debian --os-version=bookworm \
     && apt-get update \
-    && apt-get install --no-install-recommends -y mariadb-server galera-4 \
+    && apt-get install --no-install-recommends -y mariadb-server elera-4 \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/mysql/* \
     && mkdir -p /run/mysqld /var/lib/mysql \
     && chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
-COPY galera/docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
-COPY galera/package.json galera/package-lock.json /app/
-COPY galera-lib /galera-lib
+COPY elera/docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
+COPY elera/package.json elera/package-lock.json /app/
+COPY elera-lib /elera-lib
 RUN cd /app && npm ci --omit=dev
-COPY galera/src /app/src
+COPY elera/src /app/src
 RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh
 
 VOLUME ["/var/lib/mysql"]

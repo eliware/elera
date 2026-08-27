@@ -1,13 +1,13 @@
-# Galera Ecosystem API Contracts
+# Elera Ecosystem API Contracts
 
-This document is the shared contract reference for the Galera supervisor,
-`@eliware/galera-lib`, and `galera-cli`. Endpoint status and the implementation
+This document is the shared contract reference for the Elera supervisor,
+`@eliware/elera-lib`, and `elera-cli`. Endpoint status and the implementation
 checklist are tracked separately in `docs/api.md`.
 
 ## System boundary
 
 ```text
-application / galera-cli
+application / elera-cli
         |
         v
 HAProxy HTTP supervisor VIP
@@ -16,16 +16,16 @@ HAProxy HTTP supervisor VIP
 any supervisor node
         |
         +-- replicated elera_meta metadata
-        +-- Galera health and routing decisions
+        +-- Elera health and routing decisions
         +-- credential leases
 
-galera-lib receives a bundle and connects directly to eligible MariaDB nodes
+elera-lib receives a bundle and connects directly to eligible MariaDB nodes
 ```
 
 HAProxy is not part of the MySQL data path. The supervisor quorum chooses
-eligible nodes and assigns one logical writer per application. `galera-lib`
+eligible nodes and assigns one logical writer per application. `elera-lib`
 manages pools and connection-level failover within the unexpired bundle; it
-does not discover Galera topology or invent writer assignments.
+does not discover Elera topology or invent writer assignments.
 
 REST is the management and recovery interface. The preferred routing channel
 is an authenticated WebSocket through the same HTTP VIP:
@@ -44,14 +44,14 @@ current bundle expires.
 
 On graceful node shutdown, the supervisor publishes a drain event, stops
 accepting new SQL work, allows active queries and transactions to complete,
-then closes pools and MariaDB. `galera-lib` immediately stops selecting the
+then closes pools and MariaDB. `elera-lib` immediately stops selecting the
 draining node for new work and uses the next ordered candidate.
 
 ## Supervisor configuration contract
 
 GitOps supplies supervisor intent through a Kubernetes ConfigMap for
 non-secret configuration and a Secret for tokens, passwords, TLS, and other
-sensitive material. The supervisor renders the uniform MariaDB and Galera
+sensitive material. The supervisor renders the uniform MariaDB and Elera
 files; generated files are runtime artifacts, not a second configuration
 source.
 
@@ -64,7 +64,7 @@ load -> validate -> canonicalize -> hash -> render -> validate generated files
 
 The MVP tracks desired and active hashes; a last-known-good rendered copy is
 retained for recovery. These hashes identify drift. Dynamic settings
-may use a graceful MariaDB reload. Listener, Galera provider, cluster
+may use a graceful MariaDB reload. Listener, Elera provider, cluster
 identity, or node identity changes require a controlled restart. Unsafe
 bootstrap changes require explicit confirmation. Failed rendering or
 validation leaves the last known-good active configuration untouched.
@@ -116,7 +116,7 @@ backup:read backup:create backup:restore
 ```
 
 `primary` and `balanced` are routing policies, not permissions. Both may
-accept writes in a Galera cluster.
+accept writes in a Elera cluster.
 
 ## Response envelope
 
@@ -208,7 +208,7 @@ policy decision, not a topology-discovery API for the client.
 }
 ```
 
-`galera-lib` sends writes only to ordered writer candidates and may use reader
+`elera-lib` sends writes only to ordered writer candidates and may use reader
 entries for reads. It may use unexpired entries for pool balancing and
 connection-level failover, but it must not invent a new writer assignment. It
 should refresh when the bundle is stale, expired, or all candidates fail. It
@@ -332,7 +332,7 @@ POST /api/v1/internal/observations
 ```
 
 Observations include the observer, subject node, sequence, timestamp,
-readiness, Galera state, eligibility, and weight. Observations expire and must
+readiness, Elera state, eligibility, and weight. Observations expire and must
 not override local safety checks.
 
 ## Restore contract
@@ -353,7 +353,7 @@ the normal path.
 9. Verify application access
 ```
 
-Large dump streams remain local to `galera-cli`; they do not pass through the
+Large dump streams remain local to `elera-cli`; they do not pass through the
 supervisor API as JSON.
 
 ## Operation contract
@@ -383,13 +383,13 @@ POST /api/v1/operations/{operationId}/cancel
 
 ```text
 1. Contract schemas and shared validation
-2. galera-lib static primary/balanced client
+2. elera-lib static primary/balanced client
 3. Supervisor metadata initialization
 4. Database/account/identity provisioning
-5. galera-cli provisioning commands
+5. elera-cli provisioning commands
 6. Scoped token management
 7. Credential leases and connection bundles
-8. galera-lib bundle refresh and local failover
+8. elera-lib bundle refresh and local failover
 9. Encrypted artifacts and reconciliation
 10. Metadata-first restore
 11. Supervisor synchronization

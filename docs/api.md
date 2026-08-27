@@ -1,8 +1,8 @@
-# Galera Supervisor API Checklist
+# Elera Supervisor API Checklist
 
-The supervisor API is the control plane for `galera-lib`, `galera-cli`, GitOps,
+The supervisor API is the control plane for `elera-lib`, `elera-cli`, GitOps,
 and recovery. HAProxy should proxy supervisor HTTP only. The supervisor makes
-health, topology, eligibility, routing, and credential decisions. `galera-lib`
+health, topology, eligibility, routing, and credential decisions. `elera-lib`
 uses the returned routing bundle to maintain direct SQL connections.
 
 `ROOT_TOKEN` is reserved for first boot, bootstrap, metadata initialization,
@@ -14,10 +14,10 @@ metadata. The age private key is never stored in MariaDB.
 ## GitOps supervisor configuration
 
 GitOps owns the supervisor's desired configuration, not hand-authored
-MariaDB/Galera files. Kubernetes should provide a supervisor ConfigMap for
+MariaDB/Elera files. Kubernetes should provide a supervisor ConfigMap for
 non-secret intent and a separate Secret for tokens, passwords, TLS material,
 and other sensitive inputs. The supervisor validates that intent and renders
-the standardized MariaDB and Galera configuration files locally.
+the standardized MariaDB and Elera configuration files locally.
 
 - [ ] `GET /api/v1/config/desired` — inspect accepted non-secret desired configuration.
 - [ ] `GET /api/v1/config/effective` — inspect rendered and active configuration hashes.
@@ -67,7 +67,7 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [ ] `POST /api/v1/metadata/initialize` — create or migrate the metadata schema.
 - [ ] `POST /api/v1/metadata/verify` — verify metadata integrity and replication.
 
-## Galera lifecycle
+## Elera lifecycle
 
 - [x] `GET /api/v1/cluster/bootstrap/eligibility` — explain bootstrap safety.
 - [x] `POST /api/v1/cluster/bootstrap/plan` — preview bootstrap checks.
@@ -93,7 +93,7 @@ Observations must expire. A stale observation cannot keep a node eligible.
 Bundles contain the database, identity, usable credentials, direct node
 addresses on port `3306`, ordered writer and reader candidates, weights, a
 version, refresh time, and expiry. The supervisor quorum assigns one logical
-writer per application. `galera-lib` sends writes to that writer list and may
+writer per application. `elera-lib` sends writes to that writer list and may
 use permitted reader entries for reads. The WebSocket carries routing changes,
 drain/recovery events, credential rotation notices, and heartbeats—not SQL.
 REST bundle refresh remains the correctness fallback when the stream is down.
@@ -183,7 +183,7 @@ durably.
 
 Recovery order is metadata, encrypted artifacts, databases, accounts, grants,
 connectivity verification, application schemas/data, and application
-verification. `galera-cli` continues to stream dumps through native
+verification. `elera-cli` continues to stream dumps through native
 `mariadb-dump` and `mariadb` processes; dump contents do not pass through JSON.
 
 ## Maintenance
@@ -195,7 +195,7 @@ verification. `galera-cli` continues to stream dumps through native
 - [ ] `POST /api/v1/maintenance/stop` — exit maintenance safely.
 
 Graceful shutdown allows active queries and transactions to complete, rejects
-new SQL work, publishes routing changes so `galera-lib` immediately selects
+new SQL work, publishes routing changes so `elera-lib` immediately selects
 the next writer or reader candidate, then closes pools and stops MariaDB.
 
 ## Operations
@@ -214,6 +214,6 @@ passwords, bearer tokens, age private keys, or plaintext artifacts.
 - [ ] Configure VyOS HAProxy as HTTP-only supervisor load balancer.
 - [ ] Remove VyOS `agent-check` configuration.
 - [ ] Remove TCP listeners `33060` and `33070` from the supervisor.
-- [ ] Remove `galera-check.exe` from VyOS.
-- [ ] Remove VyOS Galera checker systemd units and installer.
+- [ ] Remove `elera-check.exe` from VyOS.
+- [ ] Remove VyOS Elera checker systemd units and installer.
 - [ ] Remove VyOS checker environment and post-commit rewrite logic.

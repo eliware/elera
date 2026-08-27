@@ -4,13 +4,13 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y openssh-client mariadb-client age \
     && rm -rf /var/lib/apt/lists/*
 
-COPY galera-lib /workspace/galera-lib
-COPY galera-cli /workspace/galera-cli
-RUN cd /workspace/galera-lib && npm ci \
-    && cd /workspace/galera-cli && npm ci
+COPY elera-lib /workspace/elera-lib
+COPY elera-cli /workspace/elera-cli
+RUN cd /workspace/elera-lib && npm ci \
+    && cd /workspace/elera-cli && npm ci
 
-COPY galera/docker/backup-dev-entrypoint.sh /usr/local/bin/backup-dev-entrypoint.sh
+COPY elera/docker/backup-dev-entrypoint.sh /usr/local/bin/backup-dev-entrypoint.sh
 RUN chmod 0755 /usr/local/bin/backup-dev-entrypoint.sh
 
-WORKDIR /workspace/galera-cli
+WORKDIR /workspace/elera-cli
 ENTRYPOINT ["/usr/local/bin/backup-dev-entrypoint.sh"]
