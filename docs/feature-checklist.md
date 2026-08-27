@@ -88,6 +88,11 @@ standalone first boot, generic library primitives, CLI workflows, and their
 verification gates are implemented and tested. Elera cluster formation and
 metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
+Post-rebrand certification evidence: the Elera supervisor workflow passed on
+both Ubuntu and Windows in run 33036380785; the Elera CLI entrypoint correction
+passed on both platforms in run 33036858246; and the Elera library rebrand
+workflow passed on both platforms in run 33036762276.
+
 ## Sprint 3 — `elera_meta` metadata foundation
 
 ### `elera-lib`
