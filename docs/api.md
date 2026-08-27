@@ -169,9 +169,9 @@ durably.
 
 ## Reconciliation
 
-- [ ] `POST /api/v1/reconcile/plan` — compare desired metadata with MariaDB.
-- [ ] `POST /api/v1/reconcile/apply` — reconcile databases, accounts, and grants.
-- [ ] `POST /api/v1/reconcile/verify` — report drift without changing state.
+- [x] `POST /api/v1/reconcile/plan` — compare desired managed databases and identities with MariaDB.
+- [x] `POST /api/v1/reconcile/apply` — apply confirmed managed database and identity additions.
+- [x] `POST /api/v1/reconcile/verify` — report metadata drift without changing state.
 
 ## Backup and restore coordination
 

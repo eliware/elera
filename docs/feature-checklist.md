@@ -224,12 +224,12 @@ same bundle version through a supervisor endpoint.
 
 ### Supervisor
 
-- [ ] Add reconcile plan/apply/verify operations for metadata, accounts, grants, and routes.
+- [x] Add metadata reconcile plan/apply/verify operations for managed databases and identities; account/grant and route convergence remain follow-up work.
 - [ ] Restore `elera_meta` and logical account state independently of system schemas.
 
 ### CLI and interoperability
 
-- [ ] Implement reconcile and restore plan/apply/verify commands.
+- [x] Implement CLI reconcile plan/apply/verify commands.
 - [ ] Continue using native `mariadb-dump` and `mariadb` streams.
 - [ ] Complete metadata-first restore in Docker Desktop without raw system-schema files.
 
