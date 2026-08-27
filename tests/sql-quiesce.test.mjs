@@ -1,3 +1,4 @@
+import { expect, jest, test } from '@jest/globals';
 import { createDrainManager } from '../src/lifecycle/drain-manager.mjs';
 import { createSqlQuiesce } from '../src/lifecycle/sql-quiesce.mjs';
 
