@@ -1,0 +1,13 @@
+import { describe, expect, test } from '@jest/globals';
+import { mkdtemp, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import fixture from '../contracts/supervisor-intent.fixture.json' with { type: 'json' };
+import { renderMariaDbConfig } from '../src/intent/render.mjs';
+import { createIntentState } from '../src/intent/state.mjs';
+
+describe('intent rendering and state', () => {
+  test('renders standalone and Galera configuration', () => { expect(renderMariaDbConfig(fixture)).toContain('port=3306'); const cluster = structuredClone(fixture); cluster.cluster.members.push({ name: 'galera-2', address: 'galera-2' }); expect(renderMariaDbConfig(cluster)).toContain('wsrep_on=ON'); });
+  test('applies atomically and verifies active state', async () => { const dir = await mkdtemp(join(tmpdir(), 'galera-intent-')); const state = createIntentState({ stateDir: dir }); expect((await state.plan(fixture)).change).toBe('restart'); await state.apply(fixture); expect((await state.verify(fixture)).ok).toBe(true); const changed = structuredClone(fixture); changed.mariadb.port = 3307; expect((await state.plan(changed)).change).toBe('reload'); await state.apply(changed); expect(await readFile(state.paths.previousPath, 'utf8')).toContain('3306'); });
+  test('requires a state directory', () => { expect(() => createIntentState({})).toThrow('stateDir'); });
+});
