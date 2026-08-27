@@ -61,6 +61,7 @@ const health = createHealthService({
   },
   timeoutMs: config.timeoutMs,
   elera: config.elera,
+  clusterSize: config.clusterSize,
   log,
 });
 const intentState = createIntentState({
