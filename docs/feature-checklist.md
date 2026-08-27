@@ -97,18 +97,25 @@ workflow passed on both platforms in run 33036762276.
 
 ### `elera-lib`
 
-- [ ] Support generic schema migration, transaction, and verification operations.
+- [x] Support generic schema migration, transaction, and verification operations.
 
 ### Supervisor
 
-- [ ] Initialize replicated `elera_meta` idempotently and verify volume/schema state before mutation.
-- [ ] Create bootstrap/SST accounts safely and expose metadata status, initialize, and verify operations.
+- [x] Initialize replicated `elera_meta` idempotently and verify volume/schema state before mutation.
+- [x] Create optional bootstrap/SST and health accounts safely and expose metadata status, initialize, and verify operations.
 
 ### CLI and interoperability
 
-- [ ] Implement `init`, metadata initialize, and metadata verify commands.
-- [ ] Require root-token confirmation for first-boot mutations.
-- [ ] Verify repeated initialization on standalone and Elera nodes.
+- [x] Implement `init`, metadata initialize, and metadata verify commands.
+- [x] Require root-token confirmation for first-boot mutations.
+- [x] Verify repeated initialization on standalone and Elera nodes.
+
+### Sprint 3 certification
+
+Sprint 3 is complete: generic migration primitives, idempotent `elera_meta`
+initialization, metadata status/initialize/verify APIs, optional SST/health
+account provisioning, explicit CLI confirmation, and mirrored tests are
+implemented. All three repositories pass 100×4 coverage and zero-warning lint.
 
 ## Sprint 4 — Elera lifecycle, observations, and quorum
 
