@@ -1,4 +1,3 @@
-/* istanbul ignore file -- HTTP composition boundary is covered by endpoint contract tests. */
 import { connectionBundleFromConfig } from './connection-bundle.mjs';
 import { validateCredentialLeaseRequest } from './routing-policy.mjs';
 import { json, readBody } from './api/http.mjs';

@@ -11,4 +11,3 @@ export async function handleClusterRoute({ method, path, request, response, url,
   if (method === 'POST' && path === '/api/v1/cluster/lifecycle/apply') { const body = await readBody(request); if (!lifecycle) throw Object.assign(new Error('lifecycle manager is unavailable'), { statusCode: 503 }); const data = await lifecycle.execute(body.action, body); response.json(202, { ok: true, operation: `cluster.${body.action}.apply`, ...data }); return true; }
   return false;
 }
-/* istanbul ignore file -- timing/process route adapter is covered by API and live tests. */

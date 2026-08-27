@@ -1,4 +1,3 @@
-/* istanbul ignore file -- routing event composition is covered by API and lab contracts. */
 import { calculateRoutes } from './decision.mjs';
 import { evaluateQuorum } from '../cluster/quorum.mjs';
 
@@ -15,7 +14,7 @@ export function createRoutingEventSnapshot({ observationStore, environment = pro
     if (routes.balanced.length) lastHealthy = { application, routes, at: now() };
     const drainState = observations.filter((item) => item.drain).map((item) => item.nodeId).sort();
     const nextFingerprint = JSON.stringify({ application, routes: selectedRoutes, drainState });
-    if (nextFingerprint !== fingerprint) { fingerprint = nextFingerprint; version += 1; event = { type: 'routing.update', version, bundleVersion: selectedRoutes.bundleVersion ?? String(version), application, routes: selectedRoutes, generatedAt: new Date(now()).toISOString() }; }
+    if (nextFingerprint !== fingerprint) { fingerprint = nextFingerprint; version += 1; event = { type: 'routing.update', version, bundleVersion: selectedRoutes.bundleVersion, application, routes: selectedRoutes, generatedAt: new Date(now()).toISOString() }; }
     return event;
   };
 }

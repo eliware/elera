@@ -1,4 +1,3 @@
-/* istanbul ignore file -- health-to-observation adapter is covered by route and lab contracts. */
 import { createObservation } from '../cluster/observation.mjs';
 
 export async function refreshLocalObservation({ observationStore, getStatus, environment = process.env, now = Date.now } = {}) {

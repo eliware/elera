@@ -1,7 +1,6 @@
-/* istanbul ignore file -- in-memory delivery orchestration is covered by focused contract tests. */
 import { log as defaultLog } from '@eliware/common';
 
-export function createRoutingEventBus({ heartbeatMs = 45000, log = defaultLog } = {}) {
+export function createRoutingEventBus({ heartbeatMs = 45000, log = defaultLog, setIntervalImpl = setInterval } = {}) {
   const clients = new Set();
   let last = null;
   function publish(event) {
@@ -17,7 +16,7 @@ export function createRoutingEventBus({ heartbeatMs = 45000, log = defaultLog } 
     if (last && (!filter || filter(last))) client.send(last);
     return () => clients.delete(client);
   }
-  const heartbeat = setInterval(() => {
+  const heartbeat = setIntervalImpl(() => {
     for (const client of clients) { try { client.ping?.(); } catch { clients.delete(client); } }
   }, heartbeatMs);
   heartbeat.unref?.();

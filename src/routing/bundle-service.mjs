@@ -1,4 +1,3 @@
-/* istanbul ignore file -- orchestration cache is exercised through API and lab contract tests. */
 import { connectionBundleFromConfig } from '../connection-bundle.mjs';
 import { calculateRoutes } from './decision.mjs';
 import { evaluateQuorum } from '../cluster/quorum.mjs';

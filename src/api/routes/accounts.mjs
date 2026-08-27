@@ -1,4 +1,3 @@
-/* istanbul ignore file -- route adapter is covered by API and live contract tests. */
 import { accountName, literal } from '../../accounts/sql.mjs';
 import { createManagedAccounts } from '../../accounts/managed.mjs';
 import { json, readBody } from '../http.mjs';

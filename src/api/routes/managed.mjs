@@ -1,4 +1,3 @@
-/* istanbul ignore file -- HTTP adapter paths are covered by API integration tests. */
 import { readBody } from '../http.mjs';
 
 const allowed = (auth, scope) => auth?.root || auth?.scopes?.includes(scope);

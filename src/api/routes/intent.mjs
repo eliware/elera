@@ -1,4 +1,3 @@
-/* istanbul ignore file -- HTTP adapter is exercised by control API integration tests. */
 import { intentHash, loadIntent, planIntent } from '../../intent/model.mjs';
 import { readBody } from '../http.mjs';
 

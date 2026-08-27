@@ -21,4 +21,3 @@ export function createEleraBootstrap({ processController, args, health, timeoutM
     } finally { setBusy(false); }
   };
 }
-/* istanbul ignore file -- startup timing/process adapter is covered by lifecycle and live tests. */

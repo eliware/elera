@@ -8,4 +8,3 @@ export async function handleStatusRoute({ method, path, response, getStatus, get
   }
   return false;
 }
-/* istanbul ignore file -- API adapter is covered by endpoint contract tests. */

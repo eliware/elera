@@ -1,4 +1,3 @@
-/* istanbul ignore file -- pure contract adapter is covered through API tests. */
 const routes = ['primary', 'balanced'];
 
 export function validateConnectionBundle(bundle) {

@@ -13,6 +13,17 @@ test('manages databases, identities, and scoped tokens without exposing policy S
   await managed.issueToken({ tokenName: 'global-token' });
 });
 
+test('normalizes array and serialized grants when listing identities', async () => {
+  const managed = createManagedMetadata({ query: async () => [[
+    { name: 'array-grants', application: 'payments', grants_json: ['SELECT'] },
+    { name: 'serialized-grants', application: 'payments', grants_json: '["UPDATE"]' }
+  ]] });
+  expect(await managed.listIdentities()).toEqual([
+    { name: 'array-grants', application: 'payments', grants: ['SELECT'] },
+    { name: 'serialized-grants', application: 'payments', grants: ['UPDATE'] }
+  ]);
+});
+
 test('validates managed names, purposes, and grants', async () => {
   expect(() => createManagedMetadata()).toThrow('query function');
   const managed = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] });
