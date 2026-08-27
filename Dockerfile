@@ -15,7 +15,6 @@ RUN apt-get update \
 
 COPY elera/docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
 COPY elera/package.json elera/package-lock.json /app/
-COPY elera-lib /elera-lib
 RUN cd /app && npm ci --omit=dev
 COPY elera/src /app/src
 RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh

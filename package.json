@@ -18,18 +18,13 @@
   },
   "dependencies": {
     "@eliware/common": "2.0.0",
-    "@eliware/elera-lib": "file:../elera-lib",
+    "@eliware/elera-lib": "0.1.0",
     "ws": "^8.21.3"
   },
   "devDependencies": {
     "@eliware/test": "2.0.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1"
-  },
-  "jest": {
-    "coveragePathIgnorePatterns": [
-      "/elera-lib/"
-    ]
   },
   "allowScripts": {
     "unrs-resolver@1.12.2": true

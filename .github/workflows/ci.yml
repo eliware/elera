@@ -17,21 +17,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/checkout@v6
-        with:
-          repository: eliware/elera-lib
-          ref: main
-          path: elera-lib
       - uses: actions/setup-node@v6
         with:
           node-version: 26.x
           cache: npm
       - run: npm ci
-        working-directory: elera-lib
-      - run: npm pack --pack-destination .
-        working-directory: elera-lib
-      - run: npm pkg set dependencies.@eliware/elera-lib=file:./elera-lib/eliware-elera-lib-0.1.0.tgz
-      - run: npm install --package-lock=false
       - run: npm test
       - run: npm run lint
       - run: npm run check

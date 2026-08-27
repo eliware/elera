@@ -21,12 +21,15 @@ npm run lint
 npm run check
 ```
 
-The production image uses the workspace parent as its Docker build context so
-it can include the sibling `elera-lib` package:
+The production image uses the workspace parent as its Docker build context:
 
 ```bash
 docker build -f elera/Dockerfile -t eliware/elera:local .
 ```
+
+The supervisor and backup workstation consume the published
+`@eliware/elera-lib@0.1.0` package. They do not copy or build a sibling library
+checkout into the image or CI workspace.
 
 The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Elera is
