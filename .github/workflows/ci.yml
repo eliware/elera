@@ -21,12 +21,13 @@ jobs:
         with:
           repository: eliware/galera-lib
           ref: main
-          path: ../galera-lib
+          path: galera-lib
       - uses: actions/setup-node@v4
         with:
           node-version: 26
           cache: npm
-      - run: npm ci
+      - run: npm pkg set dependencies.@eliware/galera-lib=file:./galera-lib
+      - run: npm install --package-lock=false
       - run: npm test
       - run: npm run lint
       - run: npm run check
