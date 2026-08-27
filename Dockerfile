@@ -7,6 +7,7 @@ RUN apt-get update \
     && curl -fsSL https://r.mariadb.com/downloads/mariadb_repo_setup \
        | bash -s -- --mariadb-server-version=12.3.3 --os-type=debian --os-version=bookworm \
     && apt-get update \
+    && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y mariadb-server mariadb-server-galera mariadb-backup galera-4 rsync \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/mysql/* \

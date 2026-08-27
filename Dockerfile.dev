@@ -1,6 +1,6 @@
 FROM node:26-bookworm-slim
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates curl gnupg && curl -fsSL https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version=12.3.3 --os-type=debian --os-version=bookworm && apt-get update && apt-get install --no-install-recommends -y mariadb-server mariadb-server-galera mariadb-backup galera-4 rsync && rm -rf /var/lib/apt/lists/* /var/lib/mysql/* && mkdir -p /run/mysqld /run/elera /var/lib/mysql /etc/elera && chown -R mysql:mysql /run/mysqld /run/elera /var/lib/mysql /etc/elera
+RUN apt-get update && apt-get upgrade -y && apt-get install --no-install-recommends -y ca-certificates curl gnupg && curl -fsSL https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version=12.3.3 --os-type=debian --os-version=bookworm && apt-get update && apt-get upgrade -y && apt-get install --no-install-recommends -y mariadb-server mariadb-server-galera mariadb-backup galera-4 rsync && rm -rf /var/lib/apt/lists/* /var/lib/mysql/* && mkdir -p /run/mysqld /run/elera /var/lib/mysql /etc/elera && chown -R mysql:mysql /run/mysqld /run/elera /var/lib/mysql /etc/elera
 COPY elera/package.json elera/package-lock.json /app/
 RUN cd /app && npm ci --omit=dev
 COPY elera/docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh

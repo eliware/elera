@@ -7,13 +7,15 @@ by that identity:
 
 - `/var/lib/mysql` — persistent MariaDB data;
 - `/run/mysqld` — MariaDB runtime sockets and state;
+- `/tmp` — MariaDB/InnoDB temporary files when the root filesystem is read-only;
 - `/run/elera` — writable supervisor runtime state and generated MariaDB
   configuration.
 - `/etc/elera` — optional static configuration input; ConfigMap mounts may be
   read-only.
 
-The root filesystem can be read-only when `/run/elera` is provided as a writable
-runtime mount. The persistent data directory must be a mounted,
+The root filesystem can be read-only when `/run/elera`, `/run/mysqld`, and
+`/tmp` are provided as writable runtime mounts. The persistent data directory
+must be a mounted,
 dedicated filesystem in production. A missing, read-only, non-directory, empty
 without bootstrap, partially initialized, stale, or otherwise suspicious data
 directory causes startup to fail closed.
@@ -69,8 +71,16 @@ non-secret environment configuration. Runtime passwords are supplied through
 the runtime Secret and are not placed in command-line arguments, ConfigMaps,
 or generated configuration. First initialization consumes the values through
 SQL stdin; they are not intentionally logged or written to temporary files.
+`MARIADB_ROOT_PASSWORD` is required for explicit initialization. The image does
+not claim that secrets are invisible to a privileged process inspecting the
+container environment.
 
 The lab Secret must be distinct from production credentials. The claims above
 describe the intended local image behavior; registry SBOM/scanning and real
 Galera failure evidence remain release/lab evidence items, not image-unit-test
 claims.
+
+The current local image has not cleared vulnerability release review. Docker
+Scout reports unresolved critical/high findings in the Bookworm base and
+installed packages; publication requires a DevOps remediation or documented
+risk-acceptance decision.

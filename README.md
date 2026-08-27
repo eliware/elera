@@ -58,6 +58,12 @@ working backups in its named state volume, and reaches the standalone restore
 target at `elera-single:3306`. The NAS is available as `backup-nas:22` from
 the lab and on host port `2222`.
 
+The lab does not enable Galera bootstrap automatically. For a fresh lab,
+initialize only the designated first node with `ELERA_BOOTSTRAP=true`, verify
+its Primary/Synced state, then return it to `false` before starting the other
+nodes. Existing volumes must never be bootstrapped just because a service
+starts.
+
 Stop the lab without deleting its simulated VM/NAS state with:
 
 ```bash

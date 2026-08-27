@@ -22,6 +22,7 @@ services:
       ELERA_CLUSTER_NAME: local-elera
       ELERA_CLUSTER_SIZE: "3"
       ELERA: "0"
+      ELERA_BOOTSTRAP: "false"
       ELERA_CLUSTER_ADDRESS: gcomm://
       ELERA_NODE_NAME: elera-single
       ELERA_NODE_ADDRESS: elera-single
@@ -51,7 +52,7 @@ services:
       ELERA: "1"
       ELERA_NODE_NAME: elera-0
       ELERA_NODE_ADDRESS: elera-0
-      ELERA_BOOTSTRAP: "true"
+      ELERA_BOOTSTRAP: "false"
       ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3307:3306", "8081:8080"]

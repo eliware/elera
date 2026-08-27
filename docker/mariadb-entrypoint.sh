@@ -7,6 +7,10 @@ data_action="$(node /app/src/lifecycle/data-directory-cli.mjs "$datadir" "$boots
 
 if [ "$data_action" = "initialize" ]; then
   first_boot=true
+  if [ -z "${MARIADB_ROOT_PASSWORD:-}" ]; then
+    echo "MARIADB_ROOT_PASSWORD is required for explicit initialization" >&2
+    exit 1
+  fi
   mariadb-install-db --user=mysql --datadir="$datadir" --skip-test-db --auth-root-authentication-method=normal
 
   init_socket=/run/mysqld/init.sock
