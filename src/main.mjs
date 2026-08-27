@@ -26,6 +26,7 @@ import { createRoutingEventBus } from "./routing/event-bus.mjs";
 import { createRoutingEventSnapshot } from "./routing/event-snapshot.mjs";
 import { createRoutingStream } from "./api/routing-stream.mjs";
 import { createDrainManager } from "./lifecycle/drain-manager.mjs";
+import { createSqlDrainIntegration } from "./lifecycle/sql-routing.mjs";
 
 const config = loadSupervisorConfig();
 // Supervisor control-plane SQL uses the bootstrap root credential; application credentials
@@ -34,6 +35,7 @@ const dbEnv = {
   ...process.env,
   MYSQL_HOST: "127.0.0.1",
   MYSQL_PORT: "3306",
+  MYSQL_SOCKET: "/run/mysqld/mysqld.sock",
   MYSQL_USER: "root",
   MYSQL_PASSWORD: process.env.MARIADB_ROOT_PASSWORD ?? "",
   MYSQL_DATABASE: process.env.MARIADB_DATABASE ?? "mysql",
@@ -104,9 +106,15 @@ const routingStream = createRoutingStream({
   bus: routingBus,
   log,
 });
+const updateLocalSqlRoute = createSqlDrainIntegration({
+  getClient: () => db,
+  node: process.env.ELERA_NODE_NAME ?? "elera",
+  log,
+});
 const drain = createDrainManager({
   onChange: (value) => {
     drained = value;
+    updateLocalSqlRoute(value);
     log.info(value ? "Traffic drained" : "Traffic undrained");
     routingBus.publish({
       type: value ? "routing.drain" : "routing.recovery",

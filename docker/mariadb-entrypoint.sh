@@ -3,6 +3,9 @@ set -eu
 
 datadir="${MARIADB_DATA_DIR:-/var/lib/mysql}"
 bootstrap="${ELERA_BOOTSTRAP:-false}"
+if [ "${ELERA_PENDING_INIT:-false}" = "true" ] && [ ! -e "$datadir/mysql" ] && [ -z "$(find "$datadir" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+  exec node /app/src/lifecycle/pending-init-cli.mjs
+fi
 data_action="$(node /app/src/lifecycle/data-directory-cli.mjs "$datadir" "$bootstrap")"
 
 if [ "$data_action" = "initialize" ]; then

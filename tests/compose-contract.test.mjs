@@ -6,3 +6,8 @@ test("Compose lab disables implicit bootstrap for every Elera service", async ()
   expect((compose.match(/ELERA_BOOTSTRAP: "false"/g) ?? []).length).toBe(4);
   expect(compose).not.toContain('ELERA_BOOTSTRAP: "true"');
 });
+
+test("Compose cluster keeps all members available for explicit initialization", async () => {
+  const compose = await readFile(new URL("../compose.yaml", import.meta.url), "utf8");
+  expect((compose.match(/ELERA_PENDING_INIT: "true"/g) ?? []).length).toBe(3);
+});
