@@ -1,6 +1,6 @@
 {
     "name": "@eliware/elera",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "private": true,
     "description": "Non-root MariaDB and Galera container supervisor with health, readiness, routing, and cluster control APIs",
     "keywords": [
