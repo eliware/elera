@@ -45,8 +45,17 @@ and the local readiness policy is satisfied; otherwise it returns `503`.
   from peer absence or readiness failure.
 - Recovery: explicit operator-controlled workflow only, with quorum/authority
   checks performed by the supervisor.
-- Shutdown: SIGTERM drains admission, lets active work complete within the
-  configured timeout, then sends SIGTERM to MariaDB and exits.
+- Shutdown lifecycle: the supervisor transitions through serving, draining,
+  stopping, and stopped. On SIGTERM it marks readiness failed, removes itself
+  from locally issued routes, broadcasts routing.drain, and lets
+  supervisor-managed work settle before stopping MariaDB.
+- The supervisor is not inline with direct application SQL connections.
+  elera-lib must honor the drain event, stop assigning new work to the node,
+  allow active operations to finish, and force-close remaining client
+  connections at its configured drain deadline.
+- MariaDB then receives SIGTERM and is allowed up to the configured shutdown
+  timeout to exit normally. If it remains alive, the supervisor sends SIGKILL.
+  This is separate from the client-library drain deadline.
 
 `ELERA_CONFIG_STATE_DIR` overrides the default runtime directory `/run/elera`.
 The supervisor writes `active.intent.json`, `last-known-good.intent.json`, and

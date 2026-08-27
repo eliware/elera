@@ -3,7 +3,7 @@ export function loadSupervisorConfig(environment = process.env) {
   return Object.freeze({
     httpPort: number('ELERA_HTTP_PORT', 8080),
     clusterSize: number('ELERA_CLUSTER_SIZE', 1),
-    timeoutMs: Number(environment.ELERA_QUERY_TIMEOUT_MS ?? 5000), shutdownTimeoutMs: Number(environment.ELERA_SHUTDOWN_TIMEOUT_MS ?? 30000), startupTimeoutMs: Number(environment.ELERA_STARTUP_TIMEOUT_MS ?? 30000), dataDir: environment.MARIADB_DATA_DIR ?? '/var/lib/mysql', elera: environment.ELERA === '1',
+    timeoutMs: Number(environment.ELERA_QUERY_TIMEOUT_MS ?? 5000), drainTimeoutMs: Number(environment.ELERA_DRAIN_TIMEOUT_MS ?? 45000), shutdownTimeoutMs: Number(environment.ELERA_SHUTDOWN_TIMEOUT_MS ?? 60000), startupTimeoutMs: Number(environment.ELERA_STARTUP_TIMEOUT_MS ?? 30000), dataDir: environment.MARIADB_DATA_DIR ?? '/var/lib/mysql', elera: environment.ELERA === '1',
     environment,
   });
 }

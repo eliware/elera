@@ -29,6 +29,9 @@ import { createDrainManager } from "./lifecycle/drain-manager.mjs";
 import { createSqlQuiesce } from "./lifecycle/sql-quiesce.mjs";
 import { createSqlDrainIntegration } from "./lifecycle/sql-routing.mjs";
 import { createDrainPropagation } from "./cluster/drain-propagation.mjs";
+import { createLifecycleState } from "./lifecycle/state.mjs";
+import { createShutdown } from "./lifecycle/shutdown.mjs";
+import { createDrainEventPublisher } from "./lifecycle/drain-events.mjs";
 
 const config = loadSupervisorConfig();
 // Supervisor control-plane SQL uses the bootstrap root credential; application credentials
@@ -46,6 +49,7 @@ let db;
 let drained = false;
 let shuttingDown = false;
 let restarting = false;
+const lifecycle = createLifecycleState({ initial: "serving", onChange: (state) => log.info("Supervisor lifecycle changed", { state }) });
 let bootstrapMaria;
 let peerTimer;
 let routingTimer;
@@ -101,8 +105,10 @@ const routingBundles = createRoutingBundleService({
 const routingEvent = createRoutingEventSnapshot({
   observationStore,
   environment: process.env,
+  getDrained: () => drained,
 });
 const routingBus = createRoutingEventBus({ log });
+const publishDrainEvent = createDrainEventPublisher({ bus: routingBus, node: process.env.ELERA_NODE_NAME ?? "elera", getReady: () => health.status(), log });
 const routingStream = createRoutingStream({
   token: process.env.ROOT_TOKEN,
   getEvent: routingEvent,
@@ -119,15 +125,10 @@ const drain = createDrainManager({
     drained = value;
     updateLocalSqlRoute(value);
     log.info(value ? "Traffic drained" : "Traffic undrained");
-    routingBus.publish({
-      type: value ? "routing.drain" : "routing.recovery",
-      version: Date.now(),
-      node: process.env.ELERA_NODE_NAME ?? "elera",
-      generatedAt: new Date().toISOString(),
-    });
+    void publishDrainEvent(value);
   },
 });
-const sqlQuiesce = createSqlQuiesce({ drain, timeoutMs: config.shutdownTimeoutMs });
+const sqlQuiesce = createSqlQuiesce({ drain, timeoutMs: config.drainTimeoutMs });
 const clusterDrain = createDrainPropagation({
   drain,
   peers: (process.env.ELERA_PEERS ?? "").split(","),
@@ -155,6 +156,7 @@ const control = createControlApi({
   getStatus: () => health.status(),
   getTraffic: () => ({
     drained: drain.isDraining(),
+    lifecycle: lifecycle.get(),
     active: drain.active(),
     ...health.cacheInfo(),
   }),
@@ -182,26 +184,21 @@ async function closeServer(server) {
   if (server.listening) await new Promise((resolve) => server.close(resolve));
 }
 let mariaProcess;
-async function shutdown(signal) {
-  if (shuttingDown) {
-    log.warn("Shutdown already in progress", { signal });
-    return;
-  }
-  shuttingDown = true;
-  log.info("Supervisor shutting down", { signal });
-  await sqlQuiesce.begin();
-  if (peerTimer) clearInterval(peerTimer);
-  if (routingTimer) clearInterval(routingTimer);
-  routingBus.close();
-  routingStream.close();
-  await drain.wait(config.timeoutMs);
-  await Promise.all(servers.map(closeServer));
-  await mariaProcess?.stop(config.timeoutMs);
-  await db
-    ?.close?.()
-    .catch((error) => log.error("Database pool close failed", { error }));
-  errors.removeHandlers();
-}
+const shutdown = createShutdown({
+  lifecycle,
+  sqlQuiesce,
+  drain,
+  getTimers: () => [peerTimer, routingTimer],
+  routingBus,
+  routingStream,
+  servers,
+  closeServer,
+  getMariaProcess: () => mariaProcess,
+  getDb: () => db,
+  shutdownTimeoutMs: config.shutdownTimeoutMs,
+  errors,
+  log,
+});
 const signals = registerSignals({ log, shutdownHook: shutdown, exitCode: 0 });
 
 async function main() {
