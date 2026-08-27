@@ -252,6 +252,7 @@ async function main() {
     args,
     health,
     timeoutMs: config.timeoutMs,
+    dataDir: config.dataDir,
     log,
     isBusy: () => restarting,
     setBusy: (value) => {
