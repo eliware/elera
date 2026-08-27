@@ -37,7 +37,7 @@ The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Elera is
 enabled with `ELERA=1`.
 
-This `0.1.0` release is a development and Docker-lab baseline. Production
+This `0.1.2` release is a development and Docker-lab baseline. Production
 deployment still requires the Kubernetes manifests, NetworkPolicies, secret
 delivery, and operational acceptance checks described in the feature
 checklist.
@@ -77,4 +77,8 @@ state. Control API operations use `ROOT_TOKEN` during the current lab phase.
 The container runs as the image's non-root `mysql` user. Its image-owned
 runtime directories are prepared during the build; Kubernetes supplies group
 ownership for the persistent data volume with `fsGroup`.
+
+See [the runtime contract](docs/runtime-contract.md) and [release evidence](docs/release-evidence-0.1.2.md)
+for the startup safety rules, filesystem requirements, and release-evidence
+status.
 

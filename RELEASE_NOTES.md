@@ -1,5 +1,26 @@
 # Release notes
 
+## 0.1.2 — fail-closed data-directory hardening
+
+Patch release focused on preventing accidental MariaDB initialization or
+mutation of persistent data during ordinary startup.
+
+### Security and runtime
+
+- Reject missing, non-directory, non-writable, empty, partially initialized,
+  stale, or suspicious data directories before MariaDB starts.
+- Permit `mariadb-install-db` only for an explicitly requested bootstrap on a
+  genuinely empty directory.
+- Reject bootstrap mode when an existing MariaDB system database is present.
+- Avoid modifying existing data directories during ordinary restart or rejoin.
+- Add focused regression coverage for all data-directory decisions.
+- Document the runtime contract, release evidence requirements, known
+  limitations, and rollback procedure.
+
+This release still requires DevOps SBOM, vulnerability, signing, independent
+digest verification, and real Galera failure-test evidence before production
+approval.
+
 ## 0.1.1 — non-root container hardening
 
 Patch release focused on reducing container privileges while preserving the

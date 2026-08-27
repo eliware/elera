@@ -2,9 +2,10 @@
 set -eu
 
 datadir="${MARIADB_DATA_DIR:-/var/lib/mysql}"
-mkdir -p "$datadir"
+bootstrap="${ELERA_BOOTSTRAP:-false}"
+data_action="$(node /app/src/lifecycle/data-directory-cli.mjs "$datadir" "$bootstrap")"
 
-if [ ! -d "$datadir/mysql" ]; then
+if [ "$data_action" = "initialize" ]; then
   first_boot=true
   mariadb-install-db --user=mysql --datadir="$datadir" --skip-test-db --auth-root-authentication-method=normal
 
@@ -31,11 +32,15 @@ SQL
   trap - EXIT
 fi
 
+if [ "$data_action" = "fail" ]; then
+  echo "MariaDB data-directory validation failed" >&2
+  exit 1
+fi
+
 # Bootstrap is a first-start concern. Once this datadir has been initialized,
 # never force --wsrep-new-cluster during a normal restart or rejoin.
-if [ "${ELERA_BOOTSTRAP:-false}" = "true" ] && [ "${first_boot:-false}" != "true" ] && [ -f "$datadir/.elera-supervisor-initialized" ]; then
-  export ELERA_BOOTSTRAP=false
+if [ "${first_boot:-false}" = "true" ]; then
+  touch "$datadir/.elera-supervisor-initialized"
 fi
-touch "$datadir/.elera-supervisor-initialized"
 
 exec node /app/src/main.mjs

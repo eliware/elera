@@ -1,0 +1,68 @@
+# Elera image runtime contract
+
+## Identity and filesystem
+
+The image runs as UID `100`, GID `101` (`mysql`). These paths must be writable
+by that identity:
+
+- `/var/lib/mysql` — persistent MariaDB data;
+- `/run/mysqld` — MariaDB runtime sockets and state;
+- `/etc/elera` — generated supervisor configuration.
+
+The root filesystem is currently not read-only because `/etc/elera` is
+generated at startup. The persistent data directory must be a mounted,
+dedicated filesystem in production. A missing, read-only, non-directory, empty
+without bootstrap, partially initialized, stale, or otherwise suspicious data
+directory causes startup to fail closed.
+
+## Ports and probes
+
+- `3306`: MariaDB client traffic.
+- `4444`: Galera SST.
+- `4567`: Galera replication.
+- `4568`: Galera IST.
+- `8080`: supervisor HTTP API and probes.
+
+`/healthz` is a liveness endpoint and returns `200 ok` while the supervisor
+process is alive. `/readyz` returns `200` only when MariaDB is accepting work
+and the local readiness policy is satisfied; otherwise it returns `503`.
+
+## Startup and lifecycle
+
+- First initialization: allowed only when `ELERA_BOOTSTRAP=true` and the data
+  directory is genuinely empty and writable.
+- Ordinary restart: an initialized directory starts normally; no system-table
+  initialization occurs.
+- Rejoin: a valid existing Galera directory starts without
+  `--wsrep-new-cluster`. Startup does not touch or add marker files to that
+  existing directory.
+- Bootstrap: explicit operator-controlled workflow only; it is never inferred
+  from peer absence or readiness failure.
+- Recovery: explicit operator-controlled workflow only, with quorum/authority
+  checks performed by the supervisor.
+- Shutdown: SIGTERM drains admission, lets active work complete within the
+  configured timeout, then sends SIGTERM to MariaDB and exits.
+
+`ELERA_BOOTSTRAP=false` never runs `mariadb-install-db`, erases data, or
+reinitializes a directory. A non-empty directory without the MariaDB `mysql`
+system database is rejected. `ELERA_BOOTSTRAP=true` is also rejected when the
+directory is already initialized; it is valid only for explicit first
+initialization of an empty directory. The entrypoint does not attempt to repair
+stale or corrupted data.
+
+Failed SST/IST, non-Primary state, stale/corrupt data, and insufficient or
+read-only storage result in readiness failure or process failure and require
+operator-controlled recovery. They do not trigger automatic cluster bootstrap.
+
+## Configuration and secrets
+
+MariaDB/Galera configuration is generated from the supervisor intent and
+non-secret environment configuration. Runtime passwords are supplied through
+the runtime Secret and are not placed in command-line arguments, ConfigMaps,
+or generated configuration. First initialization consumes the values through
+SQL stdin; they are not intentionally logged or written to temporary files.
+
+The lab Secret must be distinct from production credentials. The claims above
+describe the intended local image behavior; registry SBOM/scanning and real
+Galera failure evidence remain release/lab evidence items, not image-unit-test
+claims.
