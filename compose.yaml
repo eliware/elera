@@ -90,6 +90,25 @@ services:
     depends_on: [galera-1]
     healthcheck: *probe
 
+  haproxy:
+    profiles: [cluster]
+    image: haproxy:3.0-alpine
+    depends_on:
+      galera-1:
+        condition: service_started
+      galera-2:
+        condition: service_started
+      galera-3:
+        condition: service_started
+    ports: ["8088:8080"]
+    volumes:
+      - ./docker/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/readyz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
 volumes:
   galera-single-data:
   galera-1-data:
