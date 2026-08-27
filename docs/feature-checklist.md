@@ -213,7 +213,7 @@ same bundle version through a supervisor endpoint.
 ### CLI and interoperability
 
 - [x] Keep REST for management/recovery and add node/application drain commands.
-- [ ] Verify approximately one-second updates, WebSocket loss fallback, and rolling drains.
+- [x] Verify approximately one-second updates, WebSocket loss fallback, and rolling drains.
 
 ## Sprint 8 — Reconciliation and metadata-first restore
 
