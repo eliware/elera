@@ -193,15 +193,17 @@ policy decision, not a topology-discovery API for the client.
     "username": "billing_runtime",
     "password": "short-lived-secret"
   },
-  "writer": [
+  "routes": {
+    "primary": [
     { "host": "sql0.internal", "port": 3306, "weight": 100 },
     { "host": "sql1.internal", "port": 3306, "weight": 80 }
   ],
-  "readers": [
+    "balanced": [
       { "host": "sql0.internal", "port": 3306, "weight": 100 },
       { "host": "sql1.internal", "port": 3306, "weight": 80 },
       { "host": "sql2.internal", "port": 3306, "weight": 60 }
-  ],
+    ]
+  },
   "bundleVersion": 42,
   "refreshAfter": "2026-08-26T20:00:00Z",
   "expiresAt": "2026-08-26T21:00:00Z"
@@ -226,7 +228,7 @@ Request:
 {
   "database": "billing",
   "identity": "billing-runtime",
-  "routes": ["writer", "readers"]
+  "routes": ["primary", "balanced"]
 }
 ```
 

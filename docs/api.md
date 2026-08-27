@@ -109,25 +109,25 @@ slow client polling.
 ## Scoped tokens
 
 - [ ] `GET /api/v1/tokens` — list redacted token metadata.
-- [ ] `POST /api/v1/tokens` — create a scoped bearer token.
+- [x] `POST /api/v1/tokens` — create a scoped bearer token.
 - [ ] `GET /api/v1/tokens/{name}` — inspect token metadata and bindings.
 - [ ] `POST /api/v1/tokens/{name}/rotate` — rotate token material.
-- [ ] `POST /api/v1/tokens/{name}/revoke` — revoke a token.
+- [x] `POST /api/v1/tokens/revoke` — revoke a token.
 - [ ] `POST /api/v1/tokens/{name}/bindings` — add resource and scope bindings.
 - [ ] `DELETE /api/v1/tokens/{name}/bindings/{binding}` — remove a token binding.
 
 ## Managed identities
 
-- [ ] `GET /api/v1/identities` — list managed database identities.
-- [ ] `POST /api/v1/identities` — register and provision an identity.
+- [x] `GET /api/v1/identities` — list managed database identities.
+- [x] `POST /api/v1/identities` — register and provision an identity.
 - [ ] `GET /api/v1/identities/{name}` — inspect identity metadata and scopes.
 - [ ] `PATCH /api/v1/identities/{name}` — update identity metadata.
-- [ ] `POST /api/v1/identities/{name}/rotate` — rotate the identity credential.
-- [ ] `POST /api/v1/identities/{name}/revoke` — revoke the identity.
+- [x] `POST /api/v1/identities/rotate` — rotate the identity credential.
+- [x] `POST /api/v1/identities/revoke` — revoke the identity.
 
 ## Databases
 
-- [ ] `GET /api/v1/databases` — list managed application databases.
+- [x] `GET /api/v1/databases` — list managed application databases.
 - [ ] `GET /api/v1/databases/{name}` — inspect database metadata.
 - [ ] `POST /api/v1/databases/plan` — preview database changes.
 - [ ] `POST /api/v1/databases/apply` — create or reconcile databases.
@@ -138,13 +138,13 @@ slow client polling.
 
 - [x] `GET /api/v1/accounts` — list accounts without passwords.
 - [ ] `GET /api/v1/accounts/{name}` — inspect managed account metadata.
-- [ ] `POST /api/v1/accounts` — provision an account and generated credential.
+- [x] `POST /api/v1/accounts/provision` — provision an account and generated credential.
 - [ ] `POST /api/v1/accounts/plan` — preview account changes.
 - [ ] `POST /api/v1/accounts/{name}/rotate` — rotate an account password.
-- [ ] `POST /api/v1/accounts/{name}/revoke` — revoke an account.
+- [x] `POST /api/v1/accounts/revoke` — revoke an account.
 - [ ] `GET /api/v1/accounts/{name}/grants` — list structured grants.
 - [ ] `PUT /api/v1/accounts/{name}/grants` — reconcile structured grants.
-- [ ] `POST /api/v1/accounts/{name}/verify` — verify account and grants.
+- [x] `POST /api/v1/accounts/verify` — verify account and grants.
 - [x] `POST /api/v1/accounts/export` — export logical account SQL.
 - [ ] `POST /api/v1/accounts/import/plan` — preview logical account restoration.
 - [x] `POST /api/v1/accounts/import` — import logical accounts and grants.
