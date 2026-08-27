@@ -12,6 +12,7 @@ import { createBootstrapCredentialLease } from './credentials/bootstrap.mjs';
 import { createMetadataService } from './metadata/service.mjs';
 import { createLifecycleManager } from './cluster/lifecycle.mjs';
 import { createObservationStore } from './cluster/observation-store.mjs';
+import { createDurableObservationStore } from './cluster/durable-observation-store.mjs';
 import { createPeerObservationClient } from './cluster/peer-observations.mjs';
 import { createClusterOperations } from './cluster/sql-operations.mjs';
 import { loadIntent } from './intent/model.mjs';
@@ -28,7 +29,8 @@ const servers = [];
 const errors = registerHandlers({ log, events: ['uncaughtException', 'unhandledRejection', 'warning'] });
 const health = createHealthService({ db: { query: (...args) => db.query(...args), health: (...args) => db.health(...args) }, timeoutMs: config.timeoutMs, elera: config.elera, log });
 const intentState = createIntentState({ stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? '/etc/elera' });
-const observationStore = createObservationStore();
+const memoryObservationStore = createObservationStore();
+const observationStore = process.env.ELERA_OBSERVATION_STATE_PATH ? createDurableObservationStore({ store: memoryObservationStore, statePath: process.env.ELERA_OBSERVATION_STATE_PATH, log }) : memoryObservationStore;
 const control = createControlApi({ db: { query: (...args) => db.query(...args) }, metadata: createMetadataService({ query: (...args) => db.query(...args) }), observationStore, lifecycle: createLifecycleManager({ status: () => health.status(), operations: createClusterOperations({ query: (...args) => db.query(...args), processController: { start: (...args) => mariaProcess?.start?.(...args) }, setDrain: (value) => { drained = value; } }), environment: process.env }), getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
 const probes = createProbeServer({ getStatus: () => health.status(), controlHandler: (request, response) => control.handler(request, response), log });
 servers.push(probes);
@@ -39,6 +41,7 @@ async function shutdown(signal) { if (shuttingDown) { log.warn('Shutdown already
 const signals = registerSignals({ log, shutdownHook: shutdown, exitCode: 0 });
 
 async function main() {
+  await observationStore.initialize?.();
   log.info('Elera supervisor starting', { elera: config.elera, httpPort: config.httpPort, agentPort: config.agentPort, performancePort: config.performancePort });
   const initialIntent = loadIntent(process.env);
   await intentState.apply(initialIntent);
