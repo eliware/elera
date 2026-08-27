@@ -21,7 +21,9 @@
     "@eliware/galera-lib": "file:../galera-lib"
   },
   "devDependencies": {
-    "@eliware/test": "2.0.0"
+    "@eliware/test": "2.0.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
   },
   "allowScripts": {
     "unrs-resolver@1.12.2": true
