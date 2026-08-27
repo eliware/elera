@@ -1,7 +1,7 @@
 /* istanbul ignore file -- HTTP adapter is covered by endpoint and lab contract tests. */
 import { readBody } from '../http.mjs';
 import { calculateRoutes } from '../../routing/decision.mjs';
-import { refreshLocalObservation } from '../../routing/local-observation.mjs';
+import { refreshLocalObservation, refreshPeerObservations } from '../../routing/local-observation.mjs';
 
 const recentRoutes = new Map();
 
@@ -13,6 +13,11 @@ export async function handleRoutingRoute({ method, path, url, request, response,
     const previous = recentRoutes.get(application);
     const seeded = routingEvent?.(application)?.routes;
     let routes = calculated.balanced.length ? calculated : previous && Date.now() - previous.at < 5000 ? previous.routes : seeded?.balanced?.length ? seeded : calculated;
+    if (!routes.balanced.length) {
+      await refreshPeerObservations({ observationStore, environment });
+      const refreshed = calculateRoutes({ application, observations: observationStore?.snapshot?.() ?? [] });
+      if (refreshed.balanced.length) routes = refreshed;
+    }
     if (!routes.balanced.length) {
       const status = await getStatus?.().catch?.(() => undefined);
       if (status?.ready && environment?.ELERA_NODE_ADDRESS) { const node = { host: environment.ELERA_NODE_ADDRESS, port: Number(environment.ELERA_NODE_SQL_PORT ?? 3306), weight: 100 }; routes = { primary: [node], balanced: [node], bundleVersion: `${application}:local` }; }
