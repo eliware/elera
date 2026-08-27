@@ -2,9 +2,15 @@
 import { readBody } from '../http.mjs';
 import { calculateRoutes } from '../../routing/decision.mjs';
 
+const recentRoutes = new Map();
+
 export async function handleRoutingRoute({ method, path, url, request, response, observationStore, routingBundles } = {}) {
   if (path === '/api/v1/routes' && method === 'GET') {
-    const routes = calculateRoutes({ application: url.searchParams.get('application') ?? 'default', observations: observationStore?.snapshot?.() ?? [] });
+    const application = url.searchParams.get('application') ?? 'default';
+    const calculated = calculateRoutes({ application, observations: observationStore?.snapshot?.() ?? [] });
+    const previous = recentRoutes.get(application);
+    const routes = calculated.balanced.length ? calculated : previous && Date.now() - previous.at < 5000 ? previous.routes : calculated;
+    if (calculated.balanced.length) recentRoutes.set(application, { routes: calculated, at: Date.now() });
     response.json(200, { ok: true, operation: 'routes.inspect', data: routes }); return true;
   }
   if (path === '/api/v1/routes/refresh' && method === 'POST') {
