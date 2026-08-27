@@ -7,9 +7,30 @@ uses the returned routing bundle to maintain direct SQL connections.
 
 `ROOT_TOKEN` is reserved for first boot, bootstrap, metadata initialization,
 full restore, and token administration. Normal clients use scoped bearer
-tokens. The replicated `galera_cli` database is authoritative for managed
+tokens. The replicated `elera_meta` database is authoritative for managed
 databases, identities, accounts, grants, tokens, and encrypted artifact
 metadata. The age private key is never stored in MariaDB.
+
+## GitOps supervisor configuration
+
+GitOps owns the supervisor's desired configuration, not hand-authored
+MariaDB/Galera files. Kubernetes should provide a supervisor ConfigMap for
+non-secret intent and a separate Secret for tokens, passwords, TLS material,
+and other sensitive inputs. The supervisor validates that intent and renders
+the standardized MariaDB and Galera configuration files locally.
+
+- [ ] `GET /api/v1/config/desired` — inspect accepted non-secret desired configuration.
+- [ ] `GET /api/v1/config/effective` — inspect rendered and active configuration hashes.
+- [ ] `POST /api/v1/config/plan` — classify changes as no-op, reload, restart, or unsafe.
+- [ ] `POST /api/v1/config/apply` — atomically render and apply a confirmed configuration.
+- [ ] `POST /api/v1/config/rollback` — restore the last known-good rendered configuration (deferred after MVP).
+
+The MVP tracks desired and active hashes; a retained last-known-good file is
+used for recovery before a dedicated rollback endpoint is added. It writes
+files atomically, validates generated configuration before activation, and
+only reloads MariaDB for dynamic changes. Listener,
+provider, cluster identity, or node identity changes require a controlled
+restart; unsafe bootstrap changes require explicit confirmation.
 
 ## Public probes
 
@@ -27,6 +48,7 @@ metadata. The age private key is never stored in MariaDB.
 ## Supervisor synchronization
 
 - [x] `GET /api/v1/cluster/status` — local and currently observed cluster state.
+- [ ] `GET /api/v1/cluster/writer-assignments` — current per-application writer assignments.
 - [ ] `GET /api/v1/cluster/topology` — cluster members, addresses, state, and eligibility.
 - [ ] `GET /api/v1/internal/health` — authenticated supervisor health observation.
 - [ ] `GET /api/v1/internal/topology` — authenticated supervisor topology exchange.
@@ -41,7 +63,7 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [x] `POST /api/v1/initialization/apply` — apply basic database/user/grant setup.
 - [x] `POST /api/v1/initialization/verify` — verify current basic initialization.
 - [ ] `POST /api/v1/initialization/rotate-credentials` — rotate bootstrap credentials.
-- [ ] `GET /api/v1/metadata/status` — inspect `galera_cli` schema and migration state.
+- [ ] `GET /api/v1/metadata/status` — inspect `elera_meta` schema and migration state.
 - [ ] `POST /api/v1/metadata/initialize` — create or migrate the metadata schema.
 - [ ] `POST /api/v1/metadata/verify` — verify metadata integrity and replication.
 
@@ -62,13 +84,22 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [ ] `POST /api/v1/credentials/lease` — issue credentials and eligible direct SQL routes.
 - [ ] `POST /api/v1/credentials/refresh` — refresh an existing credential lease.
 - [ ] `POST /api/v1/credentials/revoke` — revoke a credential lease.
-- [ ] `GET /api/v1/routes` — return policy-selected primary and balanced node routes.
+- [ ] `GET /api/v1/routes` — return ordered application writer and reader candidates.
 - [ ] `POST /api/v1/routes/refresh` — explicitly recalculate a routing bundle.
+- [ ] `GET /api/v1/routing/bundle` — return the complete credential and routing snapshot.
+- [ ] `GET /api/v1/routing/stream` — upgrade to the authenticated routing WebSocket.
+- [ ] `POST /api/v1/routing/resync` — request a current snapshot after reconnect.
 
-Bundles contain direct node addresses, port `3306`, route roles, weights,
-refresh time, and expiry. `primary` and `balanced` describe routing policy,
-not SQL permissions. `galera-lib` may fail over among unexpired bundle entries;
-the supervisor remains the routing authority.
+Bundles contain the database, identity, usable credentials, direct node
+addresses on port `3306`, ordered writer and reader candidates, weights, a
+version, refresh time, and expiry. The supervisor quorum assigns one logical
+writer per application. `galera-lib` sends writes to that writer list and may
+use permitted reader entries for reads. The WebSocket carries routing changes,
+drain/recovery events, credential rotation notices, and heartbeats—not SQL.
+REST bundle refresh remains the correctness fallback when the stream is down.
+The stream is the preferred low-latency path: supervisors evaluate health and
+load about once per second and publish state changes instead of relying on
+slow client polling.
 
 ## Scoped tokens
 
@@ -118,16 +149,18 @@ only for compatibility and recovery imports.
 
 ## Encrypted artifacts
 
-- [ ] `GET /api/v1/secrets` — list encrypted artifact metadata.
+- [ ] `GET /api/v1/secrets` — list encrypted artifact metadata (deferred after MVP).
 - [ ] `POST /api/v1/secrets` — store age-encrypted ciphertext.
 - [ ] `GET /api/v1/secrets/{name}` — retrieve encrypted ciphertext.
 - [ ] `PUT /api/v1/secrets/{name}` — replace encrypted ciphertext.
 - [ ] `DELETE /api/v1/secrets/{name}` — delete an encrypted artifact.
 - [ ] `POST /api/v1/secrets/{name}/verify` — verify checksum and key metadata.
 
-Artifacts may include credentials, SSH keys, `known_hosts`, TLS material,
-backup configuration, and GitOps synchronization metadata. Plaintext secrets
-must not be stored durably.
+The initial implementation stores application/database/account metadata and
+credential metadata in `elera_meta`. Centralized SSH keys, `known_hosts`, TLS
+files, and backup artifacts are deferred; they remain in GitOps Secrets or the
+existing operator-managed artifact path. Plaintext secrets must not be stored
+durably.
 
 ## Reconciliation
 
@@ -141,7 +174,7 @@ must not be stored durably.
 - [ ] `POST /api/v1/backups/create` — coordinate backup metadata.
 - [ ] `POST /api/v1/backups/{id}/verify` — verify backup metadata and artifact.
 - [ ] `POST /api/v1/restores/metadata/plan` — plan metadata restoration.
-- [ ] `POST /api/v1/restores/metadata/apply` — restore `galera_cli` metadata.
+- [ ] `POST /api/v1/restores/metadata/apply` — restore `elera_meta` metadata.
 - [ ] `POST /api/v1/restores/accounts/plan` — plan account restoration.
 - [ ] `POST /api/v1/restores/accounts/apply` — recreate accounts and grants.
 - [ ] `POST /api/v1/restores/accounts/verify` — verify account restoration.
@@ -160,6 +193,10 @@ verification. `galera-cli` continues to stream dumps through native
 - [x] `POST /api/v1/traffic/undrain` — resume issuing local routes.
 - [ ] `POST /api/v1/maintenance/start` — drain and enter maintenance.
 - [ ] `POST /api/v1/maintenance/stop` — exit maintenance safely.
+
+Graceful shutdown allows active queries and transactions to complete, rejects
+new SQL work, publishes routing changes so `galera-lib` immediately selects
+the next writer or reader candidate, then closes pools and stops MariaDB.
 
 ## Operations
 

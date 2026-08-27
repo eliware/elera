@@ -1,302 +1,205 @@
 # Galera Ecosystem Feature Checklist
 
-Work is organized as parallel vertical slices. Each sprint advances
-`galera-lib`, the supervisor, and `galera-cli` together where applicable, with
-an interoperability smoke test before the sprint is considered complete.
-Check an item only when it is implemented, tested, and documented.
+Work proceeds as parallel vertical slices across `galera-lib`, the supervisor,
+and `galera-cli`. Check an item only when it is implemented, tested, and
+documented. Every sprint ends with an interoperability smoke test.
 
-## Sprint 0 — Repository and contract baseline
+## Sprint 0 — Repository and contract baseline [complete]
 
-- [x] Bootstrap all three repositories with Node.js 26, native ESM, tests, CI, Knit validation, documentation, licenses, and lockfiles.
-- [x] Establish local development linking between supervisor, `galera-cli`, and `galera-lib`.
-- [x] Define API version `/api/v1` and shared success, operation, and error envelopes.
-- [x] Define `primary` and `balanced` as routing policies rather than SQL permissions.
-- [x] Define SQL scopes: `connect`, `read`, `write`, `schema`, `execute`, and `admin`.
-- [ ] Add machine-readable schemas and shared contract fixtures to all three repositories.
-- [ ] Add contract compatibility/version validation to all three repositories.
+- [x] Bootstrap all three Node.js 26/ESM repositories with CI, Knit, licenses, and tests.
+- [x] Establish local linking between supervisor, `galera-cli`, and `galera-lib`.
+- [x] Define `/api/v1`, response envelopes, error handling, and initial scope vocabulary.
+- [x] Establish `elera_meta` as the authoritative metadata database name.
+- [x] Add machine-readable schemas and shared contract fixtures to all three repositories.
+- [x] Add contract verification to all three repositories and CI.
 
-## Sprint 1 — Bundle, configuration, and credential foundations
+## Sprint 1 — Local SQL and service lifecycle [complete]
 
-### `galera-lib`
+### Library
 
-- [x] Validate primary/balanced profiles, ports, pool limits, timeouts, and TLS options.
-- [x] Support static connection profiles and static routing bundles.
-- [x] Add a generic credential-provider interface.
-- [x] Add typed declarations, structured errors, redaction, and lifecycle cleanup.
-- [x] Add primary/balanced routing, transaction pinning, and conservative query classification.
+- [x] Implement generic profiles, routing, pool health, quarantine, transaction pinning, TLS, and cleanup.
+- [x] Never retry mutations with unknown delivery status.
 
 ### Supervisor
 
-- [x] Define and validate connection-bundle responses.
-- [x] Expose effective non-secret configuration needed by clients.
-- [x] Add initial credential and route policy models.
-- [x] Add authenticated credential-lease contract stubs.
+- [x] Start and own MariaDB as PID child with bounded startup and graceful shutdown.
+- [x] Use `galera-lib` for the local SQL connection.
+- [x] Provide `/healthz` and `/readyz` with one-second cached health checks.
 
-### `galera-cli`
+### CLI and interoperability
 
-- [x] Add shared configuration for supervisor endpoint, bearer token, identity, and database.
-- [x] Add connection-bundle and credential-lease client models.
-- [x] Add safe configuration validation and secret redaction.
+- [x] Provide `health`, `ready`, `status`, stable exits, and SQL smoke support.
+- [x] Verify library, supervisor, CLI, and real MariaDB interoperability.
 
-### Interoperability
+## Sprint 2 — GitOps supervisor configuration and first boot
 
-- [x] Supervisor emits a fixture bundle accepted by `galera-lib`.
-- [x] `galera-cli` requests and validates the same bundle.
-- [x] Smoke test direct SQL connection to the persistent MariaDB container.
+### Shared configuration contract
 
-## Sprint 2 — Local SQL behavior and supervisor health
+- [ ] Define a versioned supervisor intent schema for GitOps ConfigMaps.
+- [ ] Keep tokens, passwords, TLS inputs, and other sensitive values in separate Secrets.
+- [ ] Render standardized MariaDB/Galera files from validated supervisor intent.
+- [ ] Track desired and active hashes; retain a last-known-good rendered copy.
+- [ ] Write generated files atomically and leave active state untouched on failure.
+- [ ] Classify changes as no-op, graceful reload, controlled restart, or unsafe.
 
-### `galera-lib`
+### Library
 
-- [ ] Implement pool health checks and route health state.
-- [ ] Implement connection retry and temporary node quarantine.
-- [ ] Never automatically retry mutations with unknown delivery status.
-- [ ] Add optional session initialization and causal-consistency settings.
-- [ ] Add TLS certificate and client-key support.
+- [ ] Add generic administrative SQL and transaction-safe migration primitives.
 
 ### Supervisor
 
-- [ ] Make MariaDB child ownership and shutdown deterministic.
-- [ ] Make startup and readiness sequencing bounded.
-- [ ] Use `galera-lib` for the supervisor’s local SQL connection.
-- [x] Expose `/healthz` and `/readyz`.
-- [x] Cache health queries for one second.
+- [ ] Reconcile ConfigMap changes without hand-authored MariaDB files.
+- [ ] Expose config desired/effective/status and reconcile plan/apply operations.
+- [ ] Verify generated configuration before MariaDB activation.
+- [ ] Make first boot idempotent and reject unsafe bootstrap configuration changes.
 
-### `galera-cli`
+### CLI and interoperability
 
-- [ ] Implement `health`, `ready`, and `status` commands.
-- [ ] Use `galera-lib` for CLI SQL smoke operations.
-- [ ] Implement stable exit codes and safe output modes.
+- [ ] Add config inspection/reconcile commands.
+- [ ] Run first boot from supervisor intent against standalone Docker MariaDB.
+- [ ] Verify no-op, reload, restart, invalid-config, and last-known-good behavior.
 
-### Interoperability
+## Sprint 3 — `elera_meta` metadata foundation
 
-- [ ] Verify library health against the real MariaDB test container.
-- [ ] Verify supervisor readiness and CLI health/ready output agree.
-- [ ] Verify shutdown leaves no leaked SQL pools or child processes.
+### Library
 
-## Sprint 3 — First boot and metadata initialization
-
-### `galera-lib`
-
-- [ ] Add generic administrative database execution primitives.
-- [ ] Add transaction-safe migration helpers without Galera-specific policy.
+- [ ] Support the generic SQL operations required for metadata migrations.
 
 ### Supervisor
 
-- [x] Expose initialization inspection, planning, apply, and verification.
-- [ ] Initialize the replicated `galera_cli` metadata schema idempotently.
-- [ ] Verify volume state before first-boot mutation.
+- [ ] Initialize the replicated `elera_meta` schema idempotently.
+- [ ] Verify volume state and metadata schema before mutation.
 - [ ] Create required bootstrap/SST accounts safely.
-- [ ] Add metadata status and verification endpoints.
+- [ ] Expose metadata status, initialize, and verify operations.
 
-### `galera-cli`
+### CLI and interoperability
 
-- [ ] Implement `init`.
-- [ ] Implement metadata initialization and verification commands.
-- [ ] Support root-token confirmation for first-boot operations.
+- [ ] Implement `init`, metadata initialize, and metadata verify commands.
+- [ ] Require root-token confirmation for first-boot mutations.
+- [ ] Verify repeated initialization is idempotent on standalone and Galera nodes.
 
-### Interoperability
+## Sprint 4 — Galera cluster lifecycle and quorum
 
-- [ ] Initialize metadata through the CLI against a standalone container.
-- [ ] Re-run initialization and confirm it is idempotent.
-- [ ] Verify metadata access through `galera-lib`.
+### Library
 
-## Sprint 4 — Galera lifecycle and topology
-
-### `galera-lib`
-
-- [ ] Accept supervisor-selected node sets and weights without embedding Galera policy.
-- [ ] Refresh expired or exhausted bundles through an injected provider.
-- [ ] Maintain safe local connection failover within a valid bundle.
+- [ ] Accept supervisor-selected direct node sets without embedding Galera policy.
+- [ ] Preserve safe connection failover within a valid bundle.
 
 ### Supervisor
 
-- [x] Expose bootstrap eligibility and planning.
-- [x] Expose explicit bootstrap and readiness waiting.
-- [ ] Add topology inspection.
-- [ ] Add join, leave, and total-cluster-loss recovery planning/execution.
-- [ ] Reject unsafe or ambiguous bootstrap states.
+- [ ] Implement bootstrap eligibility, bootstrap, join, leave, and recovery planning.
+- [ ] Exchange authenticated health/topology observations between supervisors.
+- [ ] Form quorum and reject stale, contradictory, or unsafe observations.
+- [ ] Track Galera synced state, primary component, node identity, and load.
 
-### `galera-cli`
+### CLI and interoperability
 
-- [ ] Implement `cluster status`.
-- [ ] Implement `cluster bootstrap`.
-- [ ] Implement cluster join, leave, and recovery commands.
+- [ ] Implement `cluster status`, `bootstrap`, `join`, `leave`, and recovery.
+- [ ] Bootstrap and inspect a three-node Docker Galera cluster.
+- [ ] Verify topology and direct `3306` connectivity from every supervisor.
 
-### Interoperability
+## Sprint 5 — Managed databases, identities, and credentials
 
-- [ ] Bootstrap a three-node Docker Galera cluster through the CLI.
-- [ ] Retrieve topology and connection bundles from every supervisor node.
-- [ ] Verify direct connections to eligible nodes.
+### Library
 
-## Sprint 5 — Authoritative databases, identities, accounts, and grants
-
-### `galera-lib`
-
-- [ ] Support the generic SQL operations required by metadata reconciliation.
-- [ ] Support credential replacement without exposing credentials in logs.
+- [ ] Accept credential leases through a generic injected provider.
+- [ ] Replace credentials and recycle pools without exposing secrets in logs.
 
 ### Supervisor
 
-- [ ] Store managed application databases in `galera_cli`.
-- [ ] Store managed identities and purposes: runtime, readonly, migration, reporting, and admin.
-- [ ] Provision databases idempotently.
-- [ ] Provision accounts and generate strong credentials.
-- [ ] Reconcile structured grants.
-- [ ] Verify database, account, and grant desired state.
-- [ ] Rotate and revoke managed accounts.
+- [ ] Store application databases, identities, accounts, grants, and token metadata in `elera_meta`.
+- [ ] Provision runtime, readonly, migration, reporting, and admin identities idempotently.
+- [ ] Generate, rotate, revoke, and verify application credentials and grants.
 - [ ] Keep system schemas outside application management.
 
-### `galera-cli`
+### CLI and interoperability
 
-- [ ] Implement database provision/list/verify commands.
-- [ ] Implement account provision/list/show commands.
-- [ ] Implement account rotate/revoke/verify commands.
-- [ ] Implement structured grant commands.
+- [ ] Implement database, identity, account, grant, and credential commands.
+- [ ] Create scoped application tokens mapped to identities.
+- [ ] Verify actual MariaDB privileges through API, CLI, and library connections.
 
-### Interoperability
+## Sprint 6 — Per-application writer assignments and REST bundles
 
-- [ ] Provision one application with runtime, readonly, and migration identities.
-- [ ] Verify each identity’s actual MariaDB privileges.
-- [ ] Verify the same identities through supervisor API, CLI, and library connections.
+### Library
 
-## Sprint 6 — Scoped tokens and credential leases
-
-### `galera-lib`
-
-- [ ] Implement supervisor credential-provider integration.
-- [ ] Request credentials and routes without application-managed passwords.
-- [ ] Cache valid credentials in memory and refresh before expiry.
-- [ ] Continue existing connections during temporary supervisor outages.
-- [ ] Refresh when a bundle expires or all candidates fail.
+- [ ] Consume bundles containing credentials, database, ordered writer candidates, and reader candidates.
+- [ ] Send writes only to supervisor-assigned writer candidates.
+- [ ] Use permitted readers for reads while preserving transaction pinning.
+- [ ] Refresh expired/exhausted bundles through REST without inventing writer assignments.
 
 ### Supervisor
 
-- [ ] Store only token hashes.
-- [ ] Create, inspect, rotate, revoke, and expire scoped tokens.
-- [ ] Bind tokens to resources and one or more managed identities.
-- [ ] Implement credential lease issuance, refresh, and revocation.
-- [ ] Return direct `primary` and `balanced` routes with weights and expiry.
-- [ ] Prevent application tokens from performing root operations.
+- [ ] Assign one logical writer order per application/identity through quorum decisions.
+- [ ] Recalculate assignments from synchronization, health, load, weights, and drain state.
+- [ ] Use hysteresis/recovery windows to avoid writer thrashing.
+- [ ] Expose `GET /api/v1/routing/bundle` and credential lease/refresh operations.
 
-### `galera-cli`
+### CLI and interoperability
 
-- [ ] Implement token create/list/rotate/revoke commands.
-- [ ] Implement credential lease and refresh commands.
-- [ ] Never print credentials unless explicitly requested.
+- [ ] Inspect writer assignments and bundle versions.
+- [ ] Start an application using only endpoint, scoped token, database, and identity.
+- [ ] Verify writes follow the assigned writer and reads may use allowed readers.
 
-### Interoperability
+## Sprint 7 — WebSocket routing events and graceful draining
 
-- [ ] Create an application token mapped to a runtime identity.
-- [ ] Start `galera-lib` using only supervisor endpoint, token, database, and identity.
-- [ ] Verify the library receives a valid bundle and connects without `MYSQL_PASSWORD`.
-- [ ] Rotate the managed credential and verify refresh behavior.
+### Library
 
-## Sprint 7 — Supervisor synchronization and routing decisions
-
-### `galera-lib`
-
-- [ ] Consume supervisor-provided weights and route sets.
-- [ ] Quarantine failed bundle nodes locally without inventing eligibility policy.
-- [ ] Re-request a bundle after expiry, exhaustion, or explicit refresh.
+- [ ] Open an authenticated WebSocket routing stream through the HTTP VIP.
+- [ ] Apply versioned snapshots, writer changes, reader changes, drain, recovery, and credential events.
+- [ ] Reconnect with backoff and use REST bundle refresh when the stream is unavailable.
+- [ ] Stop new work on draining nodes, finish active transactions, and recycle affected pools.
+- [ ] Detect event gaps and resynchronize by bundle version.
 
 ### Supervisor
 
-- [ ] Add authenticated supervisor health observations.
-- [ ] Add authenticated topology exchange.
-- [ ] Add node identity, sequence, timestamp, and observation expiry.
-- [ ] Exchange readiness, Galera state, eligibility, and weight.
-- [ ] Reject stale, contradictory, or unsafe observations.
-- [ ] Keep local safety checks authoritative.
+- [ ] Evaluate health/load approximately once per second.
+- [ ] Publish only meaningful versioned changes plus heartbeat/ping-pong liveness.
+- [ ] Expose `/api/v1/routing/stream` and `/api/v1/routing/resync`.
+- [ ] Forward management writes to the elected writer while keeping the public API stateless.
+- [ ] Publish drain events before graceful MariaDB shutdown.
 
-### `galera-cli`
+### CLI and interoperability
 
-- [ ] Add topology and routing-bundle inspection commands.
-- [ ] Add reconciliation diagnostics for stale or conflicting observations.
+- [ ] Keep REST as the CLI interface for management and recovery operations.
+- [ ] Add node/application drain commands.
+- [ ] Verify sub-second routing updates, WebSocket loss fallback, and rolling drains.
 
-### Interoperability
+## Sprint 8 — Reconciliation and metadata-first restore
 
-- [ ] Stop one node and verify supervisors converge on its ineligibility.
-- [ ] Recover the node and verify it is reintroduced only after readiness.
-- [ ] Verify clients continue using valid bundle entries during convergence.
+### Supervisor and library
 
-## Sprint 8 — Encrypted artifacts and GitOps
+- [ ] Add reconcile plan/apply/verify operations for databases, accounts, grants, and routing assignments.
+- [ ] Restore `elera_meta` and logical account state independently of system schemas.
+- [ ] Verify credentials, privileges, schema, data, and application access.
 
-### `galera-lib`
+### CLI
 
-- [ ] Provide generic secure credential material handling for consumers.
-- [ ] Ensure credentials and TLS keys are absent from logs and diagnostics.
-
-### Supervisor
-
-- [ ] Store age-encrypted ciphertext and key-version metadata.
-- [ ] Add encrypted artifact CRUD and verification endpoints.
-- [ ] Store credential, SSH, `known_hosts`, TLS, backup, and GitOps metadata.
-- [ ] Never store age private keys in MariaDB.
-
-### `galera-cli`
-
-- [ ] Add age-key loading and local decryption.
-- [ ] Add secret/artifact put/get/verify commands.
-- [ ] Materialize temporary native-command credentials with restrictive permissions.
-- [ ] Clean up temporary credentials deterministically.
-- [ ] Add GitOps synchronization support.
+- [ ] Implement reconcile and restore plan/apply/verify commands.
+- [ ] Continue using native `mariadb-dump` and `mariadb` streams, never JSON dump transport.
 
 ### Interoperability
 
-- [ ] Store an encrypted application credential artifact.
-- [ ] Retrieve and decrypt it locally with the configured age key.
-- [ ] Verify the supervisor never receives the age private key.
+- [ ] Complete metadata-first restore in Docker Desktop.
+- [ ] Confirm restoration does not depend on raw `mysql`, `sys`, performance-schema, or information-schema files.
 
-## Sprint 9 — Reconciliation and backup/restore
+## Sprint 9 — Deferred encrypted artifacts and GitOps hardening
 
-### `galera-lib`
-
-- [ ] Verify restored credentials and grants through direct SQL.
-- [ ] Support reconnecting after account rotation or restore.
-
-### Supervisor
-
-- [ ] Add reconcile plan/apply/verify endpoints.
-- [ ] Add metadata restore plan/apply/verify endpoints.
-- [ ] Add account restore plan/apply/verify endpoints.
-- [ ] Track redacted long-running operations.
-
-### `galera-cli`
-
-- [ ] Implement reconcile plan/apply/verify.
-- [ ] Restore metadata before application databases.
-- [ ] Recreate databases, accounts, and grants logically.
-- [ ] Use native `mariadb-dump` and `mariadb` for data streams.
-- [ ] Verify schema, data, credentials, privileges, and application access.
-
-### Interoperability
-
-- [ ] Perform a complete metadata-first restore in Docker Desktop.
-- [ ] Confirm no restore depends on raw `mysql`, `sys`, or performance-schema files.
-- [ ] Confirm dump streams never pass through JSON APIs.
+- [ ] Keep GitOps Secrets/operator artifacts as the initial home for SSH, `known_hosts`, TLS files, and backup artifacts.
+- [ ] Add age-encrypted artifact storage only if restore workflows demonstrate the need.
+- [ ] Never store age private keys or plaintext secret material in `elera_meta`.
+- [ ] Add optional artifact CRUD, verification, and CLI materialization with deterministic cleanup.
 
 ## Sprint 10 — VyOS migration and legacy removal
 
-- [ ] Configure VyOS HAProxy as HTTP-only supervisor load balancer.
-- [ ] Configure HAProxy checks against `/healthz` and `/readyz`.
-- [ ] Keep supervisor nodes behind a stable HAProxy/VRRP endpoint.
-- [ ] Remove MySQL HAProxy frontends and backends.
-- [ ] Remove `agent-check` configuration.
-- [ ] Remove supervisor TCP listeners `33060` and `33070`.
-- [ ] Remove `galera-check.exe`.
-- [ ] Remove checker environment, systemd units, installer, and post-commit rewrite logic.
-- [ ] Validate direct application-to-node port `3306` access and NetworkPolicies.
-- [ ] Validate HAProxy supervisor failover.
+- [ ] Configure VyOS HAProxy as an HTTP-only supervisor load balancer.
+- [ ] Check `/healthz` and `/readyz` through HAProxy and validate WebSocket upgrades/timeouts.
+- [ ] Remove MySQL HAProxy frontends, `agent-check`, `galera-check.exe`, installer, and systemd units.
+- [ ] Remove transitional supervisor listeners `33060` and `33070`.
+- [ ] Validate direct application-to-node `3306` access and NetworkPolicies.
 
 ## Sprint 11 — Migration and release
 
-- [ ] Migrate one internal application from `@eliware/mysql` to `@eliware/galera-lib`.
-- [ ] Validate runtime, balanced, migration, and readonly identities.
-- [ ] Validate node failure and bundle-based connection failover.
-- [ ] Validate supervisor failure while existing SQL connections remain active.
-- [ ] Publish `@eliware/galera-lib` only from an authorized `v*` tag.
-- [ ] Publish `@eliware/galera-cli` only from an authorized `v*` tag.
-- [ ] Replace local links with released package versions after publication.
-- [ ] Build/publish the supervisor container only from an authorized `v*` tag.
-- [ ] Verify package/image contents, checksums, audit, tests, lint, typecheck, and 100×4 coverage.
+- [ ] Migrate an internal application from `@eliware/mysql` to `@eliware/galera-lib`.
+- [ ] Validate writer assignment, reader failover, supervisor failure, and graceful drains.
+- [ ] Publish packages and the supervisor image only from authorized `v*` tags.
+- [ ] Replace local links with released versions and verify package/image contents.

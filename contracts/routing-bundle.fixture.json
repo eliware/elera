@@ -1,0 +1,10 @@
+{
+  "apiVersion": "v1",
+  "database": "billing",
+  "identity": "billing-runtime",
+  "credentials": { "username": "billing_runtime", "password": "fixture-only" },
+  "writer": [{ "host": "sql0.internal", "port": 3306, "weight": 100 }, { "host": "sql1.internal", "port": 3306, "weight": 80 }],
+  "readers": [{ "host": "sql0.internal", "port": 3306, "weight": 100 }, { "host": "sql1.internal", "port": 3306, "weight": 80 }, { "host": "sql2.internal", "port": 3306, "weight": 60 }],
+  "bundleVersion": 1,
+  "expiresAt": "2099-01-01T00:00:00Z"
+}

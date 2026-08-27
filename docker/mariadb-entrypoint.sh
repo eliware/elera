@@ -22,7 +22,8 @@ if [ ! -d "$datadir/mysql" ]; then
   mariadb --socket="$init_socket" -uroot <<SQL
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD:-}';
 $(if [ -n "${MARIADB_DATABASE:-}" ]; then printf 'CREATE DATABASE IF NOT EXISTS `%s`;\n' "${MARIADB_DATABASE}"; fi)
-$(if [ -n "${MARIADB_USER:-}" ]; then printf "CREATE USER IF NOT EXISTS '%s'@'%%' IDENTIFIED BY '%s';\nGRANT ALL PRIVILEGES ON \\`%s\\`.* TO '%s'@'%%';\n" "${MARIADB_USER}" "${MARIADB_PASSWORD:-}" "${MARIADB_DATABASE:-*}" "${MARIADB_USER}"; fi)
+$(if [ -n "${MARIADB_USER:-}" ]; then printf "CREATE USER IF NOT EXISTS '%s'@'%%' IDENTIFIED BY '%s';\nGRANT ALL PRIVILEGES ON \`%s\`.* TO '%s'@'%%';\n" "${MARIADB_USER}" "${MARIADB_PASSWORD:-}" "${MARIADB_DATABASE:-*}" "${MARIADB_USER}"; fi)
+$(if [ -n "${MARIADB_USER:-}" ]; then printf "CREATE USER IF NOT EXISTS '%s'@'localhost' IDENTIFIED BY '%s';\nGRANT ALL PRIVILEGES ON \`%s\`.* TO '%s'@'localhost';\n" "${MARIADB_USER}" "${MARIADB_PASSWORD:-}" "${MARIADB_DATABASE:-*}" "${MARIADB_USER}"; fi)
 FLUSH PRIVILEGES;
 SQL
   kill "$init_pid"

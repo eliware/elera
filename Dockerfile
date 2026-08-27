@@ -9,6 +9,7 @@ RUN apt-get update \
     && apt-get update \
     && apt-get install --no-install-recommends -y mariadb-server galera-4 \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/lib/mysql/* \
     && mkdir -p /run/mysqld /var/lib/mysql \
     && chown -R mysql:mysql /run/mysqld /var/lib/mysql
 

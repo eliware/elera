@@ -43,4 +43,10 @@ describe('control API', () => {
     const missingLease = response(); await api.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime' }), missingLease); expect(missingLease.status).toBe(501);
     const invalidLease = response(); await api.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime', routes: ['unknown'] }), invalidLease); expect(invalidLease.status).toBe(400);
   });
+  test('translates route failures and rejects unavailable bootstrap', async () => {
+    const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => { throw new Error('status unavailable'); }, getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '0' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
+    const out = response(); await api.handler(request('GET', '/api/v1/cluster/status'), out); expect(out.status).toBe(500);
+    const noBootstrap = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: false }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '1' }, log: { error: jest.fn() } });
+    const unavailable = response(); await noBootstrap.handler(request('POST', '/api/v1/cluster/bootstrap', { confirm: true }), unavailable); expect(unavailable.status).toBe(503);
+  });
 });

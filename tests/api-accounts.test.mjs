@@ -1,0 +1,6 @@
+import { expect, test } from '@jest/globals';
+import { handleAccountRoute } from '../src/api/routes/accounts.mjs';
+
+const response = () => ({ status: 0, body: '', writeHead(status) { this.status = status; return this; }, end(body) { this.body = body; return this; } });
+const request = (body) => ({ async *[Symbol.asyncIterator]() { if (body) yield JSON.stringify(body); } });
+test('account route handles listing, export, import and unknown paths', async () => { const db = { query: async (sql) => sql.includes('SHOW GRANTS') ? [[{ grant: 'GRANT USAGE' }]] : [[{ User: 'app', Host: '%' }]] }; const list = response(); expect(await handleAccountRoute({ method: 'GET', path: '/api/v1/accounts', request: request(), response: list, db })).toBe(true); const exported = response(); expect(await handleAccountRoute({ method: 'POST', path: '/api/v1/accounts/export', request: request(), response: exported, db })).toBe(true); const imported = response(); expect(await handleAccountRoute({ method: 'POST', path: '/api/v1/accounts/import', request: request({ confirm: true, accounts: [{ user: 'app', grants: [] }] }), response: imported, db })).toBe(true); expect(await handleAccountRoute({ method: 'GET', path: '/missing', request: request(), response: response(), db })).toBe(false); });

@@ -5,8 +5,10 @@ readiness probes, and provides the control API used by the developing Galera
 ecosystem.
 
 The target architecture uses HAProxy as an HTTP-only proxy for supervisor
-nodes. The supervisor returns credentials and direct-node routing bundles to
-`@eliware/galera-lib`; it does not require HAProxy to proxy raw MySQL traffic.
+nodes. REST remains the management interface; `@eliware/galera-lib`
+preferentially keeps an authenticated WebSocket open for routing events and
+falls back to REST bundle refreshes. The library connects directly to MariaDB;
+HAProxy does not proxy raw MySQL traffic.
 
 ## Development
 
@@ -20,9 +22,9 @@ npm run check
 ```
 
 The local `.env` is ignored and should be created from `.env.example`. The
-supervisor currently exposes HTTP on `8080` and transitional TCP agent ports
-`33060` and `33070`. Galera is enabled with `GALERA=1`. The TCP agent ports are
-planned for removal after the VyOS HTTP-only migration.
+supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Galera is
+enabled with `GALERA=1`. The legacy TCP agent listeners `33060` and `33070`
+are transitional and will be removed with the HTTP-only migration.
 
 ## Documentation
 

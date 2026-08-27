@@ -15,17 +15,63 @@ HAProxy HTTP supervisor VIP
         v
 any supervisor node
         |
-        +-- replicated galera_cli metadata
+        +-- replicated elera_meta metadata
         +-- Galera health and routing decisions
         +-- credential leases
 
 galera-lib receives a bundle and connects directly to eligible MariaDB nodes
 ```
 
-HAProxy is not part of the MySQL data path. The supervisor chooses eligible
-nodes and weights. `galera-lib` manages pools and connection-level failover
-within the unexpired bundle; it does not discover Galera topology or make
-eligibility decisions.
+HAProxy is not part of the MySQL data path. The supervisor quorum chooses
+eligible nodes and assigns one logical writer per application. `galera-lib`
+manages pools and connection-level failover within the unexpired bundle; it
+does not discover Galera topology or invent writer assignments.
+
+REST is the management and recovery interface. The preferred routing channel
+is an authenticated WebSocket through the same HTTP VIP:
+
+```text
+GET       /api/v1/routing/bundle
+WebSocket /api/v1/routing/stream
+POST      /api/v1/routing/resync
+```
+
+The stream carries versioned routing snapshots, writer changes, drain and
+recovery events, credential rotation notices, and heartbeats. It never carries
+SQL. SQL uses direct MariaDB connections on port `3306`. If the stream fails,
+the library reconnects with backoff and refreshes through REST before the
+current bundle expires.
+
+On graceful node shutdown, the supervisor publishes a drain event, stops
+accepting new SQL work, allows active queries and transactions to complete,
+then closes pools and MariaDB. `galera-lib` immediately stops selecting the
+draining node for new work and uses the next ordered candidate.
+
+## Supervisor configuration contract
+
+GitOps supplies supervisor intent through a Kubernetes ConfigMap for
+non-secret configuration and a Secret for tokens, passwords, TLS, and other
+sensitive material. The supervisor renders the uniform MariaDB and Galera
+files; generated files are runtime artifacts, not a second configuration
+source.
+
+The reconciliation sequence is:
+
+```text
+load -> validate -> canonicalize -> hash -> render -> validate generated files
+     -> atomically activate -> reload or controlled restart -> verify readiness
+```
+
+The MVP tracks desired and active hashes; a last-known-good rendered copy is
+retained for recovery. These hashes identify drift. Dynamic settings
+may use a graceful MariaDB reload. Listener, Galera provider, cluster
+identity, or node identity changes require a controlled restart. Unsafe
+bootstrap changes require explicit confirmation. Failed rendering or
+validation leaves the last known-good active configuration untouched.
+
+Centralized storage for SSH keys, `known_hosts`, TLS files, and backup
+artifacts is deferred beyond the MVP; those remain in GitOps Secrets or the
+existing operator-managed artifact path.
 
 ## Compatibility and versioning
 
@@ -147,26 +193,27 @@ policy decision, not a topology-discovery API for the client.
     "username": "billing_runtime",
     "password": "short-lived-secret"
   },
-  "routes": {
-    "primary": [
-      { "host": "sql0.internal", "port": 3306, "weight": 100 }
-    ],
-    "balanced": [
+  "writer": [
+    { "host": "sql0.internal", "port": 3306, "weight": 100 },
+    { "host": "sql1.internal", "port": 3306, "weight": 80 }
+  ],
+  "readers": [
       { "host": "sql0.internal", "port": 3306, "weight": 100 },
       { "host": "sql1.internal", "port": 3306, "weight": 80 },
       { "host": "sql2.internal", "port": 3306, "weight": 60 }
-    ]
-  },
+  ],
   "bundleVersion": 42,
   "refreshAfter": "2026-08-26T20:00:00Z",
   "expiresAt": "2026-08-26T21:00:00Z"
 }
 ```
 
-`galera-lib` may use unexpired bundle entries for connection establishment,
-pool balancing, and connection-level failover. It should refresh when the
-bundle is stale, expired, or all candidates fail. It must not automatically
-retry an in-flight mutation with unknown delivery status.
+`galera-lib` sends writes only to ordered writer candidates and may use reader
+entries for reads. It may use unexpired entries for pool balancing and
+connection-level failover, but it must not invent a new writer assignment. It
+should refresh when the bundle is stale, expired, or all candidates fail. It
+must not automatically retry an in-flight mutation with unknown delivery
+status.
 
 Transactions remain pinned to one connection and one route. Unknown or
 ambiguous SQL defaults to the primary route.
@@ -179,7 +226,7 @@ Request:
 {
   "database": "billing",
   "identity": "billing-runtime",
-  "routes": ["primary", "balanced"]
+  "routes": ["writer", "readers"]
 }
 ```
 
@@ -295,7 +342,7 @@ the `mysql`, `sys`, `performance_schema`, or `information_schema` files is not
 the normal path.
 
 ```text
-1. Restore galera_cli metadata
+1. Restore elera_meta metadata
 2. Restore encrypted artifact rows
 3. Decrypt locally with the age key
 4. Recreate application databases

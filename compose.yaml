@@ -6,7 +6,9 @@ services:
     env_file:
       - path: .env
         required: false
-    build: .
+    build:
+      context: ..
+      dockerfile: galera/Dockerfile.dev
     image: eliware/galera:local
     hostname: galera-single
     environment: &single-env
@@ -34,7 +36,9 @@ services:
     env_file:
       - path: .env
         required: false
-    build: .
+    build:
+      context: ..
+      dockerfile: galera/Dockerfile.dev
     image: eliware/galera:local
     hostname: galera-1
     environment:
