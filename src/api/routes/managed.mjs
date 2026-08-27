@@ -6,6 +6,7 @@ const send = (response, status, body) => response.json(status, body);
 
 export async function handleManagedRoute({ method, path, request, response, managed, auth }) {
   if (!managed) return false;
+  if (method === 'GET' && path === '/api/v1/metadata/export') { if (!allowed(auth, 'metadata:read')) return false; send(response, 200, { ok: true, operation: 'metadata.export', data: { databases: await managed.listDatabases(), identities: await managed.listIdentities() } }); return true; }
   if (method === 'GET' && path === '/api/v1/databases') { if (!allowed(auth, 'database:read')) return false; send(response, 200, { ok: true, data: await managed.listDatabases() }); return true; }
   if (method === 'POST' && path === '/api/v1/databases') { if (!allowed(auth, 'database:provision')) return false; const body = await readBody(request); send(response, 200, { ok: true, operation: 'database.provision', data: await managed.createDatabase({ application: body.application, databaseName: body.database ?? body.databaseName }) }); return true; }
   if (method === 'GET' && path === '/api/v1/identities') { if (!allowed(auth, 'identity:read')) return false; const body = await readBody(request).catch(() => ({})); const application = new URL(request.url, 'http://localhost').searchParams.get('application') ?? body.application; send(response, 200, { ok: true, data: await managed.listIdentities(application) }); return true; }

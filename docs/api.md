@@ -175,6 +175,8 @@ durably.
 
 ## Backup and restore coordination
 
+- [x] `GET /api/v1/metadata/export` — export logical managed metadata for a backup sidecar; never includes passwords or private keys.
+
 - [ ] `POST /api/v1/backups/plan` — preview backup eligibility and metadata.
 - [ ] `POST /api/v1/backups/create` — coordinate backup metadata.
 - [ ] `POST /api/v1/backups/{id}/verify` — verify backup metadata and artifact.
