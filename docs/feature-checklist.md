@@ -7,7 +7,7 @@ documented. Every sprint ends with an interoperability smoke test.
 ## Sprint 0 — Repository and contract baseline [complete]
 
 - [x] Bootstrap all three Node.js 26/ESM repositories with CI, Knit, licenses, and tests.
-- [x] Establish local linking between supervisor, `elera-cli`, and `elera-lib`.
+- [x] Establish published-package consumption between supervisor, `elera-cli`, and `elera-lib`.
 - [x] Define `/api/v1`, response envelopes, error handling, and initial scope vocabulary.
 - [x] Establish `elera_meta` as the authoritative metadata database name.
 - [x] Add machine-readable schemas and shared contract fixtures to all three repositories.
@@ -34,7 +34,7 @@ documented. Every sprint ends with an interoperability smoke test.
 ### Sprint 1 certification evidence
 
 - Production image builds from the workspace parent context with the sibling
-  `elera-lib` included.
+  `@eliware/elera-lib@0.1.0` resolved from npm.
 - The standalone supervisor exposes `/healthz` before MariaDB is ready and
   issues an advertised `elera-single:3306` bundle to remote consumers.
 - `elera-cli sql-smoke` passes from the separate `backup-dev` container through
