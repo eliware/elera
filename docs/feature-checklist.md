@@ -135,8 +135,13 @@ implemented. All three repositories pass 100×4 coverage and zero-warning lint.
 ### CLI and interoperability
 
 - [x] Implement cluster status, bootstrap, join, leave, and recovery commands.
-- [ ] Bootstrap and inspect a three-node Docker Elera cluster.
-- [ ] Verify topology and direct `3306` connectivity from every supervisor.
+- [x] Bootstrap and inspect a three-node Docker Elera cluster.
+- [x] Verify topology and direct `3306` connectivity from every supervisor.
+
+Sprint 4 runtime evidence: the Docker Desktop lab formed three `Synced/Primary`
+nodes, each accepted direct TCP SQL on local port `3306`, quorum required two
+fresh observations, reported false after stopping one node, and returned true
+after that node rejoined with `wsrep_cluster_size=3` and `wsrep_ready=ON`.
 
 ## Sprint 5 — Managed databases, identities, and scoped credentials
 

@@ -19,6 +19,7 @@ services:
       MARIADB_USER: healthcheck
       MARIADB_PASSWORD: dev-healthcheck-password
       ELERA_CLUSTER_NAME: local-elera
+      ELERA_CLUSTER_SIZE: "3"
       ELERA: "0"
       ELERA_CLUSTER_ADDRESS: gcomm://
       ELERA_NODE_NAME: elera-single

@@ -9,6 +9,6 @@ export function loadSupervisorConfig(environment = process.env) {
 
 export function mariaDbArguments(config) {
   const args = [...(config.intentConfigPath ? [`--defaults-extra-file=${config.intentConfigPath}`] : []), `--datadir=${config.dataDir}`, '--user=mysql', '--bind-address=0.0.0.0', '--binlog-format=ROW'];
-  if (config.elera) { if (config.environment.ELERA_BOOTSTRAP === 'true') args.push('--wsrep-new-cluster'); args.push('--wsrep-on=ON', '--wsrep-provider=/usr/lib/elera/libelera_smm.so', `--wsrep-cluster-name=${config.environment.ELERA_CLUSTER_NAME ?? 'local-elera'}`, `--wsrep-cluster-address=${config.environment.ELERA_CLUSTER_ADDRESS ?? 'gcomm://'}`, `--wsrep-node-name=${config.environment.ELERA_NODE_NAME ?? 'elera'}`, `--wsrep-node-address=${config.environment.ELERA_NODE_ADDRESS ?? '127.0.0.1'}`); }
+  if (config.elera) { if (config.environment.ELERA_BOOTSTRAP === 'true') args.push('--wsrep-new-cluster'); args.push('--wsrep-on=ON', '--wsrep-provider=/usr/lib/galera/libgalera_smm.so', `--wsrep-cluster-name=${config.environment.ELERA_CLUSTER_NAME ?? 'local-elera'}`, `--wsrep-cluster-address=${config.environment.ELERA_CLUSTER_ADDRESS ?? 'gcomm://'}`, `--wsrep-node-name=${config.environment.ELERA_NODE_NAME ?? 'elera'}`, `--wsrep-node-address=${config.environment.ELERA_NODE_ADDRESS ?? '127.0.0.1'}`); }
   return args;
 }

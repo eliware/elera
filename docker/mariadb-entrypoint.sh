@@ -31,4 +31,10 @@ SQL
   trap - EXIT
 fi
 
+# Bootstrap is a first-start concern. Once this datadir has been initialized,
+# never force --wsrep-new-cluster during a normal restart or rejoin.
+if [ "${ELERA_BOOTSTRAP:-false}" = "true" ] && [ -f "$datadir/grastate.dat" ]; then
+  export ELERA_BOOTSTRAP=false
+fi
+
 exec node /app/src/main.mjs
