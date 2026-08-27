@@ -10,14 +10,16 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y mariadb-server mariadb-server-galera mariadb-backup galera-4 rsync \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/mysql/* \
-    && mkdir -p /run/mysqld /var/lib/mysql \
-    && chown -R mysql:mysql /run/mysqld /var/lib/mysql
+    && mkdir -p /run/mysqld /var/lib/mysql /etc/elera \
+    && chown -R mysql:mysql /run/mysqld /var/lib/mysql /etc/elera
 
 COPY docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
 COPY package.json package-lock.json /app/
 RUN cd /app && npm ci --omit=dev
 COPY src /app/src
 RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh
+
+USER mysql
 
 VOLUME ["/var/lib/mysql"]
 EXPOSE 3306 4444 4567 4568 8080

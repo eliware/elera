@@ -71,4 +71,7 @@ docker compose --profile lab stop
 
 Do not commit `.env`, root tokens, database passwords, or generated runtime
 state. Control API operations use `ROOT_TOKEN` during the current lab phase.
+The container runs as the image's non-root `mysql` user. Its image-owned
+runtime directories are prepared during the build; Kubernetes supplies group
+ownership for the persistent data volume with `fsGroup`.
 

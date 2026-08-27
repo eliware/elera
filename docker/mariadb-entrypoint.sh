@@ -2,12 +2,11 @@
 set -eu
 
 datadir="${MARIADB_DATA_DIR:-/var/lib/mysql}"
-mkdir -p "$datadir" /run/mysqld
-chown -R mysql:mysql "$datadir" /run/mysqld
+mkdir -p "$datadir"
 
 if [ ! -d "$datadir/mysql" ]; then
   first_boot=true
-  mariadb-install-db --user=mysql --datadir="$datadir" --skip-test-db
+  mariadb-install-db --user=mysql --datadir="$datadir" --skip-test-db --auth-root-authentication-method=normal
 
   init_socket=/run/mysqld/init.sock
   mariadbd --datadir="$datadir" --user=mysql --skip-networking --socket="$init_socket" &
