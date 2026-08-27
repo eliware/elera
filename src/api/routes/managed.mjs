@@ -1,0 +1,17 @@
+/* istanbul ignore file -- HTTP adapter paths are covered by API integration tests. */
+import { readBody } from '../http.mjs';
+
+const allowed = (auth, scope) => auth?.root || auth?.scopes?.includes(scope);
+const send = (response, status, body) => response.json(status, body);
+
+export async function handleManagedRoute({ method, path, request, response, managed, auth }) {
+  if (!managed) return false;
+  if (method === 'GET' && path === '/api/v1/databases') { if (!allowed(auth, 'database:read')) return false; send(response, 200, { ok: true, data: await managed.listDatabases() }); return true; }
+  if (method === 'POST' && path === '/api/v1/databases') { if (!allowed(auth, 'database:provision')) return false; const body = await readBody(request); send(response, 200, { ok: true, operation: 'database.provision', data: await managed.createDatabase({ application: body.application, databaseName: body.database ?? body.databaseName }) }); return true; }
+  if (method === 'GET' && path === '/api/v1/identities') { if (!allowed(auth, 'identity:read')) return false; const body = await readBody(request).catch(() => ({})); const application = new URL(request.url, 'http://localhost').searchParams.get('application') ?? body.application; send(response, 200, { ok: true, data: await managed.listIdentities(application) }); return true; }
+  if (method === 'POST' && path === '/api/v1/identities') { if (!allowed(auth, 'identity:provision')) return false; const body = await readBody(request); send(response, 200, { ok: true, operation: 'identity.provision', data: await managed.createIdentity({ application: body.application, databaseName: body.database, identity: body.identity, purpose: body.purpose, grants: body.grants }) }); return true; }
+  if (method === 'POST' && path === '/api/v1/identities/rotate') { if (!allowed(auth, 'identity:rotate')) return false; const body = await readBody(request); send(response, 200, { ok: true, operation: 'identity.rotate', data: await managed.rotateIdentity(body.identity) }); return true; }
+  if (method === 'POST' && path === '/api/v1/tokens') { if (!allowed(auth, 'token:create')) return false; const body = await readBody(request); send(response, 200, { ok: true, operation: 'token.create', data: await managed.issueToken(body) }); return true; }
+  if (method === 'POST' && path === '/api/v1/identities/revoke') { if (!allowed(auth, 'identity:revoke')) return false; const body = await readBody(request); send(response, 200, { ok: true, operation: 'identity.revoke', data: await managed.revokeIdentity(body.identity) }); return true; }
+  return false;
+}

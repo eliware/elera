@@ -147,13 +147,13 @@ after that node rejoined with `wsrep_cluster_size=3` and `wsrep_ready=ON`.
 
 ### `elera-lib`
 
-- [ ] Accept credential leases through a generic injected provider.
-- [ ] Replace credentials and recycle pools without logging secrets.
+- [x] Accept credential leases through a generic injected provider.
+- [x] Replace credentials and recycle pools without logging secrets.
 
 ### Supervisor
 
-- [ ] Store application databases, identities, accounts, grants, token metadata, and application mappings in `elera_meta`.
-- [ ] Provision runtime, readonly, migration, reporting, and admin identities idempotently.
+- [x] Store application databases, identities, accounts, grants, token metadata, and application mappings in `elera_meta`.
+- [x] Provision runtime, readonly, migration, reporting, and admin identities idempotently.
 - [ ] Generate, rotate, revoke, and verify credentials and grants; exclude system schemas.
 
 ### CLI and interoperability

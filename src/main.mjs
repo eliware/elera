@@ -10,6 +10,7 @@ import { createMariaDbProcess } from './lifecycle/mariadb-process.mjs';
 import { createEleraBootstrap, waitForSql } from './lifecycle/startup.mjs';
 import { createBootstrapCredentialLease } from './credentials/bootstrap.mjs';
 import { createMetadataService } from './metadata/service.mjs';
+import { createManagedMetadata } from './metadata/managed.mjs';
 import { createLifecycleManager } from './cluster/lifecycle.mjs';
 import { createObservationStore } from './cluster/observation-store.mjs';
 import { createDurableObservationStore } from './cluster/durable-observation-store.mjs';
@@ -31,7 +32,8 @@ const health = createHealthService({ db: { query: (...args) => db.query(...args)
 const intentState = createIntentState({ stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? '/etc/elera' });
 const memoryObservationStore = createObservationStore();
 const observationStore = process.env.ELERA_OBSERVATION_STATE_PATH ? createDurableObservationStore({ store: memoryObservationStore, statePath: process.env.ELERA_OBSERVATION_STATE_PATH, log }) : memoryObservationStore;
-const control = createControlApi({ db: { query: (...args) => db.query(...args) }, metadata: createMetadataService({ query: (...args) => db.query(...args) }), observationStore, lifecycle: createLifecycleManager({ status: () => health.status(), operations: createClusterOperations({ query: (...args) => db.query(...args), processController: { start: (...args) => mariaProcess?.start?.(...args) }, setDrain: (value) => { drained = value; } }), environment: process.env }), getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
+const metadata = createMetadataService({ query: (...args) => db.query(...args) });
+const control = createControlApi({ db: { query: (...args) => db.query(...args) }, metadata, managed: createManagedMetadata({ query: (...args) => db.query(...args) }), observationStore, lifecycle: createLifecycleManager({ status: () => health.status(), operations: createClusterOperations({ query: (...args) => db.query(...args), processController: { start: (...args) => mariaProcess?.start?.(...args) }, setDrain: (value) => { drained = value; } }), environment: process.env }), getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
 const probes = createProbeServer({ getStatus: () => health.status(), controlHandler: (request, response) => control.handler(request, response), log });
 servers.push(probes);
 
