@@ -13,10 +13,10 @@ RUN apt-get update \
     && mkdir -p /run/mysqld /var/lib/mysql \
     && chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
-COPY elera/docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
-COPY elera/package.json elera/package-lock.json /app/
+COPY docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
+COPY package.json package-lock.json /app/
 RUN cd /app && npm ci --omit=dev
-COPY elera/src /app/src
+COPY src /app/src
 RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh
 
 VOLUME ["/var/lib/mysql"]
