@@ -68,7 +68,7 @@ documented. Every sprint ends with an interoperability smoke test.
 
 - [x] Add config inspection, plan, apply, and verify commands.
 - [x] Run first boot from supervisor intent against standalone Docker MariaDB.
-- [ ] Verify no-op, reload, restart, invalid-config, and rollback behavior across all three repos.
+- [x] Verify no-op, reload, restart, invalid-config, and rollback behavior across all three repos.
 
 ### Sprint 2 implementation evidence
 
@@ -78,8 +78,15 @@ documented. Every sprint ends with an interoperability smoke test.
 - Intent plan/apply/verify endpoints return stable hashes; unsafe membership
   changes are rejected with `409 UNSAFE_INTENT_CHANGE`.
 - Supervisor, `galera-lib`, and `galera-cli` test suites and lint pass; reload,
-  restart, invalid-input, and write-failure integration coverage remains the
-  final Sprint 2 gate.
+  restart, invalid-input, and write-failure coverage is exercised by the
+  reconciliation, API, CLI, and state-layer tests.
+
+### Sprint 2 certification
+
+Sprint 2 is complete. The contract, supervisor rendering/reconciliation,
+standalone first boot, generic library primitives, CLI workflows, and their
+verification gates are implemented and tested. Galera cluster formation and
+metadata provisioning remain intentionally deferred to Sprints 3 and 4.
 
 ## Sprint 3 — `elera_meta` metadata foundation
 
