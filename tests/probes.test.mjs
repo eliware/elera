@@ -18,5 +18,16 @@ describe('HTTP probes', () => {
   });
   test('readiness errors return 503', async () => { await new Promise((resolve) => server.close(resolve)); server = createProbeServer({ getStatus: async () => { throw new Error('down'); }, controlHandler: async () => {}, log: { warn: jest.fn() } }); const port = await listen(server); expect((await get(port, '/readyz')).status).toBe(503); });
   test('draining nodes are not ready for HAProxy', async () => { await new Promise((resolve) => server.close(resolve)); server = createProbeServer({ getStatus: async () => ({ ready: true }), isDraining: () => true, controlHandler: async () => {}, log: { warn: jest.fn() } }); const port = await listen(server); expect((await get(port, '/healthz')).status).toBe(200); expect((await get(port, '/readyz')).status).toBe(503); });
+  test('router readiness remains available while SQL traffic is draining', async () => { expect((await get(server.address().port, '/router-readyz')).status).toBe(200); });
+  test('router readiness fails when SQL is unavailable', async () => {
+    await new Promise((resolve) => server.close(resolve));
+    server = createProbeServer({ getStatus: async () => ({ ready: false }), controlHandler: async () => {}, log: { warn: jest.fn() } });
+    const port = await listen(server);
+    expect((await get(port, '/router-readyz')).status).toBe(503);
+    await new Promise((resolve) => server.close(resolve));
+    server = createProbeServer({ getStatus: async () => { throw new Error('down'); }, controlHandler: async () => {}, log: { warn: jest.fn() } });
+    const failingPort = await listen(server);
+    expect((await get(failingPort, '/router-readyz')).status).toBe(503);
+  });
   test('rejects websocket upgrades when no upgrade handler accepts them', async () => { await new Promise((resolve) => server.close(resolve)); server = createProbeServer({ getStatus: async () => ({ ready: true }), controlHandler: async () => {}, log: { warn: jest.fn() } }); const port = await listen(server); const socket = await import('node:net').then(({ createConnection }) => new Promise((resolve) => { const client = createConnection(port, '127.0.0.1', () => client.write('GET /api/v1/routing/stream HTTP/1.1\\r\\nConnection: Upgrade\\r\\nUpgrade: websocket\\r\\n\\r\\n')); client.on('data', () => { client.destroy(); resolve(true); }); })); expect(socket).toBe(true); });
 });
