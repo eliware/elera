@@ -26,6 +26,7 @@ import { createRoutingEventBus } from "./routing/event-bus.mjs";
 import { createRoutingEventSnapshot } from "./routing/event-snapshot.mjs";
 import { createRoutingStream } from "./api/routing-stream.mjs";
 import { createDrainManager } from "./lifecycle/drain-manager.mjs";
+import { createSqlQuiesce } from "./lifecycle/sql-quiesce.mjs";
 import { createSqlDrainIntegration } from "./lifecycle/sql-routing.mjs";
 import { createDrainPropagation } from "./cluster/drain-propagation.mjs";
 
@@ -126,6 +127,7 @@ const drain = createDrainManager({
     });
   },
 });
+const sqlQuiesce = createSqlQuiesce({ drain, timeoutMs: config.shutdownTimeoutMs });
 const clusterDrain = createDrainPropagation({
   drain,
   peers: (process.env.ELERA_PEERS ?? "").split(","),
@@ -187,7 +189,7 @@ async function shutdown(signal) {
   }
   shuttingDown = true;
   log.info("Supervisor shutting down", { signal });
-  drain.begin();
+  await sqlQuiesce.begin();
   if (peerTimer) clearInterval(peerTimer);
   if (routingTimer) clearInterval(routingTimer);
   routingBus.close();
