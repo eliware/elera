@@ -21,6 +21,13 @@ npm run lint
 npm run check
 ```
 
+The production image uses the workspace parent as its Docker build context so
+it can include the sibling `galera-lib` package:
+
+```bash
+docker build -f galera/Dockerfile -t eliware/galera:local .
+```
+
 The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Galera is
 enabled with `GALERA=1`. The legacy TCP agent listeners `33060` and `33070`

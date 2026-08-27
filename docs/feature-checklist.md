@@ -31,6 +31,19 @@ documented. Every sprint ends with an interoperability smoke test.
 - [x] Provide `health`, `ready`, `status`, stable exits, and SQL smoke support.
 - [x] Verify library, supervisor, CLI, and real MariaDB interoperability.
 
+### Sprint 1 certification evidence
+
+- Production image builds from the workspace parent context with the sibling
+  `galera-lib` included.
+- The standalone supervisor exposes `/healthz` before MariaDB is ready and
+  issues an advertised `galera-single:3306` bundle to remote consumers.
+- `galera-cli sql-smoke` passes from the separate `backup-dev` container through
+  the supervisor lease endpoint to MariaDB.
+- Local tests pass at 100×4 coverage with zero lint warnings; the pushed
+  supervisor CI run passed on both Ubuntu and Windows.
+- The GitHub Actions Node.js 20 action warning is informational only; it does
+  not affect the Sprint 1 gates.
+
 ## Sprint 2 — GitOps intent, rendering, and first boot
 
 ### Shared contract
