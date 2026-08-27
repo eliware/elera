@@ -12,6 +12,7 @@
     "check": "node --check src/main.mjs",
     "contracts": "node scripts/verify-contracts.mjs",
     "test": "eliware-test",
+    "test:ci": "eliware-test --coveragePathIgnorePatterns=elera-lib",
     "lint": "eliware-test --lint",
     "audit": "npm audit --omit=dev --audit-level=moderate",
     "pack": "npm pack --dry-run"

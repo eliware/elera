@@ -32,7 +32,7 @@ jobs:
         working-directory: elera-lib
       - run: npm pkg set dependencies.@eliware/elera-lib=file:./elera-lib/eliware-elera-lib-0.1.0.tgz
       - run: npm install --package-lock=false
-      - run: npm test
+      - run: npm run test:ci
       - run: npm run lint
       - run: npm run check
       - run: npm run contracts
