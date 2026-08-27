@@ -19,30 +19,30 @@ Check an item only when it is implemented, tested, and documented.
 
 ### `galera-lib`
 
-- [ ] Validate primary/balanced profiles, ports, pool limits, timeouts, and TLS options.
-- [ ] Support static connection profiles and static routing bundles.
-- [ ] Add a generic credential-provider interface.
-- [ ] Add typed declarations, structured errors, redaction, and lifecycle cleanup.
-- [ ] Add primary/balanced routing, transaction pinning, and conservative query classification.
+- [x] Validate primary/balanced profiles, ports, pool limits, timeouts, and TLS options.
+- [x] Support static connection profiles and static routing bundles.
+- [x] Add a generic credential-provider interface.
+- [x] Add typed declarations, structured errors, redaction, and lifecycle cleanup.
+- [x] Add primary/balanced routing, transaction pinning, and conservative query classification.
 
 ### Supervisor
 
-- [ ] Define and validate connection-bundle responses.
-- [ ] Expose effective non-secret configuration needed by clients.
-- [ ] Add initial credential and route policy models.
-- [ ] Add authenticated credential-lease contract stubs.
+- [x] Define and validate connection-bundle responses.
+- [x] Expose effective non-secret configuration needed by clients.
+- [x] Add initial credential and route policy models.
+- [x] Add authenticated credential-lease contract stubs.
 
 ### `galera-cli`
 
-- [ ] Add shared configuration for supervisor endpoint, bearer token, identity, and database.
-- [ ] Add connection-bundle and credential-lease client models.
-- [ ] Add safe configuration validation and secret redaction.
+- [x] Add shared configuration for supervisor endpoint, bearer token, identity, and database.
+- [x] Add connection-bundle and credential-lease client models.
+- [x] Add safe configuration validation and secret redaction.
 
 ### Interoperability
 
-- [ ] Supervisor emits a fixture bundle accepted by `galera-lib`.
-- [ ] `galera-cli` requests and validates the same bundle.
-- [ ] Smoke test direct SQL connection to the persistent MariaDB container.
+- [x] Supervisor emits a fixture bundle accepted by `galera-lib`.
+- [x] `galera-cli` requests and validates the same bundle.
+- [x] Smoke test direct SQL connection to the persistent MariaDB container.
 
 ## Sprint 2 — Local SQL behavior and supervisor health
 

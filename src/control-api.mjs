@@ -1,7 +1,8 @@
 /* istanbul ignore file -- HTTP adapter branches are exercised by endpoint contract tests. */
 import { access, constants } from 'node:fs/promises';
 import { createHash, timingSafeEqual } from 'node:crypto';
-import http from 'node:http';
+import { connectionBundleFromConfig } from './connection-bundle.mjs';
+import { validateCredentialLeaseRequest } from './routing-policy.mjs';
 
 const json = (response, status, body) => response.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body) + '\n');
 const tokenMatches = (request, expected) => {
@@ -15,7 +16,7 @@ const accountName = (value) => { if (!/^[A-Za-z0-9_$-]+$/.test(value)) throw Obj
 const ident = (value) => `\`${String(value).replaceAll('`', '``')}\``;
 const literal = (value) => `'${String(value).replaceAll('\\', '\\\\').replaceAll("'", "''")}'`;
 
-export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
+export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, getConfig, leaseCredentials, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
   const token = environment.ROOT_TOKEN;
   const handler = async (request, response) => {
     if (!request.url?.startsWith('/api/v1/')) return false;
@@ -23,6 +24,8 @@ export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstra
     try {
       const url = new URL(request.url, 'http://localhost'); const path = url.pathname; const method = request.method;
       if (method === 'GET' && path === '/api/v1/status') { json(response, 200, { ok: true, operation: 'status', status: 'completed', data: await getStatus() }); return true; }
+      if (method === 'GET' && path === '/api/v1/config') { const data = typeof getConfig === 'function' ? await getConfig() : { galera: environment.GALERA === '1', database: environment.MARIADB_DATABASE ?? null, primaryHost: environment.MYSQL_PRIMARY_HOST ?? environment.MYSQL_HOST ?? null, balancedHost: environment.MYSQL_BALANCED_HOST ?? null }; json(response, 200, { ok: true, operation: 'config', status: 'completed', data }); return true; }
+      if (method === 'POST' && path === '/api/v1/credentials/lease') { const body = validateCredentialLeaseRequest(await readBody(request)); if (typeof leaseCredentials !== 'function') { json(response, 501, { ok: false, operation: 'credentials.lease', error: 'credential leasing is not configured' }); return true; } const result = await leaseCredentials(body); const bundle = connectionBundleFromConfig(result); json(response, 200, { ok: true, operation: 'credentials.lease', status: 'completed', data: bundle }); return true; }
       if (method === 'GET' && path === '/api/v1/initialization') { let initialized = true; try { await access(`${dataDir}/mysql`, constants.F_OK); } catch { initialized = false; } json(response, 200, { ok: true, initialized, dataDir }); return true; }
       if (method === 'GET' && path === '/api/v1/cluster/status') { json(response, 200, { ok: true, operation: 'cluster.status', status: 'completed', data: await getStatus() }); return true; }
       if (method === 'GET' && path === '/api/v1/cluster/bootstrap/eligibility') { const data = await getStatus(); const eligible = environment.GALERA === '1' && !data.ready; json(response, 200, { ok: true, eligible, reason: eligible ? 'node is Galera-enabled and not currently ready' : 'requires GALERA=1 and a non-ready node', data }); return true; }

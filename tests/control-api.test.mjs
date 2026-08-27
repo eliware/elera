@@ -14,6 +14,9 @@ describe('control API', () => {
     const api = createControlApi({ db, getStatus: async () => ({ ready: false, values: { wsrep_local_state_comment: 'Joining' } }), getTraffic: () => ({ drained }), setDrain: (value) => { drained = value; }, bootstrap: async () => { bootstrapped = true; }, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '1', MARIADB_DATABASE: 'app', MARIADB_USER: 'app' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
     const call = async (method, url, body) => { const out = response(); await api.handler(request(method, url, body), out); return { out, value: JSON.parse(out.body) }; };
     expect((await call('GET', '/api/v1/status')).out.status).toBe(200);
+    expect((await call('GET', '/api/v1/config')).value.data.galera).toBe(true);
+    const leaseApi = createControlApi({ db, getStatus: async () => ({}), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here' }, leaseCredentials: async () => ({ database: 'app', identity: 'runtime', username: 'app', password: 'secret', routes: { primary: [{ host: 'sql0', port: 3306 }], balanced: [{ host: 'sql0', port: 3306 }] }, expiresAt: '2099-01-01T00:00:00Z' }), log: { error: jest.fn() } });
+    const leaseOut = response(); await leaseApi.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime' }), leaseOut); expect(leaseOut.status).toBe(200);
     expect((await call('GET', '/api/v1/initialization')).out.status).toBe(200);
     expect((await call('POST', '/api/v1/initialization/plan')).value.status).toBe('planned');
     expect((await call('POST', '/api/v1/initialization/verify')).out.status).toBe(200);
@@ -37,5 +40,7 @@ describe('control API', () => {
     const unauth = response(); await api.handler(request('GET', '/api/v1/status', undefined, null), unauth); expect(unauth.status).toBe(401);
     const noConfirm = response(); await api.handler(request('POST', '/api/v1/cluster/bootstrap', {}), noConfirm); expect(noConfirm.status).toBe(409);
     const badGrant = response(); await api.handler(request('POST', '/api/v1/accounts/import', { confirm: true, accounts: [{ user: 'bad name', grants: [] }] }), badGrant); expect(badGrant.status).toBe(400);
+    const missingLease = response(); await api.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime' }), missingLease); expect(missingLease.status).toBe(501);
+    const invalidLease = response(); await api.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime', routes: ['unknown'] }), invalidLease); expect(invalidLease.status).toBe(400);
   });
 });
