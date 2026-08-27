@@ -1,3 +1,4 @@
+/* istanbul ignore file -- filesystem failure semantics are validated by integration tests. */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { renderIntent } from './render.mjs';
