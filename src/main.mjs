@@ -7,7 +7,7 @@ import { createProbeServer } from "./probes.mjs";
 import { createControlApi } from "./control-api.mjs";
 import { createMariaDbProcess } from "./lifecycle/mariadb-process.mjs";
 import { createEleraBootstrap, waitForSql } from "./lifecycle/startup.mjs";
-import { createBootstrapCredentialLease } from "./credentials/bootstrap.mjs";
+import { createBootstrapCredentialLease } from "./credentials/bootstrap-lease.mjs";
 import { createMetadataService } from "./metadata/service.mjs";
 import { createManagedMetadata } from "./metadata/managed.mjs";
 import { createMetadataReconciler } from "./metadata/reconcile.mjs";
