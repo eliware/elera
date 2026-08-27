@@ -48,21 +48,31 @@ The seven-service `lab` profile models the production topology: three Elera
 nodes, the standalone `elera-single` restore target, an HTTP-only HAProxy VIP,
 a `backup-dev` workstation running `elera-cli`, and a `backup-nas` SSH target.
 
-```bash
-docker compose --profile lab build
-docker compose --profile lab up -d
+The PowerShell launcher removes all lab volumes before each run, builds the
+local images, starts all four supervisors in pending-init mode, waits briefly,
+then starts HAProxy, NAS, and the dev workstation E2E runner:
+
+```powershell
+node ./scripts/lab-e2e.mjs
 ```
 
-The dev workstation reaches the cluster API at `http://haproxy:8080`, stores
-working backups in its named state volume, and reaches the standalone restore
-target at `elera-single:3306`. The NAS is available as `backup-nas:22` from
-the lab and on host port `2222`.
+Use `node ./scripts/lab-e2e.mjs --no-build` only when the local images are already
+known to be current. The dev workstation reaches the cluster API through
+`http://haproxy:8080`, stores working backups in its named state volume, and
+the NAS is available as `backup-nas:22` (host port `2222`). The E2E flow uses
+the root token only for explicit provisioning, then gives the sample app only
+its scoped token; it obtains a routing bundle, maintains the routing stream,
+and logs the actual SQL node and query outcome once per second.
 
-The lab does not enable Galera bootstrap automatically. For a fresh lab,
-initialize only the designated first node with `ELERA_BOOTSTRAP=true`, verify
-its Primary/Synced state, then return it to `false` before starting the other
-nodes. Existing volumes must never be bootstrapped just because a service
-starts.
+The runner performs the explicit first-node bootstrap, member joins,
+standalone initialization, metadata and credential provisioning, routing and
+drain checks, backup verification, NAS transfer, and restore verification.
+It does not rely on automatic Galera bootstrap or MariaDB initialization.
+
+For a fresh lab, the supervisor containers initially refuse normal SQL startup
+until the runner explicitly initializes them. The runner then verifies
+their Primary/Synced state and explicitly joins the remaining members.
+Existing volumes must never be bootstrapped just because a service starts.
 
 Stop the lab without deleting its simulated VM/NAS state with:
 
@@ -90,3 +100,17 @@ See [the runtime contract](docs/runtime-contract.md) and [release evidence](docs
 for the startup safety rules, filesystem requirements, and release-evidence
 status.
 
+### Local end-to-end lab
+
+The lab always starts from clean Docker volumes. It starts all four supervisors
+first, then starts HAProxy, the backup NAS, and the `backup-dev` E2E runner.
+The runner performs initialization, Galera bootstrap and joins, metadata and
+credential provisioning, sample-client routing/drain checks, and backup
+verification. Run it from PowerShell with:
+
+```powershell
+node ./scripts/lab-e2e.mjs
+```
+
+Use `-NoBuild` only when the local images are already known to be current.
+The lab is intentionally independent of GitOps and uses lab-only credentials.

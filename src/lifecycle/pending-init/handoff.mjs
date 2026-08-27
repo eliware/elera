@@ -1,14 +1,14 @@
 import { spawn } from "node:child_process";
 
 export const createClusterHandoff = ({
-  command = "/usr/local/bin/mariadb-entrypoint.sh",
+  command = "node",
   environment = process.env,
   spawnProcess = spawn,
   exit = () => {},
   onExit = () => {},
   bootstrapCluster = false,
 } = {}) => () => new Promise((resolve, reject) => {
-  const child = spawnProcess(command, {
+  const child = spawnProcess(command, ["/usr/local/bin/mariadb-entrypoint.mjs"], {
     env: {
       ...environment,
       ELERA_PENDING_INIT: "false",

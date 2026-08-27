@@ -1,0 +1,8 @@
+{
+  "name": "@eliware/elera-sample-app",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@eliware/elera-lib": "0.1.3"
+  }
+}

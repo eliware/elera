@@ -14,15 +14,15 @@ RUN apt-get update \
     && mkdir -p /run/mysqld /run/elera /var/lib/mysql /etc/elera \
     && chown -R mysql:mysql /run/mysqld /run/elera /var/lib/mysql /etc/elera
 
-COPY docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
+COPY docker/mariadb-entrypoint.mjs /usr/local/bin/mariadb-entrypoint.mjs
 COPY package.json package-lock.json /app/
 RUN cd /app && npm ci --omit=dev
 COPY src /app/src
-RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.mjs
 
 USER mysql
 
 VOLUME ["/var/lib/mysql"]
 EXPOSE 3306 4444 4567 4568 8080
 
-ENTRYPOINT ["/usr/local/bin/mariadb-entrypoint.sh"]
+ENTRYPOINT ["node", "/usr/local/bin/mariadb-entrypoint.mjs"]

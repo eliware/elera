@@ -1,0 +1,2 @@
+import { post, waitForHealth, waitForReady } from './http.mjs';
+export async function initializeSupervisors() { await waitForHealth('http://elera-0:8080'); await post('http://elera-0:8080', '/api/v1/cluster/bootstrap', { confirm: true }); await waitForReady('http://elera-0:8080'); for (const node of ['elera-1', 'elera-2', 'elera-single']) { await post(`http://${node}:8080`, '/api/v1/cluster/join', { confirm: true }); await waitForReady(`http://${node}:8080`); } }
