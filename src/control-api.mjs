@@ -32,7 +32,7 @@ export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstra
         const leaseRequest = validateCredentialLeaseRequest(await readBody(request));
         if (typeof leaseCredentials !== 'function') { out.json(501, { ok: false, operation: 'credentials.lease', error: 'credential leasing is not configured' }); return true; }
         const result = await leaseCredentials(leaseRequest);
-        out.json(200, { ok: true, operation: 'credentials.lease', status: 'completed', data: connectionBundleFromConfig(result) }); return true;
+        out.json(200, { ok: true, operation: 'credentials.lease', status: 'completed', data: result.credentials ? result : connectionBundleFromConfig(result) }); return true;
       }
       if (request.method === 'POST' && (url.pathname === '/api/v1/credentials/refresh' || url.pathname === '/api/v1/credentials/revoke')) {
         const body = await readBody(request); if (typeof managed?.lease !== 'function') { out.json(501, { ok: false, error: 'credential management is not configured' }); return true; }
