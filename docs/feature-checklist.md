@@ -220,18 +220,25 @@ same bundle version through a supervisor endpoint.
 ### `elera-lib`
 
 - [x] Provide generic SQL connection quiesce and verification hooks without exposing supervisor- or CLI-specific dump/restore orchestration.
-- [ ] Verify credentials, privileges, schema, data, and application access without JSON dump transport.
+- [x] Verify credentials, privileges, schema, data, and application access without JSON dump transport.
 
 ### Supervisor
 
-- [x] Add metadata reconcile plan/apply/verify operations for managed databases and identities; account/grant and route convergence remain follow-up work.
+- [x] Add metadata reconcile plan/apply/verify operations for managed databases and identities.
+- [x] Add account/grant restore plan/apply/verify operations for logical account state.
 - [x] Restore `elera_meta` and logical account state independently of system schemas.
 
 ### CLI and interoperability
 
 - [x] Implement CLI reconcile plan/apply/verify commands.
 - [x] Continue using native `mariadb-dump` and `mariadb` streams.
-- [ ] Complete metadata-first restore in Docker Desktop without raw system-schema files.
+- [x] Complete metadata-first restore in Docker Desktop without raw system-schema files; verified through the dev → NAS → standalone lab path.
+
+Sprint 8 runtime evidence: `mariadb-dump` produced SQL plus `SUPERVISOR-METADATA.json`,
+the artifact was transferred to the simulated NAS over SSH, retrieved by the dev
+workstation, restored metadata before application SQL, and the restored table was
+verified on the standalone Supervisor/MariaDB target. Exported grants contain no
+passwords or password hashes.
 
 ## Sprint 9 — GitOps hardening and optional encrypted artifacts
 
