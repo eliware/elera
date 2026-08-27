@@ -2,7 +2,17 @@
   "name": "@eliware/elera",
   "version": "0.1.0",
   "private": true,
-  "description": "MariaDB Elera container supervisor and health service",
+  "description": "MariaDB Elera container supervisor with health, readiness, routing, and cluster control APIs",
+  "keywords": ["eliware", "elera", "mariadb", "mysql", "galera", "supervisor", "kubernetes", "routing"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eliware/elera.git"
+  },
+  "homepage": "https://github.com/eliware/elera#readme",
+  "bugs": {
+    "url": "https://github.com/eliware/elera/issues"
+  },
+  "license": "Apache-2.0",
   "type": "module",
   "engines": {
     "node": ">=26"
