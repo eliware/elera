@@ -26,6 +26,28 @@ supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Galera is
 enabled with `GALERA=1`. The legacy TCP agent listeners `33060` and `33070`
 are transitional and will be removed with the HTTP-only migration.
 
+## Local backup and restore lab
+
+The seven-service `lab` profile models the production topology: three Galera
+nodes, the standalone `galera-single` restore target, an HTTP-only HAProxy VIP,
+a `backup-dev` workstation running `galera-cli`, and a `backup-nas` SSH target.
+
+```bash
+docker compose --profile lab build
+docker compose --profile lab up -d
+```
+
+The dev workstation reaches the cluster API at `http://haproxy:8080`, stores
+working backups in its named state volume, and reaches the standalone restore
+target at `galera-single:3306`. The NAS is available as `backup-nas:22` from
+the lab and on host port `2222`.
+
+Stop the lab without deleting its simulated VM/NAS state with:
+
+```bash
+docker compose --profile lab stop
+```
+
 ## Documentation
 
 - [API checklist](docs/api.md)
