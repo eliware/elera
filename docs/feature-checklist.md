@@ -154,13 +154,19 @@ after that node rejoined with `wsrep_cluster_size=3` and `wsrep_ready=ON`.
 
 - [x] Store application databases, identities, accounts, grants, token metadata, and application mappings in `elera_meta`.
 - [x] Provision runtime, readonly, migration, reporting, and admin identities idempotently.
-- [ ] Generate, rotate, revoke, and verify credentials and grants; exclude system schemas.
+- [x] Generate, rotate, revoke, and verify credentials and grants; exclude system schemas.
 
 ### CLI and interoperability
 
-- [ ] Implement database, identity, account, grant, token, and credential commands.
-- [ ] Map scoped bearer tokens to applications/identities.
-- [ ] Verify actual MariaDB privileges through API, CLI, and library connections.
+- [x] Implement database, identity, account, grant, token, and credential commands.
+- [x] Map scoped bearer tokens to applications/identities.
+- [x] Verify actual MariaDB privileges through API, CLI, and library connections.
+
+Sprint 5 runtime evidence: the Docker lab applied `elera_meta` migrations 1–3,
+provisioned the `payments` database and `runtime` identity, issued an encrypted
+credential lease with direct-node routes, authenticated a direct MariaDB query,
+and ran `elera-cli database-list` plus `sql-smoke` successfully from the
+backup-dev container.
 
 ## Sprint 6 — Routing decisions and REST bundles
 

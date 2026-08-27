@@ -9,7 +9,7 @@ test('manages databases, identities, and scoped tokens without exposing policy S
   expect(identity.username).toBe('payments_runtime'); expect(identity.password).toBeTruthy();
   expect(await managed.listDatabases()).toHaveLength(1); expect(await managed.listIdentities('payments')).toHaveLength(1);
   const token = await managed.issueToken({ tokenName: 'app-token', application: 'payments', identity: 'runtime', scopes: ['database:read'] });
-  expect(token.token).toBeTruthy(); expect((await managed.authenticate(token.token)).scopes).toEqual(['database:read']); expect(await managed.revokeIdentity('runtime')).toEqual({ identity: 'runtime', revoked: true }); expect(calls.some((sql) => sql.includes('CREATE DATABASE'))).toBe(true);
+  expect(token.token).toBeTruthy(); expect((await managed.authenticate(token.token)).scopes).toEqual(['database:read']); expect(await managed.revokeToken('app-token')).toEqual({ name: 'app-token', revoked: true }); expect(await managed.revokeIdentity('runtime')).toEqual({ identity: 'runtime', revoked: true }); expect(calls.some((sql) => sql.includes('CREATE DATABASE'))).toBe(true);
   await managed.issueToken({ tokenName: 'global-token' });
 });
 

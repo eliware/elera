@@ -6,6 +6,7 @@ mkdir -p "$datadir" /run/mysqld
 chown -R mysql:mysql "$datadir" /run/mysqld
 
 if [ ! -d "$datadir/mysql" ]; then
+  first_boot=true
   mariadb-install-db --user=mysql --datadir="$datadir" --skip-test-db
 
   init_socket=/run/mysqld/init.sock
@@ -33,8 +34,9 @@ fi
 
 # Bootstrap is a first-start concern. Once this datadir has been initialized,
 # never force --wsrep-new-cluster during a normal restart or rejoin.
-if [ "${ELERA_BOOTSTRAP:-false}" = "true" ] && [ -f "$datadir/grastate.dat" ]; then
+if [ "${ELERA_BOOTSTRAP:-false}" = "true" ] && [ "${first_boot:-false}" != "true" ] && [ -f "$datadir/.elera-supervisor-initialized" ]; then
   export ELERA_BOOTSTRAP=false
 fi
+touch "$datadir/.elera-supervisor-initialized"
 
 exec node /app/src/main.mjs

@@ -31,6 +31,11 @@ export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstra
         const result = await leaseCredentials(leaseRequest);
         out.json(200, { ok: true, operation: 'credentials.lease', status: 'completed', data: connectionBundleFromConfig(result) }); return true;
       }
+      if (request.method === 'POST' && (url.pathname === '/api/v1/credentials/refresh' || url.pathname === '/api/v1/credentials/revoke')) {
+        const body = await readBody(request); if (typeof managed?.lease !== 'function') { out.json(501, { ok: false, error: 'credential management is not configured' }); return true; }
+        if (url.pathname.endsWith('/revoke')) { const result = await managed.revokeIdentity(body.identity); out.json(200, { ok: true, operation: 'credentials.revoke', data: result }); return true; }
+        const result = await managed.lease(body); out.json(200, { ok: true, operation: 'credentials.refresh', status: 'completed', data: connectionBundleFromConfig(result) }); return true;
+      }
       out.json(404, { ok: false, error: 'endpoint not found' }); return true;
     } catch (error) { log?.error('Control API request failed', { error, method: request.method, url: request.url }); json(target, error.statusCode ?? 500, { ok: false, error: error.message ?? String(error) }); return true; }
   };
