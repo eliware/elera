@@ -121,19 +121,20 @@ implemented. All three repositories pass 100×4 coverage and zero-warning lint.
 
 ### `elera-lib`
 
-- [ ] Accept supervisor-selected direct node sets without embedding Elera policy.
-- [ ] Preserve safe failover only within a valid, versioned route bundle.
+- [x] Accept supervisor-selected direct node sets without embedding Elera policy.
+- [x] Preserve safe failover only within a valid, versioned route bundle.
 
 ### Supervisor
 
-- [ ] Implement bootstrap eligibility, bootstrap, join, leave, and recovery planning.
-- [ ] Exchange authenticated health/topology observations between supervisors.
-- [ ] Form quorum; reject stale, contradictory, or unsafe observations.
-- [ ] Track synced state, primary component, node identity, health, load, and drain state.
+- [x] Implement bootstrap eligibility, bootstrap, join, leave, and recovery planning.
+- [x] Exchange authenticated health/topology observations between supervisors.
+- [x] Form quorum; reject stale, contradictory, or unsafe observations.
+- [x] Track synced state, primary component, node identity, health, load, and drain state.
+- [x] Persist observations across supervisor restarts when `ELERA_OBSERVATION_STATE_PATH` is configured.
 
 ### CLI and interoperability
 
-- [ ] Implement cluster status, bootstrap, join, leave, and recovery commands.
+- [x] Implement cluster status, bootstrap, join, leave, and recovery commands.
 - [ ] Bootstrap and inspect a three-node Docker Elera cluster.
 - [ ] Verify topology and direct `3306` connectivity from every supervisor.
 

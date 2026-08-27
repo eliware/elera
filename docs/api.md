@@ -49,7 +49,7 @@ restart; unsafe bootstrap changes require explicit confirmation.
 
 - [x] `GET /api/v1/cluster/status` — local and currently observed cluster state.
 - [ ] `GET /api/v1/cluster/writer-assignments` — current per-application writer assignments.
-- [ ] `GET /api/v1/cluster/topology` — cluster members, addresses, state, and eligibility.
+- [x] `GET /api/v1/cluster/topology` — current observations and quorum decision.
 - [ ] `GET /api/v1/internal/health` — authenticated supervisor health observation.
 - [ ] `GET /api/v1/internal/topology` — authenticated supervisor topology exchange.
 - [ ] `POST /api/v1/internal/observations` — publish a signed or authenticated observation.
@@ -77,11 +77,11 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [x] `GET /api/v1/cluster/bootstrap/eligibility` — explain bootstrap safety.
 - [x] `POST /api/v1/cluster/bootstrap/plan` — preview bootstrap checks.
 - [x] `POST /api/v1/cluster/bootstrap` — explicitly create a Primary component.
-- [ ] `POST /api/v1/cluster/join/plan` — preview normal cluster joining.
-- [ ] `POST /api/v1/cluster/join` — join a configured cluster.
-- [ ] `POST /api/v1/cluster/leave` — gracefully leave the cluster.
-- [ ] `POST /api/v1/cluster/recover/plan` — analyze total-cluster-loss recovery.
-- [ ] `POST /api/v1/cluster/recover` — execute confirmed recovery.
+- [x] `POST /api/v1/cluster/join/plan` — preview normal cluster joining.
+- [x] `POST /api/v1/cluster/join` — join a configured cluster.
+- [x] `POST /api/v1/cluster/leave` — gracefully leave the cluster.
+- [x] `POST /api/v1/cluster/recover/plan` — analyze total-cluster-loss recovery.
+- [x] `POST /api/v1/cluster/recover` — execute confirmed recovery.
 - [x] `GET /api/v1/cluster/wait-ready` — wait for local readiness.
 
 ## Connection bundles
