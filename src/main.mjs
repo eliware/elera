@@ -121,7 +121,6 @@ const drain = createDrainManager({
     routingBus.publish({
       type: value ? "routing.drain" : "routing.recovery",
       version: Date.now(),
-      application: process.env.ELERA_APPLICATION ?? "default",
       node: process.env.ELERA_NODE_NAME ?? "elera",
       generatedAt: new Date().toISOString(),
     });
