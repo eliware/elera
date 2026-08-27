@@ -51,4 +51,11 @@ describe('control API', () => {
     const noBootstrap = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: false }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', GALERA: '1' }, log: { error: jest.fn() } });
     const unavailable = response(); await noBootstrap.handler(request('POST', '/api/v1/cluster/bootstrap', { confirm: true }), unavailable); expect(unavailable.status).toBe(503);
   });
+  test('plans and applies safe intent changes while rejecting unsafe ones', async () => {
+    const intent = { apiVersion: 'galera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'x', members: [{ name: 'x', address: 'x' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } };
+    const state = Object.assign(() => intent, { apply: async value => ({ hash: value.mariadb.port }) });
+    const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({}), getTraffic: () => ({}), setDrain: () => {}, getActiveIntent: state, environment: { ROOT_TOKEN: 'root_token_here' }, log: { error: jest.fn() } });
+    const out = response(); await api.handler(request('POST', '/api/v1/config/apply', { confirm: true, intent }), out); expect(out.status).toBe(200);
+    const unsafe = structuredClone(intent); unsafe.cluster.members.push({ name: 'y', address: 'y' }); const rejected = response(); await api.handler(request('POST', '/api/v1/config/apply', { confirm: true, intent: unsafe }), rejected); expect(rejected.status).toBe(409);
+  });
 });
