@@ -48,14 +48,14 @@ documented. Every sprint ends with an interoperability smoke test.
 
 ### Shared contract
 
-- [ ] Define the versioned supervisor intent schema: cluster members, MariaDB settings, routing policy, and drain policy.
-- [ ] Keep tokens, passwords, TLS inputs, and other sensitive values in separate GitOps Secrets.
-- [ ] Define desired/active hashes and change classes: no-op, reload, restart, or unsafe.
+- [x] Define the versioned supervisor intent schema: cluster members, MariaDB settings, routing policy, and drain policy.
+- [x] Keep tokens, passwords, TLS inputs, and other sensitive values in separate GitOps Secrets.
+- [x] Define desired/active hashes and change classes: no-op, reload, restart, or unsafe.
 
 ### `elera-lib`
 
 - [x] Add generic administrative SQL and transaction-safe migration primitives.
-- [ ] Keep supervisor and CLI policy out of the public library API.
+- [x] Keep supervisor and CLI policy out of the public library API.
 
 ### Supervisor
 

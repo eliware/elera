@@ -19,10 +19,10 @@ non-secret intent and a separate Secret for tokens, passwords, TLS material,
 and other sensitive inputs. The supervisor validates that intent and renders
 the standardized MariaDB and Elera configuration files locally.
 
-- [ ] `GET /api/v1/config/desired` — inspect accepted non-secret desired configuration.
-- [ ] `GET /api/v1/config/effective` — inspect rendered and active configuration hashes.
-- [ ] `POST /api/v1/config/plan` — classify changes as no-op, reload, restart, or unsafe.
-- [ ] `POST /api/v1/config/apply` — atomically render and apply a confirmed configuration.
+- [x] `GET /api/v1/config/intent` — inspect the validated non-secret supervisor intent and desired hash.
+- [x] `POST /api/v1/config/plan` — classify changes as no-op, reload, restart, or unsafe.
+- [x] `POST /api/v1/config/apply` — atomically render and apply a confirmed configuration.
+- [x] `POST /api/v1/config/verify` — compare the active rendered intent with the desired intent.
 - [ ] `POST /api/v1/config/rollback` — restore the last known-good rendered configuration (deferred after MVP).
 
 The MVP tracks desired and active hashes; a retained last-known-good file is
