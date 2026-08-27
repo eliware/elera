@@ -13,6 +13,7 @@ services:
     hostname: elera-single
     environment: &single-env
       ROOT_TOKEN: ${ROOT_TOKEN:-root_token_here}
+      ELERA_CREDENTIAL_KEY: ${ELERA_CREDENTIAL_KEY:-lab-credential-key}
       ELERA_ADVERTISED_HOST: elera-single
       MARIADB_ROOT_PASSWORD: dev-root-password
       MARIADB_DATABASE: app

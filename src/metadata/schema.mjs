@@ -10,4 +10,6 @@ export const META_MIGRATIONS = [{ version: 1, name: 'metadata-foundation', state
   'CREATE TABLE IF NOT EXISTS scoped_tokens (name VARCHAR(255) PRIMARY KEY, token_hash CHAR(64) NOT NULL, application_name VARCHAR(255), identity_name VARCHAR(255), scopes_json JSON NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, rotated_at TIMESTAMP NULL)',
   'CREATE INDEX IF NOT EXISTS idx_managed_databases_application ON managed_databases(application_name)',
   'CREATE INDEX IF NOT EXISTS idx_identities_application ON identities(application_name)'
+] }, { version: 3, name: 'encrypted-identity-credentials', statements: [
+  'ALTER TABLE identities ADD COLUMN IF NOT EXISTS credential_ciphertext TEXT NULL'
 ] }];
