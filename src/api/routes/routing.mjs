@@ -1,11 +1,13 @@
 /* istanbul ignore file -- HTTP adapter is covered by endpoint and lab contract tests. */
 import { readBody } from '../http.mjs';
 import { calculateRoutes } from '../../routing/decision.mjs';
+import { refreshLocalObservation } from '../../routing/local-observation.mjs';
 
 const recentRoutes = new Map();
 
-export async function handleRoutingRoute({ method, path, url, request, response, observationStore, routingBundles } = {}) {
+export async function handleRoutingRoute({ method, path, url, request, response, observationStore, routingBundles, getStatus, environment } = {}) {
   if (path === '/api/v1/routes' && method === 'GET') {
+    await refreshLocalObservation({ observationStore, getStatus, environment });
     const application = url.searchParams.get('application') ?? 'default';
     const calculated = calculateRoutes({ application, observations: observationStore?.snapshot?.() ?? [] });
     const previous = recentRoutes.get(application);
