@@ -167,6 +167,10 @@ files, and backup artifacts are deferred; they remain in GitOps Secrets or the
 existing operator-managed artifact path. Plaintext secrets must not be stored
 durably.
 
+Backup sidecars contain logical account and grant definitions only. Passwords,
+password hashes, and private key material are removed from exported grants and
+are regenerated through authenticated restore operations.
+
 ## Reconciliation
 
 - [x] `POST /api/v1/reconcile/plan` — compare desired managed databases and identities with MariaDB.

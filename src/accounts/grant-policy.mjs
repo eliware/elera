@@ -1,4 +1,4 @@
-const privileges = 'SELECT|INSERT|UPDATE|DELETE|EXECUTE|CREATE|ALTER|INDEX|REFERENCES|SHOW VIEW|TRIGGER|EVENT|LOCK TABLES';
+const privileges = 'SELECT|INSERT|UPDATE|DELETE|DROP|EXECUTE|CREATE|ALTER|INDEX|REFERENCES|SHOW VIEW|TRIGGER|EVENT|LOCK TABLES';
 const pattern = new RegExp(`^(${privileges})(,\\s*(${privileges}))*$`, 'i');
 
 export function validateGrantPolicy(grant) {

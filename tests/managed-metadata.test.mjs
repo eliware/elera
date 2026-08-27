@@ -18,7 +18,7 @@ test('validates managed names, purposes, and grants', async () => {
   const managed = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] });
   await expect(managed.createDatabase({ application: 'bad name', databaseName: 'db' })).rejects.toThrow('application is invalid');
   await expect(managed.createIdentity({ application: 'app', databaseName: 'db', identity: 'id', purpose: 'owner' })).rejects.toThrow('purpose is invalid');
-  await expect(managed.createIdentity({ application: 'app', databaseName: 'db', identity: 'id', grants: ['DROP'] })).rejects.toThrow('invalid grant policy');
+  await expect(managed.createIdentity({ application: 'app', databaseName: 'db', identity: 'id', grants: ['GRANT OPTION'] })).rejects.toThrow('invalid grant policy');
   expect(await managed.authenticate()).toBeNull(); expect(await managed.authenticate('missing')).toBeNull();
   const empty = createManagedMetadata({ query: async () => [[]] }); expect(await empty.authenticate('missing')).toBeNull();
   const noScopes = createManagedMetadata({ query: async () => [[{ name: 'token', scopes_json: null }]] }); expect((await noScopes.authenticate('token')).scopes).toEqual([]);
