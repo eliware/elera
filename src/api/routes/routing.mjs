@@ -5,13 +5,14 @@ import { refreshLocalObservation } from '../../routing/local-observation.mjs';
 
 const recentRoutes = new Map();
 
-export async function handleRoutingRoute({ method, path, url, request, response, observationStore, routingBundles, getStatus, environment } = {}) {
+export async function handleRoutingRoute({ method, path, url, request, response, observationStore, routingBundles, routingEvent, getStatus, environment } = {}) {
   if (path === '/api/v1/routes' && method === 'GET') {
     await refreshLocalObservation({ observationStore, getStatus, environment });
     const application = url.searchParams.get('application') ?? 'default';
     const calculated = calculateRoutes({ application, observations: observationStore?.snapshot?.() ?? [] });
     const previous = recentRoutes.get(application);
-    const routes = calculated.balanced.length ? calculated : previous && Date.now() - previous.at < 5000 ? previous.routes : calculated;
+    const seeded = routingEvent?.(application)?.routes;
+    const routes = calculated.balanced.length ? calculated : previous && Date.now() - previous.at < 5000 ? previous.routes : seeded?.balanced?.length ? seeded : calculated;
     if (calculated.balanced.length) recentRoutes.set(application, { routes: calculated, at: Date.now() });
     response.json(200, { ok: true, operation: 'routes.inspect', data: routes }); return true;
   }

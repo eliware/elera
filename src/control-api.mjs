@@ -25,7 +25,7 @@ export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstra
     if (!tokenMatches(request, token) && !scoped) { json(target, 401, { ok: false, error: 'authentication required' }); return true; }
     const out = response(target, request); const url = new URL(request.url, 'http://localhost');
     try {
-      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, setDrain, bootstrap, lifecycle, getConfig, getActiveIntent, metadata, managed, auth: tokenMatches(request, token) ? { root: true, scopes: ['*'] } : scoped, observations, observationStore, environment, dataDir };
+      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, setDrain, bootstrap, lifecycle, getConfig, getActiveIntent, metadata, managed, auth: tokenMatches(request, token) ? { root: true, scopes: ['*'] } : scoped, observations, observationStore, routingEvent, environment, dataDir };
       if (await handleStatusRoute(context) || await handleIntentRoute(context) || await handleAccountRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context) || (metadata && await handleMetadataRoute(context)) || await handleObservationRoute(context) || await handleManagedRoute(context) || await handleRoutingRoute({ ...context, routingBundles }) || handleRoutingResyncRoute({ ...context, getEvent: routingEvent })) return true;
       if (request.method === 'POST' && url.pathname === '/api/v1/credentials/lease') {
         const leaseRequest = validateCredentialLeaseRequest(await readBody(request));
