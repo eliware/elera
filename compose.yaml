@@ -26,7 +26,7 @@ services:
       ELERA_NODE_NAME: elera-single
       ELERA_NODE_ADDRESS: elera-single
       ELERA_HTTP_PORT: "8080"
-    ports: ["3306:3306", "8080:8080", "33060:33060", "33070:33070"]
+    ports: ["3306:3306", "8080:8080"]
     volumes: [elera-single-data:/var/lib/mysql]
     healthcheck: &probe
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -54,7 +54,7 @@ services:
       ELERA_BOOTSTRAP: "true"
       ELERA_PEERS: http://elera-2:8080,http://elera-3:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
-    ports: ["3307:3306", "8081:8080", "33061:33060", "33071:33070"]
+    ports: ["3307:3306", "8081:8080"]
     volumes: [elera-1-data:/var/lib/mysql]
     healthcheck: *probe
 
@@ -74,7 +74,7 @@ services:
       ELERA_BOOTSTRAP: "false"
       ELERA_PEERS: http://elera-1:8080,http://elera-3:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
-    ports: ["3308:3306", "8082:8080", "33062:33060", "33072:33070"]
+    ports: ["3308:3306", "8082:8080"]
     volumes: [elera-2-data:/var/lib/mysql]
     depends_on: [elera-1]
     healthcheck: *probe
@@ -95,7 +95,7 @@ services:
       ELERA_BOOTSTRAP: "false"
       ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
-    ports: ["3309:3306", "8083:8080", "33063:33060", "33073:33070"]
+    ports: ["3309:3306", "8083:8080"]
     volumes: [elera-3-data:/var/lib/mysql]
     depends_on: [elera-1]
     healthcheck: *probe

@@ -149,8 +149,8 @@ slow client polling.
 - [ ] `POST /api/v1/accounts/import/plan` — preview logical account restoration.
 - [x] `POST /api/v1/accounts/import` — import logical accounts and grants.
 
-Normal provisioning uses structured grant objects. Raw grant SQL is retained
-only for compatibility and recovery imports.
+Normal provisioning uses structured grant objects. Raw grant SQL is accepted
+only by the explicit recovery-import operation.
 
 ## Encrypted artifacts
 

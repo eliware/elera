@@ -3,7 +3,6 @@ import { createDbFromEnvironment } from '@eliware/elera-lib';
 import { log, registerHandlers, registerSignals } from '@eliware/common';
 import { loadSupervisorConfig, mariaDbArguments } from './config.mjs';
 import { createHealthService } from './health.mjs';
-import { listenAgent } from './agent.mjs';
 import { createProbeServer } from './probes.mjs';
 import { createControlApi } from './control-api.mjs';
 import { createMariaDbProcess } from './lifecycle/mariadb-process.mjs';
@@ -59,7 +58,7 @@ const signals = registerSignals({ log, shutdownHook: shutdown, exitCode: 0 });
 
 async function main() {
   await observationStore.initialize?.();
-  log.info('Elera supervisor starting', { elera: config.elera, httpPort: config.httpPort, agentPort: config.agentPort, performancePort: config.performancePort });
+  log.info('Elera supervisor starting', { elera: config.elera, httpPort: config.httpPort });
   const initialIntent = loadIntent(process.env);
   await intentState.apply(initialIntent);
   const args = mariaDbArguments({ ...config, intentConfigPath: intentState.paths.renderedPath });
@@ -75,8 +74,6 @@ async function main() {
   routingTimer = setInterval(publishRoutingEvent, 1000); routingTimer.unref?.(); publishRoutingEvent();
   const peers = (process.env.ELERA_PEERS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
   if (peers.length) { const peerClient = createPeerObservationClient({ peers, token: process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN, store: observationStore, log }); const publish = async () => { const current = await health.status().catch(() => ({ ready: false, values: {} })); const observation = { nodeId: process.env.ELERA_NODE_NAME ?? 'elera', clusterId: process.env.ELERA_CLUSTER_NAME ?? 'local-elera', state: current.values?.wsrep_local_state_comment ?? (current.ready ? 'Ready' : 'Down'), synced: current.values?.wsrep_local_state_comment === 'Synced', primary: current.values?.wsrep_cluster_status ?? 'Unknown', health: current.ready ? 'ok' : 'not-ready', load: current.values ?? {}, drain: drained, address: process.env.ELERA_NODE_ADDRESS ?? '127.0.0.1', sqlPort: Number(process.env.ELERA_NODE_SQL_PORT ?? 3306), observedAt: Date.now() }; observationStore.upsert(observation); await peerClient.publish(observation); await peerClient.refresh(); }; peerTimer = setInterval(() => { void publish(); }, 1000); void publish(); }
-  servers.push(listenAgent({ port: config.agentPort, performance: false, timeoutMs: config.timeoutMs, getStatus: () => health.status(), isDrained: () => drained, log }));
-  servers.push(listenAgent({ port: config.performancePort, performance: true, timeoutMs: config.timeoutMs, getStatus: () => health.status(), isDrained: () => drained, log }));
   log.info('Elera supervisor started');
 }
 main().catch((error) => { log.error('Supervisor startup failed', { error }); void signals.shutdown('startup-failure').then(() => process.exit(1)); });

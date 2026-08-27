@@ -305,7 +305,7 @@ encrypted envelope, but durable records must contain ciphertext only.
 ```
 
 The supervisor generates SQL from structured grants. Arbitrary grant SQL is
-reserved for compatibility and recovery import paths.
+reserved for explicit recovery-import paths.
 
 ## Encrypted artifacts
 

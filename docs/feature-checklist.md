@@ -254,7 +254,7 @@ same bundle version through a supervisor endpoint.
 
 ### Supervisor and `elera-lib`
 
-- [ ] Remove the transitional agent-check listeners `33060`/`33070`; they are not part of the target architecture.
+- [x] Remove the transitional agent-check listeners `33060`/`33070`; they are not part of the target architecture.
 - [ ] Validate direct application-to-node `3306` access and NetworkPolicies.
 
 ### CLI and operations

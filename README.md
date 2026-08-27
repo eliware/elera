@@ -30,8 +30,7 @@ docker build -f elera/Dockerfile -t eliware/elera:local .
 
 The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Elera is
-enabled with `ELERA=1`. The legacy TCP agent listeners `33060` and `33070`
-are transitional and will be removed with the HTTP-only migration.
+enabled with `ELERA=1`.
 
 ## Local backup and restore lab
 
@@ -65,3 +64,4 @@ docker compose --profile lab stop
 
 Do not commit `.env`, root tokens, database passwords, or generated runtime
 state. Control API operations use `ROOT_TOKEN` during the current lab phase.
+
