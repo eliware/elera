@@ -8,8 +8,9 @@ import { handleClusterRoute } from './api/routes/cluster.mjs';
 import { handleStatusRoute } from './api/routes/status.mjs';
 import { handleTrafficRoute } from './api/routes/traffic.mjs';
 import { handleInitializationRoute } from './api/routes/initialization.mjs';
+import { handleIntentRoute } from './api/routes/intent.mjs';
 
-export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, getConfig, leaseCredentials, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
+export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, getConfig, getActiveIntent, leaseCredentials, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
   const token = environment.ROOT_TOKEN;
   const response = (target, request) => ({ json: (status, body) => json(target, status, { apiVersion: 'v1', requestId: request.headers?.['x-request-id'] ?? `req-${Date.now()}`, ...body }) });
   const handler = async (request, target) => {
@@ -17,8 +18,8 @@ export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstra
     if (!tokenMatches(request, token)) { json(target, 401, { ok: false, error: 'authentication required' }); return true; }
     const out = response(target, request); const url = new URL(request.url, 'http://localhost');
     try {
-      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, setDrain, bootstrap, getConfig, environment, dataDir };
-      if (await handleStatusRoute(context) || await handleAccountRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context)) return true;
+      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, setDrain, bootstrap, getConfig, getActiveIntent, environment, dataDir };
+      if (await handleStatusRoute(context) || await handleIntentRoute(context) || await handleAccountRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context)) return true;
       if (request.method === 'POST' && url.pathname === '/api/v1/credentials/lease') {
         const leaseRequest = validateCredentialLeaseRequest(await readBody(request));
         if (typeof leaseCredentials !== 'function') { out.json(501, { ok: false, operation: 'credentials.lease', error: 'credential leasing is not configured' }); return true; }

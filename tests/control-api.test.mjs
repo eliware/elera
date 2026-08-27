@@ -15,6 +15,8 @@ describe('control API', () => {
     const call = async (method, url, body) => { const out = response(); await api.handler(request(method, url, body), out); return { out, value: JSON.parse(out.body) }; };
     expect((await call('GET', '/api/v1/status')).out.status).toBe(200);
     expect((await call('GET', '/api/v1/config')).value.data.galera).toBe(true);
+    expect((await call('GET', '/api/v1/config/intent')).value.data.intent.kind).toBe('SupervisorIntent');
+    expect((await call('POST', '/api/v1/config/plan', { routing: { healthIntervalMs: 1000 }, cluster: { name: 'x', members: [{ name: 'x', address: 'x' }] }, mariadb: { port: 3306 }, drain: { queryTimeoutMs: 1 }, apiVersion: 'galera.eliware.dev/v1alpha1', kind: 'SupervisorIntent' })).value.data.change).toBe('restart');
     const leaseApi = createControlApi({ db, getStatus: async () => ({}), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here' }, leaseCredentials: async () => ({ database: 'app', identity: 'runtime', username: 'app', password: 'secret', routes: { primary: [{ host: 'sql0', port: 3306 }], balanced: [{ host: 'sql0', port: 3306 }] }, expiresAt: '2099-01-01T00:00:00Z' }), log: { error: jest.fn() } });
     const leaseOut = response(); await leaseApi.handler(request('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'runtime' }), leaseOut); expect(leaseOut.status).toBe(200);
     expect((await call('GET', '/api/v1/initialization')).out.status).toBe(200);
