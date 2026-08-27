@@ -86,7 +86,7 @@ Observations must expire. A stale observation cannot keep a node eligible.
 
 ## Connection bundles
 
-- [ ] `POST /api/v1/credentials/lease` — issue credentials and eligible direct SQL routes.
+- [x] `POST /api/v1/credentials/lease` — issue credentials and eligible direct SQL routes.
 - [x] `POST /api/v1/credentials/refresh` — refresh an existing credential lease.
 - [ ] `POST /api/v1/credentials/revoke` — revoke a credential lease.
 - [x] `GET /api/v1/routes` — return ordered application writer and reader candidates.
