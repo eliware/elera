@@ -27,7 +27,7 @@ jobs:
           node-version: 26
           cache: npm
       - run: npm ci --prefix galera-lib
-      - run: npm pack --prefix galera-lib --pack-destination .
+      - run: npm pack --prefix galera-lib --pack-destination ..
       - run: npm pkg set dependencies.@eliware/galera-lib=file:./eliware-galera-lib-0.1.0.tgz
       - run: npm install --package-lock=false
       - run: npm test
