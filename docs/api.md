@@ -92,8 +92,8 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [x] `GET /api/v1/routes` — return ordered application writer and reader candidates.
 - [x] `POST /api/v1/routes/refresh` — explicitly recalculate a routing bundle.
 - [x] `GET /api/v1/routing/bundle` — return the complete credential and routing snapshot.
-- [ ] `GET /api/v1/routing/stream` — upgrade to the authenticated routing WebSocket.
-- [ ] `POST /api/v1/routing/resync` — request a current snapshot after reconnect.
+- [x] `GET /api/v1/routing/stream` — upgrade to the authenticated routing WebSocket.
+- [x] `GET /api/v1/routing/resync` — return a current snapshot after reconnect.
 
 Bundles contain the database, identity, usable credentials, direct node
 addresses on port `3306`, ordered writer and reader candidates, weights, a

@@ -13,8 +13,9 @@ import { handleMetadataRoute } from './api/routes/metadata.mjs';
 import { handleObservationRoute } from './api/routes/observations.mjs';
 import { handleManagedRoute } from './api/routes/managed.mjs';
 import { handleRoutingRoute } from './api/routes/routing.mjs';
+import { handleRoutingResyncRoute } from './api/routes/routing-resync.mjs';
 
-export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, lifecycle, getConfig, getActiveIntent, leaseCredentials, routingBundles, metadata, managed, observations = [], observationStore, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
+export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, lifecycle, getConfig, getActiveIntent, leaseCredentials, routingBundles, routingEvent, metadata, managed, observations = [], observationStore, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
   const token = environment.ROOT_TOKEN;
   const response = (target, request) => ({ json: (status, body) => json(target, status, { apiVersion: 'v1', requestId: request.headers?.['x-request-id'] ?? `req-${Date.now()}`, ...body }) });
   const handler = async (request, target) => {
@@ -25,7 +26,7 @@ export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstra
     const out = response(target, request); const url = new URL(request.url, 'http://localhost');
     try {
       const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, setDrain, bootstrap, lifecycle, getConfig, getActiveIntent, metadata, managed, auth: tokenMatches(request, token) ? { root: true, scopes: ['*'] } : scoped, observations, observationStore, environment, dataDir };
-      if (await handleStatusRoute(context) || await handleIntentRoute(context) || await handleAccountRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context) || (metadata && await handleMetadataRoute(context)) || await handleObservationRoute(context) || await handleManagedRoute(context) || await handleRoutingRoute({ ...context, routingBundles })) return true;
+      if (await handleStatusRoute(context) || await handleIntentRoute(context) || await handleAccountRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context) || (metadata && await handleMetadataRoute(context)) || await handleObservationRoute(context) || await handleManagedRoute(context) || await handleRoutingRoute({ ...context, routingBundles }) || handleRoutingResyncRoute({ ...context, getEvent: routingEvent })) return true;
       if (request.method === 'POST' && url.pathname === '/api/v1/credentials/lease') {
         const leaseRequest = validateCredentialLeaseRequest(await readBody(request));
         if (typeof leaseCredentials !== 'function') { out.json(501, { ok: false, operation: 'credentials.lease', error: 'credential leasing is not configured' }); return true; }

@@ -198,21 +198,21 @@ same bundle version through a supervisor endpoint.
 
 ### `elera-lib`
 
-- [ ] Open an authenticated WebSocket stream through the HTTP VIP.
+- [x] Open an authenticated WebSocket stream through the HTTP VIP.
 - [ ] Apply versioned route, writer, reader, drain, and recovery events; never transport SQL or dump data over the stream.
-- [ ] Reconnect with backoff; use REST bundle refresh when unavailable.
-- [ ] Detect event gaps and resynchronize by bundle version.
-- [ ] Stop new work, finish active transactions, and recycle affected pools during drain.
+- [x] Reconnect with backoff; use REST bundle refresh when unavailable.
+- [x] Detect event gaps and resynchronize by bundle version.
+- [x] Stop new work, finish active transactions, and recycle affected pools during drain.
 
 ### Supervisor
 
-- [ ] Publish meaningful versioned changes plus heartbeat/ping-pong liveness.
-- [ ] Expose routing stream and resync endpoints while keeping the API stateless.
-- [ ] Publish drain events before normal graceful MariaDB shutdown.
+- [x] Publish meaningful versioned changes plus heartbeat/ping-pong liveness.
+- [x] Expose routing stream and resync endpoints while keeping the API stateless.
+- [x] Publish drain events before normal graceful MariaDB shutdown.
 
 ### CLI and interoperability
 
-- [ ] Keep REST for management/recovery and add node/application drain commands.
+- [x] Keep REST for management/recovery and add node/application drain commands.
 - [ ] Verify approximately one-second updates, WebSocket loss fallback, and rolling drains.
 
 ## Sprint 8 — Reconciliation and metadata-first restore
