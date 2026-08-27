@@ -7,15 +7,27 @@ chown -R mysql:mysql "$datadir" /run/mysqld
 
 if [ ! -d "$datadir/mysql" ]; then
   mariadb-install-db --user=mysql --datadir="$datadir" --skip-test-db
+
+  init_socket=/run/mysqld/init.sock
+  mariadbd --datadir="$datadir" --user=mysql --skip-networking --socket="$init_socket" &
+  init_pid=$!
+  trap 'kill "$init_pid" 2>/dev/null || true' EXIT
+  i=0
+  until mariadb-admin --socket="$init_socket" ping --silent >/dev/null 2>&1; do
+    i=$((i + 1))
+    [ "$i" -lt 60 ] || { echo "timed out waiting for MariaDB initialization" >&2; exit 1; }
+    sleep 1
+  done
+
+  mariadb --socket="$init_socket" -uroot <<SQL
+ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD:-}';
+$(if [ -n "${MARIADB_DATABASE:-}" ]; then printf 'CREATE DATABASE IF NOT EXISTS `%s`;\n' "${MARIADB_DATABASE}"; fi)
+$(if [ -n "${MARIADB_USER:-}" ]; then printf "CREATE USER IF NOT EXISTS '%s'@'%%' IDENTIFIED BY '%s';\nGRANT ALL PRIVILEGES ON \\`%s\\`.* TO '%s'@'%%';\n" "${MARIADB_USER}" "${MARIADB_PASSWORD:-}" "${MARIADB_DATABASE:-*}" "${MARIADB_USER}"; fi)
+FLUSH PRIVILEGES;
+SQL
+  kill "$init_pid"
+  wait "$init_pid" 2>/dev/null || true
+  trap - EXIT
 fi
 
-args="--datadir=$datadir --user=mysql --bind-address=0.0.0.0 --binlog-format=ROW"
-if [ "${GALERA_BOOTSTRAP:-false}" = "true" ]; then
-  args="$args --wsrep-new-cluster"
-fi
-
-if [ -n "${GALERA_CLUSTER_ADDRESS:-}" ]; then
-  args="$args --wsrep-on=ON --wsrep-provider=/usr/lib/galera/libgalera_smm.so --wsrep-cluster-name=${GALERA_CLUSTER_NAME:-local-galera} --wsrep-cluster-address=${GALERA_CLUSTER_ADDRESS} --wsrep-node-name=${GALERA_NODE_NAME:-$(hostname)} --wsrep-node-address=${GALERA_NODE_ADDRESS:-$(hostname)}"
-fi
-
-exec mariadbd $args
+exec node /app/src/main.mjs

@@ -3,6 +3,9 @@ name: eliware-galera
 services:
   galera-single:
     profiles: [single]
+    env_file:
+      - path: .env
+        required: false
     build: .
     image: eliware/galera:local
     hostname: galera-single
@@ -12,11 +15,12 @@ services:
       MARIADB_USER: healthcheck
       MARIADB_PASSWORD: dev-healthcheck-password
       GALERA_CLUSTER_NAME: local-galera
+      GALERA: "0"
       GALERA_CLUSTER_ADDRESS: gcomm://
       GALERA_NODE_NAME: galera-single
       GALERA_NODE_ADDRESS: galera-single
       GALERA_HTTP_PORT: "8080"
-    ports: ["3306:3306", "8080:8080"]
+    ports: ["3306:3306", "8080:8080", "33060:33060", "33070:33070"]
     volumes: [galera-single-data:/var/lib/mysql]
     healthcheck: &probe
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -27,45 +31,57 @@ services:
 
   galera-1:
     profiles: [cluster]
+    env_file:
+      - path: .env
+        required: false
     build: .
     image: eliware/galera:local
     hostname: galera-1
     environment:
       <<: *single-env
       GALERA_CLUSTER_ADDRESS: gcomm://galera-1,galera-2,galera-3
+      GALERA: "1"
       GALERA_NODE_NAME: galera-1
       GALERA_NODE_ADDRESS: galera-1
       GALERA_BOOTSTRAP: "true"
-    ports: ["3307:3306", "8081:8080"]
+    ports: ["3307:3306", "8081:8080", "33061:33060", "33071:33070"]
     volumes: [galera-1-data:/var/lib/mysql]
     healthcheck: *probe
 
   galera-2:
     profiles: [cluster]
+    env_file:
+      - path: .env
+        required: false
     image: eliware/galera:local
     hostname: galera-2
     environment:
       <<: *single-env
       GALERA_CLUSTER_ADDRESS: gcomm://galera-1,galera-2,galera-3
+      GALERA: "1"
       GALERA_NODE_NAME: galera-2
       GALERA_NODE_ADDRESS: galera-2
       GALERA_BOOTSTRAP: "false"
-    ports: ["3308:3306", "8082:8080"]
+    ports: ["3308:3306", "8082:8080", "33062:33060", "33072:33070"]
     volumes: [galera-2-data:/var/lib/mysql]
     depends_on: [galera-1]
     healthcheck: *probe
 
   galera-3:
     profiles: [cluster]
+    env_file:
+      - path: .env
+        required: false
     image: eliware/galera:local
     hostname: galera-3
     environment:
       <<: *single-env
       GALERA_CLUSTER_ADDRESS: gcomm://galera-1,galera-2,galera-3
+      GALERA: "1"
       GALERA_NODE_NAME: galera-3
       GALERA_NODE_ADDRESS: galera-3
       GALERA_BOOTSTRAP: "false"
-    ports: ["3309:3306", "8083:8080"]
+    ports: ["3309:3306", "8083:8080", "33063:33060", "33073:33070"]
     volumes: [galera-3-data:/var/lib/mysql]
     depends_on: [galera-1]
     healthcheck: *probe

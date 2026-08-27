@@ -13,9 +13,12 @@ RUN apt-get update \
     && chown -R mysql:mysql /run/mysqld /var/lib/mysql
 
 COPY docker/mariadb-entrypoint.sh /usr/local/bin/mariadb-entrypoint.sh
+COPY package.json package-lock.json /app/
+RUN cd /app && npm ci --omit=dev
+COPY src /app/src
 RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.sh
 
 VOLUME ["/var/lib/mysql"]
-EXPOSE 3306 4444 4567 4568
+EXPOSE 3306 4444 4567 4568 8080 33060 33070
 
 ENTRYPOINT ["/usr/local/bin/mariadb-entrypoint.sh"]
