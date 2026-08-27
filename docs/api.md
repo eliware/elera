@@ -154,18 +154,17 @@ only by the explicit recovery-import operation.
 
 ## Encrypted artifacts
 
-- [ ] `GET /api/v1/secrets` — list encrypted artifact metadata (deferred after MVP).
-- [ ] `POST /api/v1/secrets` — store age-encrypted ciphertext.
-- [ ] `GET /api/v1/secrets/{name}` — retrieve encrypted ciphertext.
-- [ ] `PUT /api/v1/secrets/{name}` — replace encrypted ciphertext.
-- [ ] `DELETE /api/v1/secrets/{name}` — delete an encrypted artifact.
-- [ ] `POST /api/v1/secrets/{name}/verify` — verify checksum and key metadata.
+- [x] `GET /api/v1/secrets` — list encrypted artifact metadata (`backup:read`).
+- [x] `GET /api/v1/secrets/{name}` — retrieve age-encrypted ciphertext (`backup:read`).
+- [x] `PUT /api/v1/secrets/{name}` — create or replace age-encrypted ciphertext (`backup:create`).
+- [x] `DELETE /api/v1/secrets/{name}` — delete an encrypted artifact (`backup:restore`).
+- [x] `POST /api/v1/secrets/{name}/verify` — verify checksum and key metadata (`backup:read`).
 
-The initial implementation stores application/database/account metadata and
-credential metadata in `elera_meta`. Centralized SSH keys, `known_hosts`, TLS
-files, and backup artifacts are deferred; they remain in GitOps Secrets or the
-existing operator-managed artifact path. Plaintext secrets must not be stored
-durably.
+The supervisor stores only age ciphertext and non-secret metadata in
+`elera_meta`. GitOps Secrets/operator-managed inputs remain the initial home
+for SSH keys, `known_hosts`, TLS files, and backup configuration. The supervisor
+does not decrypt artifacts or return plaintext; the CLI/library decrypts locally
+and materializes data only for a bounded operation with deterministic cleanup.
 
 Backup sidecars contain logical account and grant definitions only. Passwords,
 password hashes, and private key material are removed from exported grants and

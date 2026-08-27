@@ -69,9 +69,10 @@ identity, or node identity changes require a controlled restart. Unsafe
 bootstrap changes require explicit confirmation. Failed rendering or
 validation leaves the last known-good active configuration untouched.
 
-Centralized storage for SSH keys, `known_hosts`, TLS files, and backup
-artifacts is deferred beyond the MVP; those remain in GitOps Secrets or the
-existing operator-managed artifact path.
+GitOps Secrets/operator-managed inputs are the initial home for SSH keys,
+`known_hosts`, TLS files, and backup configuration. The supervisor may store
+age-encrypted artifact ciphertext and metadata in `elera_meta`, but it does not
+store age private keys or decrypt artifacts.
 
 ## Compatibility and versioning
 
@@ -319,10 +320,24 @@ reserved for explicit recovery-import paths.
 }
 ```
 
-The future artifact store may contain credentials, SSH keys, `known_hosts`, TLS
-material, backup configuration, and GitOps synchronization metadata. That store
-is not implemented in the current MVP; the age private key remains with the
-CLI/operator or deployment secret store and is never persisted in `elera_meta`.
+The artifact store contains age-encrypted ciphertext and metadata. The age
+private key remains with the CLI/operator or deployment Secret and is never
+persisted in `elera_meta`. SSH keys, `known_hosts`, TLS material, and backup
+configuration are supplied from GitOps/operator inputs; they are not returned
+by these endpoints.
+
+The implemented operations are:
+
+```text
+GET    /api/v1/secrets              (backup:read)
+GET    /api/v1/secrets/{name}       (backup:read)
+PUT    /api/v1/secrets/{name}       (backup:create)
+DELETE /api/v1/secrets/{name}       (backup:restore)
+POST   /api/v1/secrets/{name}/verify (backup:read)
+```
+
+Ciphertext must use the age armored format. There is deliberately no
+decrypt/plaintext endpoint.
 
 ## Internal supervisor observations
 
