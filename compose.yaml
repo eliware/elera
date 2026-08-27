@@ -12,6 +12,8 @@ services:
     image: eliware/galera:local
     hostname: galera-single
     environment: &single-env
+      ROOT_TOKEN: ${ROOT_TOKEN:-root_token_here}
+      GALERA_ADVERTISED_HOST: galera-single
       MARIADB_ROOT_PASSWORD: dev-root-password
       MARIADB_DATABASE: app
       MARIADB_USER: healthcheck
