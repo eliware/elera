@@ -12,7 +12,7 @@ import { handleIntentRoute } from './api/routes/intent.mjs';
 import { handleMetadataRoute } from './api/routes/metadata.mjs';
 import { handleObservationRoute } from './api/routes/observations.mjs';
 
-export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, getConfig, getActiveIntent, leaseCredentials, metadata, observations = [], environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
+export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstrap, lifecycle, getConfig, getActiveIntent, leaseCredentials, metadata, observations = [], environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
   const token = environment.ROOT_TOKEN;
   const response = (target, request) => ({ json: (status, body) => json(target, status, { apiVersion: 'v1', requestId: request.headers?.['x-request-id'] ?? `req-${Date.now()}`, ...body }) });
   const handler = async (request, target) => {
@@ -20,7 +20,7 @@ export function createControlApi({ db, getStatus, getTraffic, setDrain, bootstra
     if (!tokenMatches(request, token)) { json(target, 401, { ok: false, error: 'authentication required' }); return true; }
     const out = response(target, request); const url = new URL(request.url, 'http://localhost');
     try {
-      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, setDrain, bootstrap, getConfig, getActiveIntent, metadata, environment, dataDir };
+      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, setDrain, bootstrap, lifecycle, getConfig, getActiveIntent, metadata, environment, dataDir };
       if (await handleStatusRoute(context) || await handleIntentRoute(context) || await handleAccountRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context) || (metadata && await handleMetadataRoute(context)) || await handleObservationRoute(context)) return true;
       if (request.method === 'POST' && url.pathname === '/api/v1/credentials/lease') {
         const leaseRequest = validateCredentialLeaseRequest(await readBody(request));
