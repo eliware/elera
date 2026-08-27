@@ -1,0 +1,7 @@
+import { createObservation } from './observation.mjs';
+export function createPeerObservationClient({ peers = [], token, fetchImpl = fetch, store, timeoutMs = 2000, log = {} } = {}) {
+  if (!store || typeof store.upsert !== 'function') throw new TypeError('observation store is required');
+  return {
+    async refresh() { const results = []; for (const peer of peers) { const controller = new AbortController(); const timer = setTimeout(controller.abort.bind(controller), timeoutMs); try { const response = await fetchImpl(`${peer.replace(/\/$/, '')}/api/v1/cluster/observations`, { headers: { accept: 'application/json', authorization: `Bearer ${token}` }, signal: controller.signal }); if (!response.ok) throw new Error(`peer returned ${response.status}`); const body = await response.json(); for (const raw of body.data ?? []) { const item = createObservation(raw); results.push(store.upsert(item)); } } catch (error) { log.warn?.('Peer observation refresh failed', { peer, error }); results.push({ accepted: false, reason: 'unavailable' }); } finally { clearTimeout(timer); } } return results; }
+  };
+}
