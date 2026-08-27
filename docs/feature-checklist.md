@@ -219,18 +219,18 @@ same bundle version through a supervisor endpoint.
 
 ### `elera-lib`
 
-- [ ] Provide generic SQL connection quiesce and verification hooks without exposing supervisor- or CLI-specific dump/restore orchestration.
+- [x] Provide generic SQL connection quiesce and verification hooks without exposing supervisor- or CLI-specific dump/restore orchestration.
 - [ ] Verify credentials, privileges, schema, data, and application access without JSON dump transport.
 
 ### Supervisor
 
 - [x] Add metadata reconcile plan/apply/verify operations for managed databases and identities; account/grant and route convergence remain follow-up work.
-- [ ] Restore `elera_meta` and logical account state independently of system schemas.
+- [x] Restore `elera_meta` and logical account state independently of system schemas.
 
 ### CLI and interoperability
 
 - [x] Implement CLI reconcile plan/apply/verify commands.
-- [ ] Continue using native `mariadb-dump` and `mariadb` streams.
+- [x] Continue using native `mariadb-dump` and `mariadb` streams.
 - [ ] Complete metadata-first restore in Docker Desktop without raw system-schema files.
 
 ## Sprint 9 — GitOps hardening and optional encrypted artifacts

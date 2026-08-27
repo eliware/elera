@@ -178,11 +178,11 @@ durably.
 - [ ] `POST /api/v1/backups/plan` — preview backup eligibility and metadata.
 - [ ] `POST /api/v1/backups/create` — coordinate backup metadata.
 - [ ] `POST /api/v1/backups/{id}/verify` — verify backup metadata and artifact.
-- [ ] `POST /api/v1/restores/metadata/plan` — plan metadata restoration.
-- [ ] `POST /api/v1/restores/metadata/apply` — restore `elera_meta` metadata.
-- [ ] `POST /api/v1/restores/accounts/plan` — plan account restoration.
-- [ ] `POST /api/v1/restores/accounts/apply` — recreate accounts and grants.
-- [ ] `POST /api/v1/restores/accounts/verify` — verify account restoration.
+- [x] `POST /api/v1/restores/metadata/plan` — plan metadata restoration.
+- [x] `POST /api/v1/restores/metadata/apply` — restore `elera_meta` metadata.
+- [x] `POST /api/v1/restores/accounts/plan` — plan account restoration.
+- [x] `POST /api/v1/restores/accounts/apply` — recreate accounts and grants.
+- [x] `POST /api/v1/restores/accounts/verify` — verify account restoration.
 - [ ] `POST /api/v1/restores/plan` — plan application data restoration.
 - [ ] `POST /api/v1/restores/apply` — coordinate application restoration.
 
