@@ -5,11 +5,11 @@ on:
     deployments:
       - target: dev
         cwd: /opt/elera
-    commands:
-      - git pull --ff-only
-      - npm ci
-      - npm run check
-      - npm test
-      - npm run lint
-      - npm run audit
-      - npm run pack
+        commands:
+          - git pull --ff-only
+          - npm ci
+          - npm run check
+          - npm test
+          - npm run lint
+          - npm run audit
+          - npm run pack
