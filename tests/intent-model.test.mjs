@@ -8,4 +8,5 @@ describe('supervisor intent model', () => {
   test('rejects malformed intent', () => { expect(() => validateIntent({})).toThrow('invalid supervisor intent'); });
   test('loads defaults and rejects malformed JSON', () => { expect(defaultIntent({}).cluster.name).toBe('local-galera'); expect(loadIntent({}).mariadb.port).toBe(3306); expect(() => loadIntent({ SUPERVISOR_INTENT_JSON: '{' })).toThrow('invalid SUPERVISOR_INTENT_JSON'); });
   test('plans restart-required changes', () => { const changed = structuredClone(fixture); changed.mariadb.port = 3307; expect(planIntent(changed, fixture).change).toBe('restart'); });
+  test('plans membership changes as unsafe', () => { const changed = structuredClone(fixture); changed.cluster.members.push({ name: 'two', address: 'two' }); expect(planIntent(changed, fixture).change).toBe('unsafe'); });
 });

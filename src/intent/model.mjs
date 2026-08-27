@@ -19,7 +19,8 @@ export function planIntent(desired, active) {
   if (!active) return { change: 'restart', changed: true, desiredHash: intentHash(desired), activeHash: null };
   const desiredHash = intentHash(desired); const activeHash = intentHash(active);
   if (desiredHash === activeHash) return { change: 'no-op', changed: false, desiredHash, activeHash };
-  if (desired.mariadb.port !== active.mariadb.port || desired.cluster.name !== active.cluster.name) return { change: 'restart', changed: true, desiredHash, activeHash };
+  if (desired.cluster.name !== active.cluster.name || JSON.stringify(desired.cluster.members) !== JSON.stringify(active.cluster.members)) return { change: 'unsafe', changed: true, desiredHash, activeHash, reason: 'cluster identity or membership changes require an explicit bootstrap workflow' };
+  if (desired.mariadb.port !== active.mariadb.port) return { change: 'restart', changed: true, desiredHash, activeHash };
   return { change: 'reload', changed: true, desiredHash, activeHash };
 }
 
