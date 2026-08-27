@@ -172,22 +172,27 @@ backup-dev container.
 
 ### `elera-lib`
 
-- [ ] Consume bundles containing credentials, database, ordered writer candidates, and reader candidates.
-- [ ] Send writes only to assigned writer candidates and reads to permitted readers.
-- [ ] Preserve transaction pinning and refresh expired bundles through REST.
+- [x] Consume bundles containing credentials, database, ordered writer candidates, and reader candidates.
+- [x] Send writes only to assigned writer candidates and reads to permitted readers.
+- [x] Preserve transaction pinning and refresh expired bundles through REST.
 
 ### Supervisor
 
-- [ ] Assign per-application writer order through quorum decisions.
-- [ ] Recalculate routes from synchronization, health, load, weights, and drain state at approximately one-second intervals.
-- [ ] Use hysteresis/recovery windows to avoid writer thrashing.
-- [ ] Expose bundle, lease, refresh, and route inspection endpoints.
+- [x] Assign per-application writer order through quorum decisions.
+- [x] Recalculate routes from synchronization, health, load, weights, and drain state at approximately one-second intervals.
+- [x] Use hysteresis/recovery windows to avoid writer thrashing.
+- [x] Expose bundle, lease, refresh, and route inspection endpoints.
 
 ### CLI and interoperability
 
-- [ ] Inspect writer assignments, route candidates, and bundle versions.
-- [ ] Start an application using only endpoint, scoped token, database, and identity.
-- [ ] Verify writes follow assigned writers and reads use allowed readers.
+- [x] Inspect writer assignments, route candidates, and bundle versions.
+- [x] Start an application using only endpoint, scoped token, database, and identity.
+- [x] Verify writes follow assigned writers and reads use allowed readers.
+
+Sprint 6 runtime evidence: a clean Docker lab formed all three Galera nodes,
+the supervisor route endpoint returned deterministic ordered writer and reader
+candidates for `payments`, and `elera-cli routes payments --json` returned the
+same bundle version through a supervisor endpoint.
 
 ## Sprint 7 — WebSocket events and graceful draining
 
