@@ -199,7 +199,7 @@ same bundle version through a supervisor endpoint.
 ### `elera-lib`
 
 - [x] Open an authenticated WebSocket stream through the HTTP VIP.
-- [ ] Apply versioned route, writer, reader, drain, and recovery events; never transport SQL or dump data over the stream.
+- [x] Apply versioned route, writer, reader, drain, and recovery events; never transport SQL or dump data over the stream.
 - [x] Reconnect with backoff; use REST bundle refresh when unavailable.
 - [x] Detect event gaps and resynchronize by bundle version.
 - [x] Stop new work, finish active transactions, and recycle affected pools during drain.
