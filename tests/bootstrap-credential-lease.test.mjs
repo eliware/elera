@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { createBootstrapCredentialLease } from '../src/credentials/bootstrap-lease.mjs';
+import { createBootstrapCredentialLease } from '../src/bootstrap/lease.mjs';
 
 test('creates a local bootstrap bundle for CLI SQL smoke tests', () => {
   const lease = createBootstrapCredentialLease({ MARIADB_USER: 'healthcheck', MARIADB_PASSWORD: 'secret', MARIADB_HOST: '127.0.0.1', MARIADB_PORT: '3306' });
