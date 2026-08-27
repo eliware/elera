@@ -109,8 +109,34 @@ services:
       timeout: 3s
       retries: 12
 
+  backup-dev:
+    profiles: [backup-test]
+    build:
+      context: ..
+      dockerfile: galera/docker/backup-dev.Dockerfile
+    image: eliware/galera-backup-dev:local
+    depends_on:
+      backup-nas:
+        condition: service_started
+    volumes:
+      - backup-dev-state:/lab
+    command: ["sleep", "infinity"]
+
+  backup-nas:
+    profiles: [backup-test]
+    build:
+      context: ..
+      dockerfile: galera/docker/backup-nas.Dockerfile
+    image: eliware/galera-backup-nas:local
+    ports: ["2222:22"]
+    volumes:
+      - backup-nas-data:/srv/backups
+      - backup-dev-state:/lab:ro
+
 volumes:
   galera-single-data:
   galera-1-data:
   galera-2-data:
   galera-3-data:
+  backup-dev-state:
+  backup-nas-data:
