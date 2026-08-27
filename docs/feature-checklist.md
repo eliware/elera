@@ -244,18 +244,25 @@ passwords or password hashes.
 
 ### `elera-lib`
 
-- [ ] Materialize short-lived credentials and artifacts with deterministic cleanup.
-- [ ] Never expose age keys or plaintext secret material through logs or generic library APIs.
+- [x] Materialize short-lived credentials and artifacts with deterministic cleanup.
+- [x] Never expose age keys or plaintext secret material through logs or generic library APIs.
 
 ### Supervisor
 
-- [ ] Treat GitOps Secrets/operator artifacts as the initial home for SSH, `known_hosts`, TLS, and backup inputs.
-- [ ] Add age-encrypted artifact storage only when restore workflows demonstrate the need; never store private keys in `elera_meta`.
+- [x] Treat GitOps Secrets/operator artifacts as the initial home for SSH, `known_hosts`, TLS, and backup inputs.
+- [x] Add age-encrypted artifact storage only when restore workflows demonstrate the need; never store private keys in `elera_meta`.
 
 ### CLI and interoperability
 
-- [ ] Add optional artifact CRUD, verification, and materialization commands.
-- [ ] Verify encrypted artifacts survive backup/restore and cannot be returned as plaintext accidentally.
+- [x] Add optional artifact CRUD, verification, and materialization commands.
+- [x] Verify encrypted artifacts survive backup/restore and cannot be returned as plaintext accidentally.
+
+Sprint 9 evidence: the supervisor stores and returns only age ciphertext and
+metadata; the CLI materializes artifacts only for a child operation and removes
+the temporary file directory afterward. Focused unit tests cover CRUD,
+checksum verification, age process failures, GitOps-mounted input resolution,
+materialization cleanup, and metadata-first backup/restore sidecars. All three
+repositories pass strict 100×4 coverage with zero lint warnings.
 
 ## Sprint 10 — VyOS HTTP migration and legacy removal
 

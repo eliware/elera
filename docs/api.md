@@ -166,9 +166,10 @@ for SSH keys, `known_hosts`, TLS files, and backup configuration. The supervisor
 does not decrypt artifacts or return plaintext; the CLI/library decrypts locally
 and materializes data only for a bounded operation with deterministic cleanup.
 
-Backup sidecars contain logical account and grant definitions only. Passwords,
-password hashes, and private key material are removed from exported grants and
-are regenerated through authenticated restore operations.
+Backup sidecars contain logical account/grant definitions and age-encrypted
+artifact records. Passwords, password hashes, age identities, and private key
+material are never exported in plaintext; ciphertext records are restored via
+the authenticated artifact API and decrypted only by the local operator.
 
 ## Reconciliation
 
