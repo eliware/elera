@@ -319,9 +319,10 @@ reserved for explicit recovery-import paths.
 }
 ```
 
-Artifacts may contain credentials, SSH keys, `known_hosts`, TLS material,
-backup configuration, and GitOps synchronization metadata. The age private key
-remains with the CLI/operator or deployment secret store.
+The future artifact store may contain credentials, SSH keys, `known_hosts`, TLS
+material, backup configuration, and GitOps synchronization metadata. That store
+is not implemented in the current MVP; the age private key remains with the
+CLI/operator or deployment secret store and is never persisted in `elera_meta`.
 
 ## Internal supervisor observations
 
