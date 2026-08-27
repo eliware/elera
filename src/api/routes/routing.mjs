@@ -12,7 +12,11 @@ export async function handleRoutingRoute({ method, path, url, request, response,
     const calculated = calculateRoutes({ application, observations: observationStore?.snapshot?.() ?? [] });
     const previous = recentRoutes.get(application);
     const seeded = routingEvent?.(application)?.routes;
-    const routes = calculated.balanced.length ? calculated : previous && Date.now() - previous.at < 5000 ? previous.routes : seeded?.balanced?.length ? seeded : calculated;
+    let routes = calculated.balanced.length ? calculated : previous && Date.now() - previous.at < 5000 ? previous.routes : seeded?.balanced?.length ? seeded : calculated;
+    if (!routes.balanced.length) {
+      const status = await getStatus?.().catch?.(() => undefined);
+      if (status?.ready && environment?.ELERA_NODE_ADDRESS) { const node = { host: environment.ELERA_NODE_ADDRESS, port: Number(environment.ELERA_NODE_SQL_PORT ?? 3306), weight: 100 }; routes = { primary: [node], balanced: [node], bundleVersion: `${application}:local` }; }
+    }
     if (calculated.balanced.length) recentRoutes.set(application, { routes: calculated, at: Date.now() });
     response.json(200, { ok: true, operation: 'routes.inspect', data: routes }); return true;
   }
