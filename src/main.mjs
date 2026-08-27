@@ -12,6 +12,7 @@ import { createBootstrapCredentialLease } from './credentials/bootstrap.mjs';
 import { createMetadataService } from './metadata/service.mjs';
 import { createLifecycleManager } from './cluster/lifecycle.mjs';
 import { createObservationStore } from './cluster/observation-store.mjs';
+import { createPeerObservationClient } from './cluster/peer-observations.mjs';
 import { loadIntent } from './intent/model.mjs';
 import { createIntentState } from './intent/state.mjs';
 import { planIntent } from './intent/model.mjs';
@@ -20,19 +21,20 @@ const config = loadSupervisorConfig();
 // Supervisor control-plane SQL uses the bootstrap root credential; application credentials
 // are leased separately and must never be used for provisioning or reconciliation.
 const dbEnv = { ...process.env, MYSQL_HOST: '127.0.0.1', MYSQL_PORT: '3306', MYSQL_USER: 'root', MYSQL_PASSWORD: process.env.MARIADB_ROOT_PASSWORD ?? '', MYSQL_DATABASE: process.env.MARIADB_DATABASE ?? 'mysql' };
-let db; let drained = false; let shuttingDown = false; let restarting = false; let bootstrapMaria;
+let db; let drained = false; let shuttingDown = false; let restarting = false; let bootstrapMaria; let peerTimer;
 let applyIntent = (intent) => intentState.apply(intent);
 const servers = [];
 const errors = registerHandlers({ log, events: ['uncaughtException', 'unhandledRejection', 'warning'] });
 const health = createHealthService({ db: { query: (...args) => db.query(...args), health: (...args) => db.health(...args) }, timeoutMs: config.timeoutMs, elera: config.elera, log });
 const intentState = createIntentState({ stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? '/etc/elera' });
-const control = createControlApi({ db: { query: (...args) => db.query(...args) }, metadata: createMetadataService({ query: (...args) => db.query(...args) }), observationStore: createObservationStore(), lifecycle: createLifecycleManager({ status: () => health.status(), operations: { bootstrap: () => bootstrapMaria?.() }, environment: process.env }), getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
+const observationStore = createObservationStore();
+const control = createControlApi({ db: { query: (...args) => db.query(...args) }, metadata: createMetadataService({ query: (...args) => db.query(...args) }), observationStore, lifecycle: createLifecycleManager({ status: () => health.status(), operations: { bootstrap: () => bootstrapMaria?.() }, environment: process.env }), getStatus: () => health.status(), getTraffic: () => ({ drained, ...health.cacheInfo() }), setDrain: (value) => { drained = value; log.info(value ? 'Traffic drained' : 'Traffic undrained'); }, bootstrap: () => bootstrapMaria?.(), getActiveIntent: Object.assign(() => loadIntent(process.env), { ...intentState, apply: (intent) => applyIntent(intent) }), leaseCredentials: createBootstrapCredentialLease(process.env), environment: process.env, log });
 const probes = createProbeServer({ getStatus: () => health.status(), controlHandler: (request, response) => control.handler(request, response), log });
 servers.push(probes);
 
 async function closeServer(server) { if (server.listening) await new Promise((resolve) => server.close(resolve)); }
 let mariaProcess;
-async function shutdown(signal) { if (shuttingDown) { log.warn('Shutdown already in progress', { signal }); return; } shuttingDown = true; log.info('Supervisor shutting down', { signal }); await Promise.all(servers.map(closeServer)); await mariaProcess?.stop(config.timeoutMs); await db?.close?.().catch((error) => log.error('Database pool close failed', { error })); errors.removeHandlers(); }
+async function shutdown(signal) { if (shuttingDown) { log.warn('Shutdown already in progress', { signal }); return; } shuttingDown = true; log.info('Supervisor shutting down', { signal }); if (peerTimer) clearInterval(peerTimer); await Promise.all(servers.map(closeServer)); await mariaProcess?.stop(config.timeoutMs); await db?.close?.().catch((error) => log.error('Database pool close failed', { error })); errors.removeHandlers(); }
 const signals = registerSignals({ log, shutdownHook: shutdown, exitCode: 0 });
 
 async function main() {
@@ -47,6 +49,8 @@ async function main() {
   db = await createDbFromEnvironment({ env: dbEnv, log });
   probes.listen(config.httpPort, '0.0.0.0', () => log.info('HTTP listener started', { port: config.httpPort }));
   if (!await waitForSql({ health, timeoutMs: config.startupTimeoutMs, log })) throw new Error(`MariaDB did not become SQL-ready within ${config.startupTimeoutMs}ms`);
+  const peers = (process.env.ELERA_PEERS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+  if (peers.length) { const peerClient = createPeerObservationClient({ peers, token: process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN, store: observationStore, log }); peerTimer = setInterval(() => { void peerClient.refresh(); }, 1000); void peerClient.refresh(); }
   servers.push(listenAgent({ port: config.agentPort, performance: false, timeoutMs: config.timeoutMs, getStatus: () => health.status(), isDrained: () => drained, log }));
   servers.push(listenAgent({ port: config.performancePort, performance: true, timeoutMs: config.timeoutMs, getStatus: () => health.status(), isDrained: () => drained, log }));
   log.info('Elera supervisor started');
