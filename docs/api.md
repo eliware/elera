@@ -11,6 +11,11 @@ tokens. The replicated `elera_meta` database is authoritative for managed
 databases, identities, accounts, grants, tokens, and encrypted artifact
 metadata. The age private key is never stored in MariaDB.
 
+This checklist describes the current supervisor API surface. A checked item
+means the endpoint exists and is covered by the repository's validation; it
+does not imply production Kubernetes readiness. Unchecked items are planned
+work and must not be treated as available API behavior.
+
 ## GitOps supervisor configuration
 
 GitOps owns the supervisor's desired configuration, not hand-authored
@@ -105,6 +110,11 @@ REST bundle refresh remains the correctness fallback when the stream is down.
 The stream is the preferred low-latency path: supervisors evaluate health and
 load about once per second and publish state changes instead of relying on
 slow client polling.
+
+The supervisor does not proxy SQL traffic and does not expose the former
+`33060` or `33070` agent-check listeners. HAProxy is expected to proxy these
+HTTP endpoints, including WebSocket upgrades; applications connect directly
+to the MariaDB addresses returned in the bundle.
 
 ## Scoped tokens
 

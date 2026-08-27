@@ -1,8 +1,7 @@
 # @eliware/elera
 
 MariaDB/Elera container supervisor. It starts MariaDB, exposes liveness and
-readiness probes, and provides the control API used by the developing Elera
-ecosystem.
+readiness probes, and provides the control API used by the Elera ecosystem.
 
 The target architecture uses HAProxy as an HTTP-only proxy for supervisor
 nodes. REST remains the management interface; `@eliware/elera-lib`
@@ -34,6 +33,11 @@ checkout into the image or CI workspace.
 The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Elera is
 enabled with `ELERA=1`.
+
+This `0.1.0` release is a development and Docker-lab baseline. Production
+deployment still requires the Kubernetes manifests, NetworkPolicies, secret
+delivery, and operational acceptance checks described in the feature
+checklist.
 
 ## Local backup and restore lab
 

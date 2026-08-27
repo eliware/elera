@@ -397,7 +397,12 @@ GET  /api/v1/operations/{operationId}
 POST /api/v1/operations/{operationId}/cancel
 ```
 
-## Implementation sequence
+## Historical implementation sequence
+
+The following sequence records the original vertical-slice design. It is
+retained as project history, not as a statement that these steps are still
+pending or must be implemented in this order. Current completion status is
+tracked in `docs/feature-checklist.md`.
 
 ```text
 1. Contract schemas and shared validation
