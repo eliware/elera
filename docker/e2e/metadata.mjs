@@ -13,6 +13,6 @@ export async function provisionMetadata(environment) {
   await runCli(['database-create', 'sample-app', 'restore_verify_sample_app'], environment);
   await runCli(['identity-create', 'sample-app', 'sample_app', 'backup-dev', 'runtime', 'SELECT,SHOW VIEW,TRIGGER,EVENT,LOCK TABLES'], environment);
   await runCli(['identity-create', 'sample-app', 'restore_verify_sample_app', 'restore-verifier', 'admin', 'SELECT,INSERT,UPDATE,DELETE,DROP,EXECUTE,CREATE,ALTER,INDEX,REFERENCES,SHOW VIEW,TRIGGER,EVENT,LOCK TABLES'], environment);
-  await runCli(['identity-create', 'sample-app', 'sample_app', 'sample-runtime', 'runtime', 'SELECT'], environment);
+  await runCli(['identity-create', 'sample-app', 'sample_app', 'sample-runtime', 'runtime', 'SELECT,INSERT,UPDATE,CREATE'], environment);
   return { appEnvironment: await createToken(environment, 'sample-app-runtime', 'sample-runtime'), restoreEnvironment: { ...environment, ELERA_API_TOKEN: environment.ROOT_TOKEN ?? environment.ELERA_API_TOKEN, ELERA_IDENTITY: 'restore-verifier', ELERA_APPLICATION: 'sample-app' } };
 }
