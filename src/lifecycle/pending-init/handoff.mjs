@@ -11,8 +11,6 @@ export const createClusterHandoff = ({
   const child = spawnProcess(command, ["/usr/local/bin/mariadb-entrypoint.mjs"], {
     env: {
       ...environment,
-      ELERA_PENDING_INIT: "false",
-      ELERA_BOOTSTRAP: "false",
       ELERA_CLUSTER_BOOTSTRAP: bootstrapCluster ? "true" : "false",
     },
     stdio: "inherit",

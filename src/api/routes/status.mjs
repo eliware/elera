@@ -3,7 +3,7 @@ export async function handleStatusRoute({ method, path, response, getStatus, get
     response.json(200, { ok: true, operation: 'status', status: 'completed', data: await getStatus() }); return true;
   }
   if (method === 'GET' && path === '/api/v1/config') {
-    const data = typeof getConfig === 'function' ? await getConfig() : { elera: environment.ELERA === '1', database: environment.MARIADB_DATABASE ?? null, primaryHost: environment.MYSQL_PRIMARY_HOST ?? environment.MYSQL_HOST ?? null, balancedHost: environment.MYSQL_BALANCED_HOST ?? null };
+    const data = typeof getConfig === 'function' ? await getConfig() : { elera: false, database: 'elera_meta', primaryHost: null, balancedHost: null };
     response.json(200, { ok: true, operation: 'config', status: 'completed', data }); return true;
   }
   return false;

@@ -80,9 +80,7 @@ non-secret environment configuration. Runtime passwords are supplied through
 the runtime Secret and are not placed in command-line arguments, ConfigMaps,
 or generated configuration. First initialization consumes the values through
 SQL stdin; they are not intentionally logged or written to temporary files.
-`MARIADB_ROOT_PASSWORD` is required for explicit initialization. The image does
-not claim that secrets are invisible to a privileged process inspecting the
-container environment.
+Explicit initialization uses local Unix-socket authentication and the fixed `elera_meta` database. No root password or application database credentials are required in the runtime environment.
 
 The lab Secret must be distinct from production credentials. The claims above
 describe the intended local image behavior; registry SBOM/scanning and real
@@ -95,11 +93,7 @@ installed packages; publication requires a DevOps remediation or documented
 risk-acceptance decision.
 ### Client-facing SQL address
 
-`ELERA_NODE_ADDRESS` identifies the node to Galera and internal peer traffic.
-In Elera mode, client-facing routing bundles advertise the machine's
-`hostname -f` value. Kubernetes and external DNS must therefore make that FQDN
-resolve to the appropriate SQL VIP. Standalone mode falls back to
-`ELERA_NODE_ADDRESS`.
+Node identity is derived from `hostname -f` and `hostname -i` at startup. Persisted intent is authoritative after initialization; cluster environment variables are used only as a pre-start fallback so an initialized node can rejoin without the CLI.
 
 ### Pending initialization
 

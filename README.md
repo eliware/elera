@@ -35,7 +35,8 @@ checkout into the image or CI workspace.
 
 The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Elera is
-enabled with `ELERA=1`.
+enabled by the explicit initialization workflow; an uninitialized data directory
+starts in pending-init mode and does not bootstrap automatically.
 
 This `0.1.6` release is a development and Docker-lab baseline. Production
 deployment still requires the Kubernetes manifests, NetworkPolicies, secret

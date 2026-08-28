@@ -176,6 +176,7 @@ test("uses the local fallback port and optional observation snapshot paths", asy
   const c = context("GET", "/api/v1/routes", []);
   c.observationStore = { snapshot: undefined, upsert: jest.fn() };
   c.environment.ELERA_NODE_SQL_PORT = undefined;
+  c.clientAddress = () => 'local';
   await expect(handleRoutingRoute(c)).resolves.toBe(true);
 });
 test("uses default local SQL port when a ready node has no observation", async () => {
@@ -183,6 +184,7 @@ test("uses default local SQL port when a ready node has no observation", async (
   c.url = new URL("http://localhost/api/v1/routes?application=port-test");
   c.observationStore = { snapshot: () => null, upsert: jest.fn() };
   c.environment.ELERA_NODE_SQL_PORT = undefined;
+  c.clientAddress = () => 'local';
   await expect(handleRoutingRoute(c)).resolves.toBe(true);
   expect(c.response.json).toHaveBeenCalledWith(
     200,

@@ -7,7 +7,7 @@ test("cluster handoff disables pending data initialization and enables one-shot 
   const exit = jest.fn();
   await createClusterHandoff({ environment: { ROOT_TOKEN: "secret" }, spawnProcess, exit, bootstrapCluster: true })();
   expect(spawnProcess).toHaveBeenCalledWith("node", ["/usr/local/bin/mariadb-entrypoint.mjs"], expect.objectContaining({
-    env: expect.objectContaining({ ELERA_PENDING_INIT: "false", ELERA_BOOTSTRAP: "false", ELERA_CLUSTER_BOOTSTRAP: "true" }),
+    env: expect.objectContaining({ ELERA_CLUSTER_BOOTSTRAP: "true" }),
     stdio: "inherit",
   }));
   expect(exit).toHaveBeenCalledWith(0);

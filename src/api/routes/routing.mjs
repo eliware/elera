@@ -4,6 +4,7 @@ import {
   refreshLocalObservation,
   refreshPeerObservations,
 } from "../../routing/local-observation.mjs";
+import { clientSqlAddress } from '../../routing/client-address.mjs';
 
 const recentRoutes = new Map();
 
@@ -37,6 +38,7 @@ export async function handleRoutingRoute({
   getStatus,
   environment,
   fetchImpl,
+  clientAddress = clientSqlAddress,
 } = {}) {
   if (path === "/api/v1/routes" && method === "GET") {
     await refreshLocalObservation({ observationStore, getStatus, environment });
@@ -68,9 +70,9 @@ export async function handleRoutingRoute({
     }
     if (!routes.balanced.length) {
       const status = await optionalStatus(getStatus);
-      if (status?.ready && environment?.ELERA_NODE_ADDRESS) {
+      if (status?.ready) {
         const node = {
-          host: environment.ELERA_NODE_ADDRESS,
+          host: clientAddress(environment),
           port: localPort(environment),
           weight: 100,
         };

@@ -4,7 +4,7 @@ import { handleIntentRoute } from '../src/api/routes/intent.mjs';
 const response = () => ({ json: jest.fn() });
 const request = (body) => ({ async *[Symbol.asyncIterator]() { yield JSON.stringify(body); } });
 const intent = { apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'c', members: [{ name: 'n', address: 'a' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } };
-const context = (method, path, body = {}) => ({ method, path, request: request(body), response: response(), environment: { ELERA: '1', ELERA_CLUSTER_NAME: 'c' } });
+const context = (method, path, body = {}) => ({ method, path, request: request(body), response: response(), environment: { ELERA_CLUSTER_MODE: '1', ELERA_CLUSTER_NAME: 'c' } });
 
 test('handles intent inspection, raw and wrapped plans, apply, and verify', async () => {
   const state = Object.assign(async () => intent, { apply: async () => ({ applied: true }), verify: async () => ({ verified: true }) });

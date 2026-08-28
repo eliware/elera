@@ -58,6 +58,7 @@ export function createIntentState({ stateDir }) {
     };
   };
   return {
+    read: readActive,
     plan,
     async apply(intent) {
       const rendered = renderIntent(intent);

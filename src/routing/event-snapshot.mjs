@@ -7,7 +7,7 @@ export function createRoutingEventSnapshot({ observationStore, environment = pro
   let event;
   let lastHealthy;
   return function snapshot(application = 'default') {
-    const observations = (observationStore?.snapshot?.() ?? []).map((item) => item.nodeId === (environment.ELERA_NODE_NAME ?? 'elera') ? { ...item, drain: getDrained() } : item);
+    const observations = (observationStore?.snapshot?.() ?? []).map((item) => item.nodeId === (environment.RUNTIME_NODE_NAME ?? 'elera') ? { ...item, drain: getDrained() } : item);
     const quorum = evaluateQuorum(observations, { now: now(), expectedSize: Number(environment.ELERA_CLUSTER_SIZE ?? observations.length) });
     const routes = calculateRoutes({ application, observations: quorum.quorum ? observations : [], now: now() });
     const selectedRoutes = routes.balanced.length ? routes : (lastHealthy?.application === application && now() - lastHealthy.at < 5000 ? lastHealthy.routes : routes);

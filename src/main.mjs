@@ -33,8 +33,10 @@ import { createDrainPropagation } from "./cluster/drain-propagation.mjs";
 import { createLifecycleState } from "./lifecycle/state.mjs";
 import { createShutdown } from "./lifecycle/shutdown.mjs";
 import { createDrainEventPublisher } from "./lifecycle/drain-events.mjs";
+import { runtimeIdentity } from "./runtime/identity.mjs";
 
 const config = loadSupervisorConfig();
+const identity = runtimeIdentity();
 // Supervisor control-plane SQL uses the bootstrap root credential; application credentials
 // are leased separately and must never be used for provisioning or reconciliation.
 const dbEnv = {
@@ -43,8 +45,8 @@ const dbEnv = {
   MYSQL_PORT: "3306",
   MYSQL_SOCKET: "/run/mysqld/mysqld.sock",
   MYSQL_USER: "root",
-  MYSQL_PASSWORD: process.env.MARIADB_ROOT_PASSWORD ?? "",
-  MYSQL_DATABASE: process.env.MARIADB_DATABASE ?? "mysql",
+  MYSQL_PASSWORD: "",
+  MYSQL_DATABASE: "elera_meta",
 };
 let db;
 let drained = false;
@@ -71,7 +73,7 @@ const health = createHealthService({
   log,
 });
 const intentState = createIntentState({
-  stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? "/run/elera",
+  stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? `${process.env.MARIADB_DATA_DIR ?? "/var/lib/mysql"}/.elera`,
 });
 const memoryObservationStore = createObservationStore();
 const observationStore = process.env.ELERA_OBSERVATION_STATE_PATH
@@ -109,7 +111,7 @@ const routingEvent = createRoutingEventSnapshot({
   getDrained: () => drained,
 });
 const routingBus = createRoutingEventBus({ log });
-const publishDrainEvent = createDrainEventPublisher({ bus: routingBus, node: process.env.ELERA_NODE_NAME ?? "elera", getReady: () => health.status(), log });
+const publishDrainEvent = createDrainEventPublisher({ bus: routingBus, node: identity.name, getReady: () => health.status(), log });
 const routingStream = createRoutingStream({
   token: process.env.ROOT_TOKEN,
   getEvent: routingEvent,
@@ -118,7 +120,7 @@ const routingStream = createRoutingStream({
 });
 const updateLocalSqlRoute = createSqlDrainIntegration({
   getClient: () => db,
-  node: process.env.ELERA_NODE_NAME ?? "elera",
+  node: identity.name,
   log,
 });
 const drain = createDrainManager({
@@ -208,7 +210,7 @@ async function main() {
     elera: config.elera,
     httpPort: config.httpPort,
   });
-  const initialIntent = loadIntent(process.env);
+  const initialIntent = (await intentState.read()) ?? loadIntent({ ...process.env, RUNTIME_NODE_NAME: identity.name, RUNTIME_NODE_ADDRESS: identity.address });
   await intentState.apply(initialIntent);
   const args = mariaDbArguments({
     ...config,
@@ -222,7 +224,7 @@ async function main() {
     },
   });
   applyIntent = async (desired) => {
-    const active = loadIntent(process.env);
+    const active = (await intentState.read()) ?? loadIntent(process.env);
     const plan = planIntent(desired, active);
     if (plan.change === "unsafe")
       throw Object.assign(new Error(plan.reason), {
@@ -293,8 +295,8 @@ async function main() {
         .status()
         .catch(() => ({ ready: false, values: {} }));
       const observation = {
-        nodeId: process.env.ELERA_NODE_NAME ?? "elera",
-        clusterId: process.env.ELERA_CLUSTER_NAME ?? "local-elera",
+        nodeId: identity.name,
+        clusterId: initialIntent.cluster.name,
         state:
           current.values?.wsrep_local_state_comment ??
           (current.ready ? "Ready" : "Down"),

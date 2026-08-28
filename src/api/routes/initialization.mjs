@@ -1,5 +1,4 @@
 import { access, constants } from "node:fs/promises";
-import { identifier, literal } from "../../accounts/sql.mjs";
 import { readBody } from "../http.mjs";
 
 export async function handleInitializationRoute({
@@ -35,9 +34,7 @@ export async function handleInitializationRoute({
       changed: false,
       status: "planned",
       data: {
-        elera: environment.ELERA === "1",
-        database: environment.MARIADB_DATABASE ?? null,
-        user: environment.MARIADB_USER ?? null,
+        database: "elera_meta",
       },
     });
     return true;
@@ -48,31 +45,15 @@ export async function handleInitializationRoute({
       throw Object.assign(new Error("initialization requires confirm: true"), {
         statusCode: 409,
       });
-    const database = body.database ?? environment.MARIADB_DATABASE;
-    const user = body.user ?? environment.MARIADB_USER;
-    const password = body.password ?? environment.MARIADB_PASSWORD;
-    await (database
-      ? db.query(`CREATE DATABASE IF NOT EXISTS ${identifier(database)}`)
-      : Promise.resolve());
-    await (user
-      ? (async () => {
-          await db.query(
-            `CREATE USER IF NOT EXISTS ${literal(user)}@'%' IDENTIFIED BY ${literal(password ?? "")}`,
-          );
-          await (database
-            ? db.query(
-                `GRANT ALL PRIVILEGES ON ${identifier(database)}.* TO ${literal(user)}@'%'`,
-              )
-            : Promise.resolve());
-        })()
-      : Promise.resolve());
+    const database = "elera_meta";
+    await db.query("CREATE DATABASE IF NOT EXISTS `elera_meta`");
     await db.query("FLUSH PRIVILEGES");
     response.json(200, {
       ok: true,
       operation: "initialization.apply",
       changed: true,
       status: "completed",
-      data: { database: database ?? null, user: user ?? null },
+      data: { database },
     });
     return true;
   }

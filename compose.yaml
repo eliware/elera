@@ -15,18 +15,7 @@ services:
       ROOT_TOKEN: ${ROOT_TOKEN:-root_token_here}
       ELERA_CREDENTIAL_KEY: ${ELERA_CREDENTIAL_KEY:-lab-credential-key}
       ELERA_ADVERTISED_HOST: elera-single
-      MARIADB_ROOT_PASSWORD: dev-root-password
-      MARIADB_DATABASE: app
-      MARIADB_USER: healthcheck
-      MARIADB_PASSWORD: dev-healthcheck-password
-      ELERA_CLUSTER_NAME: local-elera
       ELERA_CLUSTER_SIZE: "3"
-      ELERA: "0"
-      ELERA_BOOTSTRAP: "false"
-      ELERA_PENDING_INIT: "true"
-      ELERA_CLUSTER_ADDRESS: gcomm://
-      ELERA_NODE_NAME: elera-single
-      ELERA_NODE_ADDRESS: elera-single
       ELERA_HTTP_PORT: "8080"
     ports: ["3306:3306", "8080:8080"]
     volumes: [elera-single-data:/var/lib/mysql]
@@ -49,12 +38,10 @@ services:
     hostname: elera-0
     environment:
       <<: *single-env
+      ELERA_CLUSTER_MODE: "1"
+      ELERA_CLUSTER_NAME: local-elera
       ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
-      ELERA: "1"
-      ELERA_NODE_NAME: elera-0
-      ELERA_NODE_ADDRESS: elera-0
       ELERA_BOOTSTRAP: "false"
-      ELERA_PENDING_INIT: "true"
       ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3307:3306", "8081:8080"]
@@ -70,12 +57,10 @@ services:
     hostname: elera-1
     environment:
       <<: *single-env
+      ELERA_CLUSTER_MODE: "1"
+      ELERA_CLUSTER_NAME: local-elera
       ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
-      ELERA: "1"
-      ELERA_NODE_NAME: elera-1
-      ELERA_NODE_ADDRESS: elera-1
       ELERA_BOOTSTRAP: "false"
-      ELERA_PENDING_INIT: "true"
       ELERA_PEERS: http://elera-0:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3308:3306", "8082:8080"]
@@ -92,12 +77,10 @@ services:
     hostname: elera-2
     environment:
       <<: *single-env
+      ELERA_CLUSTER_MODE: "1"
+      ELERA_CLUSTER_NAME: local-elera
       ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
-      ELERA: "1"
-      ELERA_NODE_NAME: elera-2
-      ELERA_NODE_ADDRESS: elera-2
       ELERA_BOOTSTRAP: "false"
-      ELERA_PENDING_INIT: "true"
       ELERA_PEERS: http://elera-0:8080,http://elera-1:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3309:3306", "8083:8080"]

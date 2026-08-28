@@ -4,12 +4,12 @@ import { startPendingInitRuntime } from '/app/src/lifecycle/pending-init/runtime
 import { initializePendingData } from '/app/src/lifecycle/pending-init/initialize.mjs';
 
 const datadir = process.env.MARIADB_DATA_DIR ?? '/var/lib/mysql';
-if (process.env.ELERA_PENDING_INIT === 'true' && !(await exists(`${datadir}/mysql`))) {
+if (!(await exists(`${datadir}/mysql`))) {
   const entries = await import('node:fs/promises').then(fs => fs.readdir(datadir));
   if (entries.length === 0) { startPendingInitRuntime(); }
   else process.exit(fail('pending initialization requires an empty data directory'));
 } else {
-  const action = await runNode('/app/src/lifecycle/data-directory-cli.mjs', datadir, process.env.ELERA_BOOTSTRAP ?? 'false');
+  const action = await runNode('/app/src/lifecycle/data-directory-cli.mjs', datadir, 'false');
   if (action === 'initialize') await initialize(datadir);
   if (action === 'fail') process.exit(fail('MariaDB data-directory validation failed'));
   if (action === 'initialize') await import('node:fs/promises').then(fs => fs.writeFile(`${datadir}/.elera-supervisor-initialized`, ''));
