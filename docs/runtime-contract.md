@@ -94,7 +94,7 @@ installed packages; publication requires a DevOps remediation or documented
 risk-acceptance decision.
 ### Client-facing SQL address
 
-Node identity is derived from `hostname -f` and `hostname -i` at startup. Persisted intent is authoritative after initialization; cluster environment variables are used only as a pre-start fallback so an initialized node can rejoin without the CLI.
+Node identity is derived from `hostname -f` and `hostname -i` at startup. Persisted intent is the sole source of cluster topology after initialization; cluster topology is established only through the explicit initialization workflow.
 
 ### Pending initialization
 

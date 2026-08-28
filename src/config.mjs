@@ -18,6 +18,6 @@ export function loadSupervisorConfig(environment = process.env, intent = undefin
 
 export function mariaDbArguments(config) {
   const args = [...(config.intentConfigPath ? [`--defaults-extra-file=${config.intentConfigPath}`] : []), `--datadir=${config.dataDir}`, '--user=mysql', '--bind-address=0.0.0.0', '--binlog-format=ROW'];
-  if (config.elera) { if (config.environment.ELERA_CLUSTER_BOOTSTRAP === 'true' || config.environment.ELERA_BOOTSTRAP === 'true') args.push('--wsrep-new-cluster'); const members = config.intent.cluster.members; const local = members.find((item) => item.name === config.runtimeNodeName) ?? members[0]; args.push('--wsrep-on=ON', '--wsrep-provider=/usr/lib/galera/libgalera_smm.so', `--wsrep-cluster-name=${config.intent.cluster.name}`, `--wsrep-cluster-address=gcomm://${members.map((item) => item.address).join(',')}`, `--wsrep-node-name=${local.name}`, `--wsrep-node-address=${local.address}`); }
+  if (config.elera) { if (config.environment.ELERA_CLUSTER_BOOTSTRAP === 'true') args.push('--wsrep-new-cluster'); const members = config.intent.cluster.members; const local = members.find((item) => item.name === config.runtimeNodeName) ?? members[0]; args.push('--wsrep-on=ON', '--wsrep-provider=/usr/lib/galera/libgalera_smm.so', `--wsrep-cluster-name=${config.intent.cluster.name}`, `--wsrep-cluster-address=gcomm://${members.map((item) => item.address).join(',')}`, `--wsrep-node-name=${local.name}`, `--wsrep-node-address=${local.address}`); }
   return args;
 }

@@ -38,10 +38,6 @@ services:
     hostname: elera-0
     environment:
       <<: *single-env
-      ELERA_CLUSTER_MODE: "1"
-      ELERA_CLUSTER_NAME: local-elera
-      ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
-      ELERA_BOOTSTRAP: "false"
       ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3307:3306", "8081:8080"]
@@ -57,10 +53,6 @@ services:
     hostname: elera-1
     environment:
       <<: *single-env
-      ELERA_CLUSTER_MODE: "1"
-      ELERA_CLUSTER_NAME: local-elera
-      ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
-      ELERA_BOOTSTRAP: "false"
       ELERA_PEERS: http://elera-0:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3308:3306", "8082:8080"]
@@ -77,10 +69,6 @@ services:
     hostname: elera-2
     environment:
       <<: *single-env
-      ELERA_CLUSTER_MODE: "1"
-      ELERA_CLUSTER_NAME: local-elera
-      ELERA_CLUSTER_ADDRESS: gcomm://elera-0,elera-1,elera-2
-      ELERA_BOOTSTRAP: "false"
       ELERA_PEERS: http://elera-0:8080,http://elera-1:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
     ports: ["3309:3306", "8083:8080"]
