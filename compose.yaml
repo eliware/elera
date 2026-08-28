@@ -38,10 +38,13 @@ services:
     hostname: elera-0
     environment:
       <<: *single-env
+      SUPERVISOR_INTENT_JSON: '{"apiVersion":"elera.eliware.dev/v1alpha1","kind":"SupervisorIntent","cluster":{"name":"local-elera","members":[{"name":"elera-0","address":"elera-0","port":3306},{"name":"elera-1","address":"elera-1","port":3306},{"name":"elera-2","address":"elera-2","port":3306}]},"mariadb":{"port":3306,"dataDir":"/var/lib/mysql","binlogFormat":"ROW"},"routing":{"healthIntervalMs":1000,"weights":{}},"drain":{"queryTimeoutMs":5000,"drainTimeoutMs":45000,"shutdownTimeoutMs":60000}}'
       ELERA_PEERS: http://elera-1:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
+      ELERA_CONFIG_STATE_DIR: /run/elera
     ports: ["3307:3306", "8081:8080"]
-    volumes: [elera-0-data:/var/lib/mysql]
+    volumes: [elera-0-data:/var/lib/mysql, elera-0-runtime:/run/elera]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
     healthcheck: *probe
 
   elera-1:
@@ -53,10 +56,13 @@ services:
     hostname: elera-1
     environment:
       <<: *single-env
+      SUPERVISOR_INTENT_JSON: '{"apiVersion":"elera.eliware.dev/v1alpha1","kind":"SupervisorIntent","cluster":{"name":"local-elera","members":[{"name":"elera-0","address":"elera-0","port":3306},{"name":"elera-1","address":"elera-1","port":3306},{"name":"elera-2","address":"elera-2","port":3306}]},"mariadb":{"port":3306,"dataDir":"/var/lib/mysql","binlogFormat":"ROW"},"routing":{"healthIntervalMs":1000,"weights":{}},"drain":{"queryTimeoutMs":5000,"drainTimeoutMs":45000,"shutdownTimeoutMs":60000}}'
       ELERA_PEERS: http://elera-0:8080,http://elera-2:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
+      ELERA_CONFIG_STATE_DIR: /run/elera
     ports: ["3308:3306", "8082:8080"]
-    volumes: [elera-1-data:/var/lib/mysql]
+    volumes: [elera-1-data:/var/lib/mysql, elera-1-runtime:/run/elera]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
     depends_on: [elera-0]
     healthcheck: *probe
 
@@ -69,10 +75,13 @@ services:
     hostname: elera-2
     environment:
       <<: *single-env
+      SUPERVISOR_INTENT_JSON: '{"apiVersion":"elera.eliware.dev/v1alpha1","kind":"SupervisorIntent","cluster":{"name":"local-elera","members":[{"name":"elera-0","address":"elera-0","port":3306},{"name":"elera-1","address":"elera-1","port":3306},{"name":"elera-2","address":"elera-2","port":3306}]},"mariadb":{"port":3306,"dataDir":"/var/lib/mysql","binlogFormat":"ROW"},"routing":{"healthIntervalMs":1000,"weights":{}},"drain":{"queryTimeoutMs":5000,"drainTimeoutMs":45000,"shutdownTimeoutMs":60000}}'
       ELERA_PEERS: http://elera-0:8080,http://elera-1:8080
       ELERA_OBSERVATION_STATE_PATH: /var/lib/mysql/elera-observations.json
+      ELERA_CONFIG_STATE_DIR: /run/elera
     ports: ["3309:3306", "8083:8080"]
-    volumes: [elera-2-data:/var/lib/mysql]
+    volumes: [elera-2-data:/var/lib/mysql, elera-2-runtime:/run/elera]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
     depends_on: [elera-0]
     healthcheck: *probe
 
@@ -118,7 +127,7 @@ services:
         condition: service_started
     environment:
       ELERA_API_ENDPOINT: http://haproxy:8080
-      ELERA_API_TOKEN: root_token_here
+      ELERA_API_TOKEN: ${ROOT_TOKEN:-root_token_here}
       ELERA_DATABASE: app
       ELERA_IDENTITY: backup-dev
       ELERA_CLUSTER_SQL_HOSTS: elera-0,elera-1,elera-2
@@ -153,5 +162,8 @@ volumes:
   elera-0-data:
   elera-1-data:
   elera-2-data:
+  elera-0-runtime:
+  elera-1-runtime:
+  elera-2-runtime:
   backup-dev-state:
   backup-nas-data:

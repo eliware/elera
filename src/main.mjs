@@ -73,7 +73,7 @@ const health = createHealthService({
   log,
 });
 const intentState = createIntentState({
-  stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? `${process.env.MARIADB_DATA_DIR ?? "/var/lib/mysql"}/.elera`,
+  stateDir: process.env.ELERA_CONFIG_STATE_DIR ?? `${process.env.MARIADB_DATA_DIR ?? "/var/lib/mysql"}/elera-state`,
 });
 const memoryObservationStore = createObservationStore();
 const observationStore = process.env.ELERA_OBSERVATION_STATE_PATH
@@ -155,7 +155,9 @@ const control = createControlApi({
       setDrain: (value) => clusterDrain.set(value),
     }),
     environment: process.env,
+    config,
   }),
+  getConfig: () => config,
   getStatus: () => health.status(),
   getTraffic: () => ({
     drained: drain.isDraining(),

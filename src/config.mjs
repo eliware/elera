@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadIntent } from './intent/model.mjs';
 import { runtimeIdentity } from './runtime/identity.mjs';
-const persistedIntent = (environment) => { try { return JSON.parse(readFileSync(join(environment.ELERA_CONFIG_STATE_DIR ?? `${environment.MARIADB_DATA_DIR ?? '/var/lib/mysql'}/.elera`, 'active.intent.json'), 'utf8')); } catch { return undefined; } };
+const persistedIntent = (environment) => { try { return JSON.parse(readFileSync(join(environment.ELERA_CONFIG_STATE_DIR ?? `${environment.MARIADB_DATA_DIR ?? '/var/lib/mysql'}/elera-state`, 'active.intent.json'), 'utf8')); } catch { return undefined; } };
 
 export function loadSupervisorConfig(environment = process.env, intent = undefined) {
   intent ??= persistedIntent(environment) ?? loadIntent(environment);
