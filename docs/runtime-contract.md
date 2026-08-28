@@ -8,8 +8,8 @@ by that identity:
 - `/var/lib/mysql` — persistent MariaDB data;
 - `/run/mysqld` — MariaDB runtime sockets and state;
 - `/tmp` — MariaDB/InnoDB temporary files when the root filesystem is read-only;
-- `/run/elera` — writable supervisor runtime state and generated MariaDB
-  configuration.
+- `/var/lib/mysql/.elera` — writable supervisor intent state and generated
+  MariaDB configuration by default; `ELERA_CONFIG_STATE_DIR` may override it.
 - `/etc/elera` — optional static configuration input; ConfigMap mounts may be
   read-only.
 
@@ -57,7 +57,8 @@ and the local readiness policy is satisfied; otherwise it returns `503`.
   timeout to exit normally. If it remains alive, the supervisor sends SIGKILL.
   This is separate from the client-library drain deadline.
 
-`ELERA_CONFIG_STATE_DIR` overrides the default runtime directory `/run/elera`.
+`ELERA_CONFIG_STATE_DIR` overrides the default state directory
+`/var/lib/mysql/.elera`.
 The supervisor writes `active.intent.json`, `last-known-good.intent.json`, and
 `mariadb.cnf` there. Startup fails if that directory is unavailable or
 unwritable.
