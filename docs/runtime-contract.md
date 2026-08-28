@@ -100,3 +100,11 @@ In Elera mode, client-facing routing bundles advertise the machine's
 `hostname -f` value. Kubernetes and external DNS must therefore make that FQDN
 resolve to the appropriate SQL VIP. Standalone mode falls back to
 `ELERA_NODE_ADDRESS`.
+
+### Pending initialization
+
+The explicit pending-initialization path uses `/run/mysqld/pending-init.sock`
+for its private MariaDB process and readiness probe. This temporary socket is
+not exposed as a service port. Initialization is entered only through the
+explicit authenticated workflow; ordinary startup does not create, erase, or
+repair a data directory.

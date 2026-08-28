@@ -1,5 +1,32 @@
 # Release notes
 
+## 0.1.6 — scoped authentication and pending-init socket consistency
+
+Patch release candidate containing focused fixes identified during local and
+Kubernetes-style validation.
+
+### Authentication
+
+- Authenticate scoped bearer tokens against active replicated metadata using
+  constant-time hash comparison in the supervisor process.
+- Add regression coverage for valid, invalid, malformed, and empty token
+  metadata records.
+
+### Pending initialization
+
+- Use one shared `/run/mysqld/pending-init.sock` contract for explicit
+  initialization and the MariaDB readiness probe.
+- Reuse the focused pending-init implementation from the container entrypoint
+  instead of maintaining a second initialization path.
+- Add regression coverage for the pending-init socket and credential-handling
+  contract.
+
+### Verification
+
+- Supervisor test suite passes with 100×4 coverage and zero lint warnings.
+- Fresh local Docker E2E lab passes initialization, Galera joins, scoped token
+  provisioning, backup verification, and restore verification.
+
 ## 0.1.5 — local E2E lab and lifecycle hardening
 
 Unreleased patch release candidate for the next test image.
