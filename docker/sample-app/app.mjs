@@ -7,12 +7,18 @@ const application = process.env.ELERA_APPLICATION ?? 'sample-app';
 if (!endpoint || !token || !identity) throw new Error('sample app requires endpoint, scoped token, and identity');
 
 async function fetchBundle() {
-  const response = await fetch(endpoint.replace(/\/$/, '') + '/api/v1/routing/bundle?identity=' + encodeURIComponent(identity), {
-    headers: { accept: 'application/json', authorization: 'Bearer ' + token },
-  });
-  if (!response.ok) throw new Error('routing bundle request failed: ' + response.status);
-  const body = await response.json();
-  return body.data ?? body;
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const response = await fetch(endpoint.replace(/\/$/, '') + '/api/v1/routing/bundle?identity=' + encodeURIComponent(identity), {
+      headers: { accept: 'application/json', authorization: 'Bearer ' + token },
+    });
+    if (response.ok) {
+      const body = await response.json();
+      return body.data ?? body;
+    }
+    if (response.status !== 401 && response.status !== 404) throw new Error('routing bundle request failed: ' + response.status);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error('routing bundle request failed after metadata convergence retries');
 }
 
 const bundle = await fetchBundle();

@@ -22,6 +22,6 @@ export const createClusterHandoff = ({
     const exitCode = code ?? (signal ? 1 : 0);
     onExit(exitCode, signal);
     exit(exitCode);
-    resolve();
   });
+  resolve();
 });
