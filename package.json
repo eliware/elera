@@ -37,6 +37,7 @@
         "lint": "eliware-test --lint",
         "audit": "npm audit --omit=dev --audit-level=moderate",
         "pack": "npm pack --dry-run"
+        ,"test:e2e:rolling": "node docker/e2e/rolling-restart.mjs"
     },
     "dependencies": {
         "@eliware/common": "2.0.0",
