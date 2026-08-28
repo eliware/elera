@@ -11,6 +11,8 @@ await post(node, '/api/v1/traffic/undrain');
 await waitForReady(node);
 await Promise.all(peers.map((peer) => waitForReady(peer)));
 await assertRoute(node);
+const client = await startClient();
+await delay(5000);
 console.log('[rolling-e2e] baseline cluster healthy');
 
 await exec('docker', ['compose', 'stop', '--timeout', '60', 'elera-0'], { cwd: process.cwd() });
@@ -22,11 +24,26 @@ await exec('docker', ['compose', 'start', 'elera-0'], { cwd: process.cwd() });
 await waitForReady(node, 120);
 await Promise.all(peers.map((peer) => waitForReady(peer)));
 await assertRoute(node);
+await delay(5000);
+await client.stop();
+if (client.errors.length > 0) throw new Error(`sample client recorded ${client.errors.length} query errors`);
 console.log('[rolling-e2e] restarted node returned to healthy routing');
 
 async function assertRoute(endpoint) {
   const response = await fetch(`${endpoint}/api/v1/routing/bundle?identity=sample-runtime`, { headers: { authorization: `Bearer ${token}` } });
   if (!response.ok) throw new Error(`routing bundle failed with ${response.status}`);
+}
+
+async function startClient() {
+  const errors = [];
+  const { stdout: container } = await exec('docker', ['compose', 'run', '--detach', '--name', 'elera-rolling-client', '--no-deps', '-e', 'ELERA_API_ENDPOINT=http://haproxy:8080', `-e=ELERA_API_TOKEN=${token}`, '-e', 'ELERA_IDENTITY=sample-runtime', '-e', 'ELERA_APPLICATION=sample-app', 'backup-dev', 'node', '/workspace/sample-app/app.mjs'], { cwd: process.cwd() });
+  return { errors, stop: async () => {
+    await exec('docker', ['stop', '--time', '10', container.trim()], { cwd: process.cwd() });
+    const { stdout, stderr } = await exec('docker', ['logs', container.trim()]);
+    const output = `${stdout}${stderr}`;
+    for (const line of output.split(/\r?\n/)) if (line.includes('sql.error') || line.includes('routing.error')) errors.push(new Error(line));
+    await exec('docker', ['rm', container.trim()], { cwd: process.cwd() });
+  } };
 }
 
 async function assertUnavailable(endpoint) {
