@@ -45,11 +45,12 @@ const tick = async () => {
   const currentSequence = ++sequence;
   try {
     const [rows] = await db.query('SELECT 1 AS healthy, @@hostname AS node, @@wsrep_local_state_comment AS wsrep_state, @@wsrep_cluster_status AS cluster_status');
-    await db.query('CREATE TABLE IF NOT EXISTS sample_app.e2e_probe (id BIGINT PRIMARY KEY, touched_at TIMESTAMP(6) NOT NULL)');
-    await db.query('INSERT INTO sample_app.e2e_probe (id, touched_at) VALUES (?, NOW(6)) ON DUPLICATE KEY UPDATE touched_at = VALUES(touched_at)', [currentSequence]);
+    await db.query('CREATE TABLE IF NOT EXISTS sample_app.e2e_probe (id BIGINT PRIMARY KEY, touched_at TIMESTAMP(6) NOT NULL, writer_node VARCHAR(255) NOT NULL)');
+    await db.query('INSERT INTO sample_app.e2e_probe (id, touched_at, writer_node) SELECT ?, NOW(6), @@hostname ON DUPLICATE KEY UPDATE touched_at = VALUES(touched_at), writer_node = VALUES(writer_node)', [currentSequence]);
+    const [writeRows] = await db.query('SELECT writer_node FROM sample_app.e2e_probe WHERE id = ?', [currentSequence]);
     writes += 1;
     const finishedAt = new Date();
-    console.log(JSON.stringify({ event: 'sql.probe', sequence: currentSequence, startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(), durationMs: Math.round(performance.now() - started), gapSincePreviousMs: previousProbeAt ? Math.round(startedAt - previousProbeAt) : null, bundleVersion: db.bundle()?.bundleVersion, readRoute: db.classify('SELECT 1'), writeRoute: db.classify('INSERT INTO sample_app.e2e_probe VALUES (?, NOW(6))'), readNode: rows[0]?.node, writes, wsrepState: rows[0]?.wsrep_state, clusterStatus: rows[0]?.cluster_status, nodes: db.nodeStates() }));
+    console.log(JSON.stringify({ event: 'sql.probe', sequence: currentSequence, startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(), durationMs: Math.round(performance.now() - started), gapSincePreviousMs: previousProbeAt ? Math.round(startedAt - previousProbeAt) : null, bundleVersion: db.bundle()?.bundleVersion, readRoute: db.classify('SELECT 1'), writeRoute: db.classify('INSERT INTO sample_app.e2e_probe VALUES (?, NOW(6))'), readNode: rows[0]?.node, writeNode: writeRows[0]?.writer_node, writes, wsrepState: rows[0]?.wsrep_state, clusterStatus: rows[0]?.cluster_status, nodes: db.nodeStates() }));
     previousProbeAt = finishedAt;
   } catch (error) {
     console.warn(JSON.stringify({ event: 'sql.error', sequence: currentSequence, startedAt: startedAt.toISOString(), finishedAt: new Date().toISOString(), durationMs: Math.round(performance.now() - started), gapSincePreviousMs: previousProbeAt ? Math.round(startedAt - previousProbeAt) : null, error: error.message, code: error.code, nodes: db.nodeStates() }));
