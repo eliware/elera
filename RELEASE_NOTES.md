@@ -1,5 +1,29 @@
 # Release notes
 
+## 0.1.5 — local E2E lab and lifecycle hardening
+
+Unreleased patch release candidate for the next test image.
+
+### Runtime and lifecycle
+
+- Add explicit pending-init, bootstrap, join, and rejoin handoff behavior.
+- Require Galera quorum for readiness and propagate drain state across
+  supervisors.
+- Allow active SQL sessions to settle during graceful shutdown before MariaDB
+  termination.
+- Replace shell entrypoints with Node.js ESM entrypoints.
+
+### Local validation
+
+- Add a fresh seven-service Docker lab with three Galera nodes, a standalone
+  node, HTTP-only HAProxy, backup-dev, and backup-NAS.
+- Add focused E2E modules for lifecycle, metadata, routing, backup, and CLI
+  interoperability.
+- Validate metadata provisioning, scoped application credentials, backup and
+  verification, NAS transfer, and standalone restore verification.
+- Make the E2E runner quiet by default while retaining filtered failure
+  diagnostics and a `--verbose` mode.
+
 ## 0.1.4 — hardened local and Kubernetes-style startup validation
 
 Unreleased patch release containing the locally verified follow-up hardening

@@ -231,6 +231,10 @@ passwords, bearer tokens, age private keys, or plaintext artifacts.
 
 ## Legacy removal checklist
 
+These items are platform-owned migration tasks. The supervisor-side removal of
+the legacy listeners is complete; the remaining entries track VyOS/GitOps
+changes and are not implemented or validated by this repository.
+
 - [ ] Remove MySQL backends from VyOS HAProxy.
 - [ ] Configure VyOS HAProxy as HTTP-only supervisor load balancer.
 - [ ] Remove VyOS `agent-check` configuration.

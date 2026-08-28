@@ -30,14 +30,14 @@ The Compose lab intentionally uses the workspace parent context so its
 development Dockerfile can also build the adjacent CLI and simulator images.
 
 The supervisor and backup workstation consume the published
-`@eliware/elera-lib@0.1.0` package. They do not copy or build a sibling library
+`@eliware/elera-lib@0.1.3` package. They do not copy or build a sibling library
 checkout into the image or CI workspace.
 
 The local `.env` is ignored and should be created from `.env.example`. The
 supervisor HTTP API listens on `8080`; MariaDB listens on `3306`. Elera is
 enabled with `ELERA=1`.
 
-This `0.1.4` release is a development and Docker-lab baseline. Production
+This `0.1.5` release is a development and Docker-lab baseline. Production
 deployment still requires the Kubernetes manifests, NetworkPolicies, secret
 delivery, and operational acceptance checks described in the feature
 checklist.
