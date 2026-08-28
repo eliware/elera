@@ -1,11 +1,10 @@
-export function createSqlQuiesce({ drain, timeoutMs = 30000, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) } = {}) {
+export function createSqlQuiesce({ drain, timeoutMs = 30000 } = {}) {
   if (!drain || typeof drain.begin !== 'function' || typeof drain.wait !== 'function') throw new TypeError('drain manager is required');
   return {
-    async begin() {
+    async begin(limitMs = timeoutMs) {
       drain.begin();
-      await drain.wait(timeoutMs);
-      await sleep(timeoutMs);
-      return { drained: true, settled: true };
+      const settled = await drain.wait(limitMs);
+      return { drained: true, settled };
     },
   };
 }

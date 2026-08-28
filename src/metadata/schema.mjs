@@ -35,4 +35,11 @@ export const META_MIGRATIONS = [
       "CREATE TABLE IF NOT EXISTS elera_meta.artifacts (name VARCHAR(255) PRIMARY KEY, kind VARCHAR(64) NOT NULL, ciphertext LONGTEXT NOT NULL, key_version VARCHAR(128) NOT NULL, checksum CHAR(64) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
     ],
   },
+  {
+    version: 5,
+    name: "routing-writer-assignments",
+    statements: [
+      "CREATE TABLE IF NOT EXISTS elera_meta.routing_assignments (application_name VARCHAR(255) PRIMARY KEY, writer_host VARCHAR(255) NOT NULL, bundle_version VARCHAR(128) NOT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
+    ],
+  },
 ];

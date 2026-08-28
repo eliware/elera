@@ -37,5 +37,16 @@ test('returns an empty decision when quorum has no eligible node and honors weig
   expect(result.primary[0].weight).toBe(25);
 });
 test('uses a previous writer when it remains within the load preference window', () => { const now = Date.now(); const observations = [{ ...base, nodeId: 'busy', address: 'busy', load: { threads_connected: 10 }, weight: 1, observedAt: now }, { ...base, nodeId: 'light', address: 'light', load: { threads_connected: 1 }, observedAt: now }]; expect(calculateRoutes({ application: 'x', previousWriterHost: 'light', observations, now }).primary[0].host).toBe('light'); });
-test('falls back from an overloaded previous writer and ignores malformed nodes', () => { const now = Date.now(); const observations = [{ ...base, nodeId: 'busy', address: 'busy', load: { wsrep_local_recv_queue: 100 }, weight: 1, observedAt: now }, { ...base, nodeId: 'light', address: 'light', observedAt: now }, { ...base, nodeId: 'none', address: '', observedAt: now }, { ...base, nodeId: 'port', address: 'port', sqlPort: 0, observedAt: now }]; expect(calculateRoutes({ application: 'x', previousWriterHost: 'busy', observations, now }).primary[0].host).toBe('light'); });
-test('uses defaults for omitted application, ports, weights, and load values', () => { const result = calculateRoutes({ observations: [{ nodeId: 'n', address: 'n', synced: true, primary: 'Primary', health: 'ok', observedAt: Date.now() }] }); expect(result.primary[0]).toEqual({ host: 'n', port: 3306, weight: 100 }); expect(result.bundleVersion).toHaveLength(16); });
+test('keeps a persisted writer despite load and ignores malformed nodes', () => { const now = Date.now(); const observations = [{ ...base, nodeId: 'busy', address: 'busy', load: { wsrep_local_recv_queue: 100 }, weight: 1, observedAt: now }, { ...base, nodeId: 'light', address: 'light', observedAt: now }, { ...base, nodeId: 'none', address: '', observedAt: now }, { ...base, nodeId: 'port', address: 'port', sqlPort: 0, observedAt: now }]; expect(calculateRoutes({ application: 'x', previousWriterHost: 'busy', observations, now }).primary[0].host).toBe('busy'); });
+test('uses explicit writer selection and ordered failover without zero-weight signaling', () => { const now = Date.now(); const routes = calculateRoutes({ application: 'x', observations: [{ ...base, nodeId: 'a', address: 'a', observedAt: now }, { ...base, nodeId: 'b', address: 'b', observedAt: now }], previousWriterHost: 'b', now }); expect(routes.writer.host).toBe('b'); expect(routes.failover).toEqual([{ host: 'a', port: 3306 }]); expect(routes.primary.every(({ weight }) => weight > 0)).toBe(true); });
+test('uses defaults for omitted application, ports, weights, and load values', () => { const result = calculateRoutes({ observations: [{ nodeId: 'n', address: 'n', synced: true, primary: 'Primary', health: 'ok', observedAt: Date.now() }] }); expect(result.primary[0]).toEqual({ host: 'n', port: 3306, weight: 1 }); expect(result.bundleVersion).toHaveLength(16); });
+test('assigns primary weight only to the elected writer and preserves ordered failover candidates', () => {
+  const now = Date.now();
+  const result = calculateRoutes({ application: 'app', observations: [
+    { ...base, nodeId: 'a', address: 'a', observedAt: now },
+    { ...base, nodeId: 'b', address: 'b', observedAt: now },
+  ], now });
+  expect(result.primary).toHaveLength(2);
+  expect(result.primary[0].weight).toBe(1);
+  expect(result.primary[1].weight).toBe(1);
+});

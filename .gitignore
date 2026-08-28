@@ -1,5 +1,11 @@
 node_modules/
 coverage/
+.nyc_output/
+test-results/
+logs/
+*.log
+*.tmp
+*.tgz
 dist/
 .env
 .env.*

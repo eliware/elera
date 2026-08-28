@@ -4,6 +4,7 @@ const endpoint = process.env.ELERA_API_ENDPOINT;
 const token = process.env.ELERA_API_TOKEN;
 const identity = process.env.ELERA_IDENTITY;
 const application = process.env.ELERA_APPLICATION ?? 'sample-app';
+const debug = process.env.ELERA_E2E_DEBUG === '1';
 if (!endpoint || !token || !identity) throw new Error('sample app requires endpoint, scoped token, and identity');
 
 async function fetchBundle() {
@@ -31,7 +32,7 @@ const stream = createRoutingStream({
   token,
   application,
   fetchBundle: async () => fetchBundle(),
-  onUpdate: (event) => console.log(JSON.stringify({ event: event.type, timestamp: new Date().toISOString(), version: event.version, routes: event.bundle?.routes })),
+  onUpdate: (event) => emit({ event: event.type, timestamp: new Date().toISOString(), version: event.version, routes: event.bundle?.routes }),
   onError: (error) => console.warn(JSON.stringify({ event: 'routing.error', timestamp: new Date().toISOString(), error: error.message })),
 });
 await db.attachRoutingStream(stream);
@@ -44,14 +45,19 @@ const tick = async () => {
   const started = performance.now();
   const currentSequence = ++sequence;
   try {
-    const [rows] = await db.query('SELECT 1 AS healthy, @@hostname AS node, @@wsrep_local_state_comment AS wsrep_state, @@wsrep_cluster_status AS cluster_status');
+    const [rows] = await db.query('SELECT 1 AS healthy, @@hostname AS node');
+    const [statusRows] = await db.query("SHOW STATUS WHERE Variable_name IN ('wsrep_local_state_comment', 'wsrep_cluster_status')");
+    const status = Object.fromEntries(statusRows.map((entry) => [entry.Variable_name, entry.Value]));
     await db.query('CREATE TABLE IF NOT EXISTS sample_app.e2e_probe (id BIGINT AUTO_INCREMENT PRIMARY KEY, touched_at TIMESTAMP(6) NOT NULL, writer_node VARCHAR(255) NOT NULL)');
     const [writeResult] = await db.query('INSERT INTO sample_app.e2e_probe (touched_at, writer_node) SELECT NOW(6), @@hostname');
     const generatedId = writeResult.insertId;
     const [writeRows] = await db.query('SELECT writer_node FROM sample_app.e2e_probe WHERE id = ?', [generatedId]);
+    const writeNode = db.bundle()?.writer?.host;
     writes += 1;
     const finishedAt = new Date();
-    console.log(JSON.stringify({ event: 'sql.probe', sequence: currentSequence, startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(), durationMs: Math.round(performance.now() - started), gapSincePreviousMs: previousProbeAt ? Math.round(startedAt - previousProbeAt) : null, bundleVersion: db.bundle()?.bundleVersion, readRoute: db.classify('SELECT 1'), writeRoute: db.classify('INSERT INTO sample_app.e2e_probe (touched_at, writer_node) SELECT NOW(6), @@hostname'), readNode: rows[0]?.node, writeNode: writeRows[0]?.writer_node, generatedId, writes, wsrepState: rows[0]?.wsrep_state, clusterStatus: rows[0]?.cluster_status, nodes: db.nodeStates() }));
+    const latencyMs = Math.round(performance.now() - started);
+    const clientTelemetry = db.telemetry?.snapshot?.() ?? {};
+    emit({ event: 'sql.probe', sequence: currentSequence, startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(), operation: 'read+write', selectedNode: writeNode, retryCount: clientTelemetry.retries ?? 0, reconnectCount: clientTelemetry.reconnects ?? 0, latencyMs, gapSincePreviousMs: previousProbeAt ? Math.round(startedAt - previousProbeAt) : null, bundleVersion: db.bundle()?.bundleVersion, readRoute: db.classify('SELECT 1'), writeRoute: db.classify('INSERT INTO sample_app.e2e_probe (touched_at, writer_node) SELECT NOW(6), @@hostname'), readNode: rows[0]?.node, writeNode, readbackNode: writeRows[0]?.writer_node, generatedId, writes, wsrepState: status.wsrep_local_state_comment, clusterStatus: status.wsrep_cluster_status, nodes: db.nodeStates() });
     previousProbeAt = finishedAt;
   } catch (error) {
     console.warn(JSON.stringify({ event: 'sql.error', sequence: currentSequence, startedAt: startedAt.toISOString(), finishedAt: new Date().toISOString(), durationMs: Math.round(performance.now() - started), gapSincePreviousMs: previousProbeAt ? Math.round(startedAt - previousProbeAt) : null, error: error.message, code: error.code, nodes: db.nodeStates() }));
@@ -70,3 +76,5 @@ async function shutdown() {
 }
 process.once('SIGTERM', () => { void shutdown().finally(() => process.exit(0)); });
 process.once('SIGINT', () => { void shutdown().finally(() => process.exit(0)); });
+
+function emit(value) { if (debug) console.log(JSON.stringify(value)); }

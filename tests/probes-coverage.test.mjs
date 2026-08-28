@@ -27,12 +27,12 @@ test('reports draining and readiness errors as unavailable', async () => {
   await new Promise((resolve) => second.server.close(resolve));
 });
 
-test('delegates websocket upgrades and destroys rejected sockets', () => {
+test('delegates websocket upgrades and destroys rejected sockets', async () => {
   const accepted = jest.fn(() => true); const rejected = { destroy: jest.fn() };
   const server = createProbeServer({ getStatus: async () => ({ ready: true }), controlHandler: jest.fn(), upgradeHandler: accepted, log: { warn: jest.fn() } });
   server.listeners('upgrade')[0]({ url: '/ws' }, {}, Buffer.alloc(0));
   expect(accepted).toHaveBeenCalled();
   const rejecting = createProbeServer({ getStatus: async () => ({ ready: true }), controlHandler: jest.fn(), upgradeHandler: () => false, log: { warn: jest.fn() } });
-  rejecting.listeners('upgrade')[0]({}, rejected, Buffer.alloc(0));
+  await rejecting.listeners('upgrade')[0]({}, rejected, Buffer.alloc(0));
   expect(rejected.destroy).toHaveBeenCalled();
 });

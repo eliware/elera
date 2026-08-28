@@ -4,8 +4,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install --no-install-recomme
 COPY elera/package.json elera/package-lock.json /app/
 RUN cd /app && npm ci --omit=dev
 COPY elera/docker/mariadb-entrypoint.mjs /usr/local/bin/mariadb-entrypoint.mjs
+COPY elera/docker/run-supervisor.mjs /usr/local/bin/run-supervisor.mjs
 COPY elera/src /app/src
-RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.mjs
+RUN chmod 0755 /usr/local/bin/mariadb-entrypoint.mjs /usr/local/bin/run-supervisor.mjs
 USER mysql
 VOLUME ["/var/lib/mysql"]
 EXPOSE 3306 4444 4567 4568 8080

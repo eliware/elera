@@ -14,6 +14,9 @@ export function validateConnectionBundle(bundle) {
   return bundle;
 }
 
-export function connectionBundleFromConfig({ database, identity, username, password, routes: routeSet, expiresAt, refreshAfter, bundleVersion = 1 }) {
-  return validateConnectionBundle({ database, identity, credentials: { username, password }, routes: routeSet, expiresAt, refreshAfter, bundleVersion });
+export function connectionBundleFromConfig({ application, database, identity, username, password, routes: routeSet, writer, failover, readers, expiresAt, refreshAfter, bundleVersion = 1, nodeIdentity, ports }) {
+  if (!routeSet?.primary || !routeSet?.balanced) throw Object.assign(new Error('connection bundle route primary and balanced are required'), { statusCode: 400 });
+  const primary = routeSet.primary.map((node) => ({ ...node, nodeId: node.nodeId ?? node.host }));
+  const balanced = routeSet.balanced.map((node) => ({ ...node, nodeId: node.nodeId ?? node.host }));
+  return validateConnectionBundle({ application: application ?? 'default', database, identity, credentials: { username, password }, routes: { primary, balanced }, writer: writer ?? primary[0] ?? null, failover: failover ?? primary.slice(1), readers: readers ?? balanced, expiresAt, refreshAfter, bundleVersion, nodeIdentity, ports });
 }

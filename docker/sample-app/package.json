@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@eliware/elera-lib": "0.1.3"
+    "@eliware/elera-lib": "^0.1.8"
   }
 }

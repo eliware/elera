@@ -13,6 +13,19 @@ test('routes the complete control surface through its composed handlers', async 
   for (const [method, url, body] of calls) { const out = response(); await api.handler(request(method, url, body), out); expect(out.status).toBeGreaterThanOrEqual(200); }
 });
 
+test('does not invoke cold bootstrap while composing an unrelated request', async () => {
+  const coldBootstrap = jest.fn();
+  const api = createControlApi({
+    environment: { ROOT_TOKEN: 'root_token_here' },
+    getStatus: async () => ({ ready: false, values: {} }),
+    getColdBootstrapLocal: () => coldBootstrap,
+  });
+  const out = response();
+  await api.handler(request('GET', '/api/v1/cluster/status', {}), out);
+  expect(out.status).toBe(200);
+  expect(coldBootstrap).not.toHaveBeenCalled();
+});
+
 test('handles authentication, unavailable services, and request errors', async () => {
   const out = response(); const api = createControlApi({ environment: { ROOT_TOKEN: 'root' }, log: { error: jest.fn() } });
   await api.handler({ method: 'GET', url: '/api/v1/status', headers: {} }, out); expect(out.status).toBe(401);

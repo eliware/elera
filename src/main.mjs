@@ -26,6 +26,10 @@ import { createRoutingEventBus } from "./routing/event-bus.mjs";
 import { createRoutingEventSnapshot } from "./routing/event-snapshot.mjs";
 import { clientSqlAddress } from "./routing/client-address.mjs";
 import { createRoutingStream } from "./api/routing-stream.mjs";
+import { createAssignmentStore } from "./routing/assignment-store.mjs";
+import { createMetadataAssignmentStore } from "./routing/metadata-assignments.mjs";
+import { createTelemetryCollector } from "./telemetry/collector.mjs";
+import { promises as dns } from "node:dns";
 import { createDrainManager } from "./lifecycle/drain-manager.mjs";
 import { createSqlQuiesce } from "./lifecycle/sql-quiesce.mjs";
 import { createSqlDrainIntegration } from "./lifecycle/sql-routing.mjs";
@@ -34,6 +38,10 @@ import { createLifecycleState } from "./lifecycle/state.mjs";
 import { createShutdown } from "./lifecycle/shutdown.mjs";
 import { createDrainEventPublisher } from "./lifecycle/drain-events.mjs";
 import { runtimeIdentity } from "./runtime/identity.mjs";
+import { createColdBootstrapEvidence } from "./cluster/cold-bootstrap/peer-evidence.mjs";
+import { createColdBootstrapCoordinator } from "./cluster/cold-bootstrap/coordinator.mjs";
+import { createColdBootstrapAction } from "./cluster/cold-bootstrap/action.mjs";
+import { shutdownCondition } from "./cluster/shutdown-condition.mjs";
 
 const config = loadSupervisorConfig();
 const identity = runtimeIdentity();
@@ -52,8 +60,12 @@ let db;
 let drained = false;
 let shuttingDown = false;
 let restarting = false;
-const lifecycle = createLifecycleState({ initial: "serving", onChange: (state) => log.info("Supervisor lifecycle changed", { state }) });
+const lifecycle = createLifecycleState({ initial: "serving", onChange: (state) => { telemetry.recordEvent(`lifecycle.${state}`); log.info("Supervisor lifecycle changed", { state }); } });
+const telemetry = createTelemetryCollector();
 let bootstrapMaria;
+let coldBootstrapLocal;
+let coldBootstrapService;
+let coldEvidence;
 let peerTimer;
 let routingTimer;
 let applyIntent = (intent) => intentState.apply(intent);
@@ -70,6 +82,7 @@ const health = createHealthService({
   timeoutMs: config.timeoutMs,
   elera: config.elera,
   clusterSize: config.clusterSize,
+  getTelemetry: () => telemetry.summary(),
   log,
 });
 const intentState = createIntentState({
@@ -100,23 +113,41 @@ const reconciler = createMetadataReconciler({
 const artifactStore = createArtifactStore({
   query: (...args) => db?.query?.(...args),
 });
+const routingAssignments = createAssignmentStore({ path: process.env.ELERA_ASSIGNMENTS_PATH ?? `${process.env.MARIADB_DATA_DIR ?? '/var/lib/mysql'}/elera-state/routing-assignments.json` });
+const sharedRoutingAssignments = createMetadataAssignmentStore({ query: (...args) => db?.query?.(...args) });
+const routingEnvironment = { ...process.env, ELERA_CLUSTER_SIZE: String(config.clusterSize) };
 const routingBundles = createRoutingBundleService({
   managed,
   observationStore,
-  environment: process.env,
+  environment: routingEnvironment,
+  assignmentStore: sharedRoutingAssignments,
+  validateAddresses: true,
+  resolveAddress: (host) => dns.lookup(host),
+  log,
 });
 const routingEvent = createRoutingEventSnapshot({
   observationStore,
-  environment: process.env,
+  assignmentStore: sharedRoutingAssignments,
+  environment: routingEnvironment,
+  nodeIdentity: identity,
   getDrained: () => drained,
 });
 const routingBus = createRoutingEventBus({ log });
-const publishDrainEvent = createDrainEventPublisher({ bus: routingBus, node: identity.name, getReady: () => health.status(), log });
+const publishDrainEvent = createDrainEventPublisher({ bus: routingBus, node: identity.name, getReady: () => health.status(), getContext: () => ({ nodeIdentity: identity, reconnectDeadlineMs: config.shutdownTimeoutMs, ...(process.env.ELERA_LOAD_BALANCER_ENDPOINT ? { loadBalancerEndpoint: process.env.ELERA_LOAD_BALANCER_ENDPOINT } : {}) }), log });
 const routingStream = createRoutingStream({
   token: process.env.ROOT_TOKEN,
+  nodeIdentity: identity,
+  authorize: async (supplied, application) => {
+    if (!supplied) return false;
+    if (process.env.ROOT_TOKEN && supplied === process.env.ROOT_TOKEN) return true;
+    const auth = await metadata?.authenticate?.(supplied);
+    return Boolean(auth && (!auth.application || auth.application === application));
+  },
   getEvent: routingEvent,
   bus: routingBus,
+  telemetry,
   log,
+  loadBalancerEndpoint: process.env.ELERA_LOAD_BALANCER_ENDPOINT,
 });
 const updateLocalSqlRoute = createSqlDrainIntegration({
   getClient: () => db,
@@ -125,6 +156,7 @@ const updateLocalSqlRoute = createSqlDrainIntegration({
 });
 const drain = createDrainManager({
   onChange: (value) => {
+    telemetry.recordEvent(value ? "traffic.drain" : "traffic.undrain");
     drained = value;
     updateLocalSqlRoute(value);
     log.info(value ? "Traffic drained" : "Traffic undrained");
@@ -159,6 +191,8 @@ const control = createControlApi({
   }),
   getConfig: () => config,
   getStatus: () => health.status(),
+  getTelemetry: () => telemetry.summary(),
+  getTelemetryDetails: (application) => telemetry.details(application),
   getTraffic: () => ({
     drained: drain.isDraining(),
     lifecycle: lifecycle.get(),
@@ -167,6 +201,9 @@ const control = createControlApi({
   }),
   setDrain: (value, propagated) => clusterDrain.set(value, propagated),
   bootstrap: () => bootstrapMaria?.(),
+  getColdBootstrap: () => coldBootstrapService,
+  getColdEvidence: () => coldEvidence,
+  getColdBootstrapLocal: () => coldBootstrapLocal?.(),
   getActiveIntent: Object.assign(() => loadIntent(process.env), {
     ...intentState,
     apply: (intent) => applyIntent(intent),
@@ -178,6 +215,7 @@ const control = createControlApi({
 const probes = createProbeServer({
   getStatus: () => health.status(),
   isDraining: () => drain.isDraining(),
+  isShuttingDown: () => ['draining', 'stopping', 'stopped'].includes(lifecycle.get()),
   controlHandler: (request, response) => control.handler(request, response),
   upgradeHandler: (request, socket, head) =>
     routingStream.upgrade(request, socket, head),
@@ -193,9 +231,12 @@ const shutdown = createShutdown({
   lifecycle,
   sqlQuiesce,
   drain,
+  propagateDrain: () => clusterDrain.set(true),
+  shutdownCondition: () => shutdownCondition({ clusterSize: config.clusterSize, observations: observationStore.snapshot(), localNodeId: identity.name }),
   getTimers: () => [peerTimer, routingTimer],
   routingBus,
   routingStream,
+  telemetry,
   servers,
   closeServer,
   getMariaProcess: () => mariaProcess,
@@ -207,16 +248,36 @@ const shutdown = createShutdown({
 const signals = registerSignals({ log, shutdownHook: shutdown, exitCode: 0 });
 
 async function main() {
+  telemetry.start();
   await observationStore.initialize?.();
   log.info("Elera supervisor starting", {
     elera: config.elera,
     httpPort: config.httpPort,
   });
   const initialIntent = (await intentState.read()) ?? loadIntent({ ...process.env, RUNTIME_NODE_NAME: identity.name, RUNTIME_NODE_ADDRESS: identity.address });
+  // The persisted intent is authoritative for quorum size; environment
+  // defaults may not describe the deployed cluster.
+  routingEnvironment.ELERA_CLUSTER_SIZE = String(initialIntent.cluster.members.length);
   await intentState.apply(initialIntent);
   const args = mariaDbArguments({
     ...config,
     intentConfigPath: intentState.paths.renderedPath,
+  });
+  const localEvidence = createColdBootstrapEvidence({ localNode: identity, dataDir: config.dataDir, health, token: process.env.ROOT_TOKEN, log });
+  coldEvidence = localEvidence.local;
+  const members = initialIntent.cluster.members.map((member) => ({ ...member, local: member.name === identity.name, url: `http://${member.address}:${config.httpPort}` }));
+  coldBootstrapService = createColdBootstrapCoordinator({
+    nodes: members,
+    local: localEvidence.local,
+    remote: localEvidence.remote,
+    bootstrapLocal: () => coldBootstrapLocal?.(),
+    bootstrapRemote: async (node) => {
+      const response = await fetch(`${node.url}/api/v1/cluster/cold-bootstrap/local`, { method: 'POST', headers: { accept: 'application/json', 'content-type': 'application/json', 'x-elera-internal': 'true', 'x-elera-peer-token': process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN, authorization: `Bearer ${process.env.ROOT_TOKEN}` }, body: JSON.stringify({ confirm: true }), signal: AbortSignal.timeout(config.timeoutMs) });
+      if (!response.ok) throw Object.assign(new Error(`candidate supervisor returned ${response.status}`), { statusCode: response.status });
+      return response.json();
+    },
+    lockPath: '/run/elera/cold-bootstrap.lock',
+    log,
   });
   mariaProcess = createMariaDbProcess({
     args,
@@ -224,6 +285,14 @@ async function main() {
     onUnexpectedExit: (code) => {
       if (!restarting && !shuttingDown) process.exit(code ?? 1);
     },
+  });
+  coldBootstrapLocal = createColdBootstrapAction({
+    processController: mariaProcess,
+    args,
+    timeoutMs: config.timeoutMs,
+    log,
+    isBusy: () => restarting,
+    setBusy: (value) => { restarting = value; },
   });
   applyIntent = async (desired) => {
     const active = (await intentState.read()) ?? loadIntent(process.env);
@@ -266,16 +335,21 @@ async function main() {
   probes.listen(config.httpPort, "0.0.0.0", () =>
     log.info("HTTP listener started", { port: config.httpPort }),
   );
-  if (!(await waitForSql({ health, timeoutMs: config.startupTimeoutMs, log })))
-    throw new Error(
-      `MariaDB did not become SQL-ready within ${config.startupTimeoutMs}ms`,
-    );
-  let publishedVersion = 0;
+  const sqlReady = await waitForSql({ health, timeoutMs: config.startupTimeoutMs, log });
+  if (!sqlReady) {
+    log.warn("MariaDB is not SQL-ready; supervisor remains available for explicit recovery", {
+      timeoutMs: config.startupTimeoutMs,
+    });
+  }
+  const publishedVersions = new Map();
   const publishRoutingEvent = () => {
-    const event = routingEvent(process.env.ELERA_APPLICATION ?? "default");
-    if (event && event.version !== publishedVersion) {
-      publishedVersion = event.version;
-      routingBus.publish(event);
+    const applications = new Set([process.env.ELERA_APPLICATION ?? "default", ...sharedRoutingAssignments.applications()]);
+    for (const application of applications) {
+      const event = routingEvent(application);
+      if (event && event.version !== publishedVersions.get(application)) {
+        publishedVersions.set(application, event.version);
+        routingBus.publish(event);
+      }
     }
   };
   routingTimer = setInterval(publishRoutingEvent, 1000);

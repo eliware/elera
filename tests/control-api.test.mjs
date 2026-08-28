@@ -24,7 +24,7 @@ describe('control API', () => {
     expect((await call('POST', '/api/v1/initialization/verify')).out.status).toBe(200);
     expect((await call('POST', '/api/v1/initialization/apply', { confirm: true })).out.status).toBe(200);
     expect((await call('GET', '/api/v1/cluster/status')).out.status).toBe(200);
-    expect((await call('GET', '/api/v1/cluster/bootstrap/eligibility')).value.eligible).toBe(true);
+    expect((await call('GET', '/api/v1/cluster/bootstrap/eligibility')).value.eligible).toBe(false);
     expect((await call('POST', '/api/v1/cluster/bootstrap/plan')).out.status).toBe(200);
     expect((await call('POST', '/api/v1/cluster/bootstrap', { confirm: true })).out.status).toBe(202);
     expect(bootstrapped).toBe(true);

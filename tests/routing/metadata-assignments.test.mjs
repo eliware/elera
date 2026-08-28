@@ -1,0 +1,5 @@
+import { expect, test } from '@jest/globals';
+import { createMetadataAssignmentStore } from '../../src/routing/metadata-assignments.mjs';
+
+test('reads and writes shared writer assignments', async () => { const calls = []; const store = createMetadataAssignmentStore({ query: async (sql) => { calls.push(sql); if (sql.startsWith('SELECT')) return [[{ writer_host: 'elera-1' }]]; return [[]]; } }); expect(await store.get('app')).toBe('elera-1'); expect(store.peek('app')).toBe('elera-1'); await store.set('app', 'elera-2', 'v2'); expect(store.applications()).toEqual(['app']); expect(calls.some((sql) => sql.includes('routing_assignments'))).toBe(true); });
+test('validates the shared assignment dependency and missing assignment', async () => { expect(() => createMetadataAssignmentStore()).toThrow('assignment query'); const store = createMetadataAssignmentStore({ query: async () => [[]] }); expect(await store.get('missing')).toBeUndefined(); });

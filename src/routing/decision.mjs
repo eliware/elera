@@ -34,6 +34,7 @@ export function calculateRoutes({
   const ordered = [...nodes].sort(
     (a, b) => score(a) - score(b) || a.nodeId.localeCompare(b.nodeId),
   );
+  const stable = [...nodes].sort((a, b) => a.nodeId.localeCompare(b.nodeId));
   if (!ordered.length)
     return {
       primary: [],
@@ -48,17 +49,21 @@ export function calculateRoutes({
     const preferred = ordered.find(
       (item) => item.address === previousWriterHost,
     );
-    const writer =
-      preferred && score(preferred) <= score(ordered[0]) * 2 + 1
-        ? preferred
-        : ordered[hash % ordered.length];
+    // A persisted assignment is authoritative while its node remains eligible.
+    // Load affects reader ordering, but must not cause writer churn every tick.
+    // Local load observations may arrive in different orders on each
+    // supervisor. Initial election must therefore use stable node identity;
+    // reader ordering can still use current load.
+    const writer = preferred ?? stable[hash % stable.length];
     const primary = [
       writer,
       ...ordered.filter((item) => item.nodeId !== writer.nodeId),
     ].map((item) => ({
       host: item.address,
       port: Number(item.sqlPort ?? 3306),
-      weight: Number(weights[item.nodeId] ?? item.weight ?? 100),
+      // Writer preference is explicit in `writer`; failover is represented by
+      // list order, never by the legacy 100/0/0 weight convention.
+      weight: Number(weights[item.nodeId] ?? item.weight ?? 1),
     }));
     const balanced = ordered.map((item) => ({
       host: item.address,
@@ -69,6 +74,7 @@ export function calculateRoutes({
       .update(JSON.stringify({ primary, balanced }))
       .digest("hex")
       .slice(0, 16);
-    return { primary, balanced, bundleVersion };
+    const failover = primary.slice(1).map(({ host, port }) => ({ host, port }));
+    return { writer: { host: primary[0].host, port: primary[0].port }, failover, readers: balanced.map(({ host, port }) => ({ host, port })), primary, balanced, bundleVersion };
   }
 }

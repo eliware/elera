@@ -1,0 +1,10 @@
+import { normalizeTelemetryReport } from './normalize.mjs';
+
+export function createTelemetryCollector({ intervalMs = 10000, now = () => Date.now(), setIntervalImpl = setInterval, clearIntervalImpl = clearInterval } = {}) {
+  const clients = new Map(); const lifecycleEvents = {}; let summary = { clients: 0, queries: 0, failures: 0, retries: 0, reconnects: 0, failoverCount: 0, inflight: 0, avgLatencyMs: 0, lifecycleEvents: {}, updatedAt: null }; let timer;
+  const accept = (report) => { const normalized = normalizeTelemetryReport(report, now()); if (!normalized) return false; clients.set(normalized.application, normalized); return true; };
+  const summarize = () => { const current = now(); const values = [...clients.values()].filter((value) => current - value.receivedAt <= intervalMs * 3); for (const [application, value] of clients) if (current - value.receivedAt > intervalMs * 3) clients.delete(application); const totalQueries = values.reduce((n, x) => n + x.queries, 0); const totalLatency = values.reduce((n, x) => n + x.avgLatencyMs * x.queries, 0); summary = { clients: values.length, queries: totalQueries, failures: values.reduce((n, x) => n + x.failures, 0), retries: values.reduce((n, x) => n + x.retries, 0), reconnects: values.reduce((n, x) => n + x.reconnects, 0), failoverCount: values.reduce((n, x) => n + x.failoverCount, 0), inflight: values.reduce((n, x) => n + x.inflight, 0), avgLatencyMs: totalQueries ? totalLatency / totalQueries : 0, lifecycleEvents: { ...lifecycleEvents }, updatedAt: new Date(current).toISOString() }; return summary; };
+  const details = (application) => application ? clients.get(application) ?? null : [...clients.values()];
+  const recordEvent = (type) => { if (!type) return; lifecycleEvents[type] = (lifecycleEvents[type] ?? 0) + 1; };
+  return { accept, recordEvent, summary: () => summary, details, start() { timer ??= setIntervalImpl(summarize, intervalMs); timer.unref?.(); }, stop() { if (timer) clearIntervalImpl(timer); timer = undefined; }, summarize };
+}

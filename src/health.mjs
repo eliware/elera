@@ -1,6 +1,6 @@
 import { isQuorumReady } from './cluster/quorum-readiness.mjs';
 
-export function createHealthService({ db, timeoutMs, log, elera = true, clusterSize = 1 }) {
+export function createHealthService({ db, timeoutMs, log, elera = true, clusterSize = 1, getTelemetry = () => undefined }) {
   let cached; let expiresAt = 0; let inFlight;
   async function fetchStatus() {
     if (!db) throw new Error('database pool is unavailable');
@@ -11,7 +11,7 @@ export function createHealthService({ db, timeoutMs, log, elera = true, clusterS
     const values = Object.fromEntries(rows.map((row) => [row.Variable_name, row.Value]));
     const ready = !elera || (values.wsrep_local_state_comment === 'Synced' && values.wsrep_ready === 'ON' && values.wsrep_cluster_status === 'Primary' && isQuorumReady(values, { expectedSize: clusterSize }));
     log.debug('Elera status checked', { ready, state: values.wsrep_local_state_comment, wsrepReady: values.wsrep_ready, clusterStatus: values.wsrep_cluster_status });
-    return { values, ready };
+    return { values, ready, telemetry: getTelemetry() };
   }
   return {
     status() { if (cached && Date.now() < expiresAt) return Promise.resolve(cached); if (inFlight) return inFlight; inFlight = fetchStatus().then((result) => { cached = result; expiresAt = Date.now() + 1000; return result; }).finally(() => { inFlight = undefined; }); return inFlight; },
