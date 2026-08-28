@@ -24,6 +24,7 @@ import { planIntent } from "./intent/model.mjs";
 import { createRoutingBundleService } from "./routing/bundle-service.mjs";
 import { createRoutingEventBus } from "./routing/event-bus.mjs";
 import { createRoutingEventSnapshot } from "./routing/event-snapshot.mjs";
+import { clientSqlAddress } from "./routing/client-address.mjs";
 import { createRoutingStream } from "./api/routing-stream.mjs";
 import { createDrainManager } from "./lifecycle/drain-manager.mjs";
 import { createSqlQuiesce } from "./lifecycle/sql-quiesce.mjs";
@@ -302,7 +303,7 @@ async function main() {
         health: current.ready ? "ok" : "not-ready",
         load: current.values ?? {},
         drain: drained,
-        address: process.env.ELERA_NODE_ADDRESS ?? "127.0.0.1",
+        address: clientSqlAddress(process.env),
         sqlPort: Number(process.env.ELERA_NODE_SQL_PORT ?? 3306),
         observedAt: Date.now(),
       };

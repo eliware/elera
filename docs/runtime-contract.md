@@ -93,3 +93,10 @@ The current local image has not cleared vulnerability release review. Docker
 Scout reports unresolved critical/high findings in the Bookworm base and
 installed packages; publication requires a DevOps remediation or documented
 risk-acceptance decision.
+### Client-facing SQL address
+
+`ELERA_NODE_ADDRESS` identifies the node to Galera and internal peer traffic.
+In Elera mode, client-facing routing bundles advertise the machine's
+`hostname -f` value. Kubernetes and external DNS must therefore make that FQDN
+resolve to the appropriate SQL VIP. Standalone mode falls back to
+`ELERA_NODE_ADDRESS`.

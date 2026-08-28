@@ -1,16 +1,18 @@
 import { expect, jest, test } from "@jest/globals";
-import { initializePendingData, wait } from "../../../src/lifecycle/pending-init/initialize.mjs";
+import { initializePendingData, PENDING_INIT_SOCKET, wait } from "../../../src/lifecycle/pending-init/initialize.mjs";
 
 test("wait resolves after the requested delay", async () => { await wait(0); });
 
 test("initialization validates, starts private MariaDB, applies SQL, and stops it", async () => {
   const calls = [];
   const child = { kill: jest.fn(), once: (event, callback) => { calls.push(event); callback(); } };
-  await initializePendingData({ environment: { MARIADB_DATA_DIR: "/data", MARIADB_ROOT_PASSWORD: "secret" }, run: async (...args) => calls.push(args), start: () => child, execute: async (value) => calls.push(value), log: { info: jest.fn() }, sleep: async () => {} });
+  let startOptions;
+  await initializePendingData({ environment: { MARIADB_DATA_DIR: "/data", MARIADB_ROOT_PASSWORD: "secret" }, run: async (...args) => calls.push(args), start: (options) => { startOptions = options; return child; }, execute: async (value) => calls.push(value), log: { info: jest.fn() }, sleep: async () => {} });
   expect(calls[0][0]).toBe("mariadb-install-db");
   expect(calls.some((value) => Array.isArray(value) && value[0] === "mariadb-admin")).toBe(true);
   expect(calls.some((value) => value?.sql?.includes("IDENTIFIED BY 'secret'"))).toBe(true);
   expect(child.kill).toHaveBeenCalledWith("SIGTERM");
+  expect(startOptions.socket).toBe(PENDING_INIT_SOCKET);
 });
 
 test("initialization fails before starting MariaDB without a root password", async () => {

@@ -100,8 +100,8 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [x] `GET /api/v1/routing/stream` — upgrade to the authenticated routing WebSocket.
 - [x] `GET /api/v1/routing/resync` — return a current snapshot after reconnect.
 
-Bundles contain the database, identity, usable credentials, direct node
-addresses on port `3306`, ordered writer and reader candidates, weights, a
+Bundles contain the database, identity, usable credentials, machine FQDNs on
+port `3306`, ordered writer and reader candidates, weights, a
 version, refresh time, and expiry. The supervisor quorum assigns one logical
 writer per application. `elera-lib` sends writes to that writer list and may
 use permitted reader entries for reads. The WebSocket carries routing changes,

@@ -1,9 +1,10 @@
 import { createManagedMetadata } from '../src/metadata/managed.mjs';
 import { createSecretBox } from '../src/metadata/secret-box.mjs';
+import { createHash } from 'node:crypto';
 
 test('manages databases, identities, and scoped tokens without exposing policy SQL', async () => {
-  const calls = [];
-  const managed = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => { calls.push(sql); if (sql.includes('FROM `elera_meta`.managed_databases')) return [[{ name: 'billing', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.identities')) return [[{ name: 'runtime', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.scoped_tokens')) return [[{ name: 'app-token', application: 'payments', identity: 'runtime', scopes_json: '["database:read"]' }]]; return [[]]; } });
+  const calls = []; let tokenHash;
+  const managed = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => { calls.push(sql); if (sql.includes('INSERT INTO `elera_meta`.scoped_tokens')) tokenHash = sql.match(/VALUES \([^,]+, '([0-9a-f]+)'/)?.[1]; if (sql.includes('FROM `elera_meta`.managed_databases')) return [[{ name: 'billing', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.identities')) return [[{ name: 'runtime', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.scoped_tokens')) return [[{ name: 'app-token', application: 'payments', identity: 'runtime', token_hash: tokenHash, scopes_json: '["database:read"]' }]]; return [[]]; } });
   expect(await managed.createDatabase({ application: 'payments', databaseName: 'billing' })).toEqual({ application: 'payments', database: 'billing' });
   const identity = await managed.createIdentity({ application: 'payments', databaseName: 'billing', identity: 'runtime', purpose: 'runtime', grants: ['SELECT'] });
   expect(identity.username).toBe('payments_runtime'); expect(identity.password).toBeTruthy();
@@ -32,7 +33,8 @@ test('validates managed names, purposes, and grants', async () => {
   await expect(managed.createIdentity({ application: 'app', databaseName: 'db', identity: 'id', grants: ['GRANT OPTION'] })).rejects.toThrow('invalid grant policy');
   expect(await managed.authenticate()).toBeNull(); expect(await managed.authenticate('missing')).toBeNull();
   const empty = createManagedMetadata({ query: async () => [[]] }); expect(await empty.authenticate('missing')).toBeNull();
-  const noScopes = createManagedMetadata({ query: async () => [[{ name: 'token', scopes_json: null }]] }); expect((await noScopes.authenticate('token')).scopes).toEqual([]);
+  const noScopes = createManagedMetadata({ query: async () => [[{ name: 'token', token_hash: createHash('sha256').update('token').digest('hex'), scopes_json: null }]] }); expect((await noScopes.authenticate('token')).scopes).toEqual([]);
+  const malformed = createManagedMetadata({ query: async () => [[{ name: 'malformed' }]] }); expect(await malformed.authenticate('token')).toBeNull();
   const unconfigured = createManagedMetadata({ query: async () => [[]] }); await expect(unconfigured.createIdentity({ application: 'app', databaseName: 'db', identity: 'id' })).rejects.toThrow('encryption'); await expect(unconfigured.rotateIdentity('id')).rejects.toThrow('encryption'); await expect(unconfigured.lease({ identity: 'id' })).rejects.toThrow('encryption');
   const rotating = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => sql.includes('SELECT username') ? [[{ username: 'payments_runtime' }]] : [[]] }); expect((await rotating.rotateIdentity('runtime')).rotated).toBe(true);
   const missingIdentity = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(missingIdentity.rotateIdentity('runtime')).rejects.toThrow('identity not found');

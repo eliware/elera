@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { startPendingInitRuntime } from '/app/src/lifecycle/pending-init/runtime.mjs';
+import { initializePendingData } from '/app/src/lifecycle/pending-init/initialize.mjs';
 
 const datadir = process.env.MARIADB_DATA_DIR ?? '/var/lib/mysql';
 if (process.env.ELERA_PENDING_INIT === 'true' && !(await exists(`${datadir}/mysql`))) {
@@ -16,13 +17,7 @@ if (process.env.ELERA_PENDING_INIT === 'true' && !(await exists(`${datadir}/mysq
 }
 
 async function initialize(directory) {
-  if (!process.env.MARIADB_ROOT_PASSWORD) process.exit(fail('MARIADB_ROOT_PASSWORD is required for explicit initialization'));
-  await run('mariadb-install-db', ['--user=mysql', `--datadir=${directory}`, '--skip-test-db', '--auth-root-authentication-method=normal']);
-  const socket = '/run/mysqld/init.sock'; const server = spawn('mariadbd', [`--datadir=${directory}`, '--user=mysql', '--skip-networking', `--socket=${socket}`]);
-  try { for (let i = 0; i < 60; i++) { if ((await runStatus('mariadb-admin', [`--socket=${socket}`, 'ping', '--silent'])) === 0) break; await new Promise(resolve => setTimeout(resolve, 1000)); if (i === 59) throw new Error('timed out waiting for MariaDB initialization'); }
-    const sql = `ALTER USER 'root'@'localhost' IDENTIFIED BY '${process.env.MARIADB_ROOT_PASSWORD}';\nFLUSH PRIVILEGES;\n`;
-    await runInput('mariadb', [`--socket=${socket}`, '-uroot'], sql);
-  } finally { server.kill('SIGTERM'); }
+  await initializePendingData({ environment: { ...process.env, MARIADB_DATA_DIR: directory }, log: console });
 }
 async function exists(path) { try { await access(path); return true; } catch { return false; } }
 function runNode(file, ...args) { return new Promise((resolve, reject) => { const child = spawn('node', [file, ...args], { stdio: ['ignore', 'pipe', 'inherit'] }); let out = ''; child.stdout.on('data', data => out += data); child.once('error', reject); child.once('exit', code => code === 0 ? resolve(out.trim()) : reject(new Error(`node ${file} exited with ${code}`))); }); }

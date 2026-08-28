@@ -16,6 +16,6 @@ describe('supervisor configuration', () => {
     expect(mariaDbArguments(config)).toContain('--wsrep-new-cluster');
   });
   test('rejects invalid ports', () => { expect(() => loadSupervisorConfig({ ELERA_HTTP_PORT: '0' })).toThrow('ELERA_HTTP_PORT'); });
-  test('uses Elera defaults when enabled without optional values', () => { const args = mariaDbArguments(loadSupervisorConfig({ ELERA: '1' })); expect(args).toEqual(expect.arrayContaining(['--wsrep-on=ON', '--wsrep-cluster-address=gcomm://', '--wsrep-node-address=127.0.0.1'])); });
+  test('uses the explicit Galera node address when provided', () => { const args = mariaDbArguments(loadSupervisorConfig({ ELERA: '1', ELERA_NODE_ADDRESS: '10.244.0.1' })); expect(args).toEqual(expect.arrayContaining(['--wsrep-on=ON', '--wsrep-cluster-address=gcomm://', '--wsrep-node-address=10.244.0.1'])); });
   test('supports generated intent configuration', () => { expect(mariaDbArguments({ ...loadSupervisorConfig({}), intentConfigPath: '/etc/elera/mariadb.cnf' })[0]).toBe('--defaults-extra-file=/etc/elera/mariadb.cnf'); });
 });
