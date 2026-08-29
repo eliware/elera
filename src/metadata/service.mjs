@@ -1,4 +1,4 @@
-import { createMigrationRunner } from '@eliware/elera-lib';
+import { createMigrationRunner } from '../internal/admin/migrations.mjs';
 import { META_DATABASE, META_MIGRATIONS } from './schema.mjs';
 import { ensureReplicationAccounts } from './accounts.mjs';
 export function createMetadataService({ query, database = META_DATABASE }) {

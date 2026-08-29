@@ -1,10 +1,11 @@
-import { connectionBundleFromConfig } from '../connection-bundle.mjs';
+import { createSupervisorBundle as connectionBundleFromConfig } from '../internal/routing/bundle.mjs';
 import { calculateRoutes } from './decision.mjs';
 import { evaluateQuorum } from '../cluster/quorum.mjs';
 import { createAssignmentStore } from './assignment-store.mjs';
 import { filterReachableNodes } from './address-validation.mjs';
 import { clientSqlAddress } from './client-address.mjs';
 import { createQuorumAssignmentCoordinator } from './quorum-assignment.mjs';
+import { validateBundle } from '@eliware/elera-lib';
 
 export function createRoutingBundleService({ managed, observationStore, environment = process.env, now = Date.now, assignmentStore = createAssignmentStore({ path: environment.ELERA_ASSIGNMENTS_PATH ?? `${environment.MARIADB_DATA_DIR ?? '/var/lib/mysql'}/elera-state/routing-assignments.json` }), validateAddresses = false, resolveAddress, log = {} } = {}) {
   if (!managed?.lease || !observationStore?.snapshot) throw new TypeError('managed metadata and observation store are required');
@@ -33,8 +34,8 @@ export function createRoutingBundleService({ managed, observationStore, environm
         return { valid: false, error: error.message };
       }
       const routes = bundle.routes;
-      const valid = Boolean(bundle.application && bundle.database && bundle.bundleVersion && Array.isArray(routes.primary) && Array.isArray(routes.balanced));
-      return { valid, application: bundle.application, database: bundle.database, bundleVersion: bundle.bundleVersion, writer: bundle.writer ?? null, routeCount: routes.balanced.length };
+      validateBundle(bundle);
+      return { valid: true, application: bundle.application, database: bundle.database, bundleVersion: bundle.bundleVersion, writer: bundle.writer, routeCount: routes.balanced.length };
     },
     async rebalance(request = {}) {
       const key = request.application ?? 'default';

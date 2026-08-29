@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals';
-import { createDrainManager } from '../src/lifecycle/drain-manager.mjs';
+import { createDrainManager } from '../../src/lifecycle/drain-manager.mjs';
 
 test('rejects new work while allowing tracked work to finish', async () => {
   const changed = jest.fn(); const drain = createDrainManager({ onChange: changed }); const leave = drain.enter();

@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleIntentRoute } from '../src/api/routes/intent.mjs';
+import { handleIntentRoute } from '../../../src/api/routes/intent.mjs';
 
 const response = () => ({ json: jest.fn() });
 const request = (body) => ({ async *[Symbol.asyncIterator]() { yield JSON.stringify(body); } });

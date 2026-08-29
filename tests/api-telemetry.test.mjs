@@ -1,7 +1,0 @@
-import { expect, jest, test } from '@jest/globals';
-import { handleTelemetryRoute } from '../src/api/routes/telemetry.mjs';
-
-const context = (path, search = '') => { const json = jest.fn(); return { method: 'GET', path, url: new URL(`http://localhost${path}${search}`), response: { json }, getTelemetry: () => ({ clients: 1 }), getTelemetryDetails: () => ({ application: 'app' }), json }; };
-test('returns telemetry summary', async () => { const value = context('/api/v1/telemetry'); expect(await handleTelemetryRoute(value)).toBe(true); expect(value.json).toHaveBeenCalledWith(200, expect.objectContaining({ operation: 'telemetry.summary' })); });
-test('returns application detail and validates application', async () => { const detail = context('/api/v1/telemetry/details', '?application=app'); expect(await handleTelemetryRoute(detail)).toBe(true); expect(detail.json).toHaveBeenCalledWith(200, expect.objectContaining({ operation: 'telemetry.details' })); const missing = context('/api/v1/telemetry/details'); expect(await handleTelemetryRoute(missing)).toBe(true); expect(missing.json).toHaveBeenCalledWith(400, expect.objectContaining({ error: 'application is required' })); });
-test('ignores non-telemetry requests', async () => { expect(await handleTelemetryRoute(context('/api/v1/status'))).toBe(false); expect(await handleTelemetryRoute({ ...context('/api/v1/telemetry'), method: 'POST' })).toBe(false); });

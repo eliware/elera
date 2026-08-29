@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleAccountRoute } from '../src/api/routes/accounts.mjs';
+import { handleAccountRoute } from '../../../src/api/routes/accounts.mjs';
 
 const response = () => ({ status: 0, body: '', writeHead(status) { this.status = status; return this; }, end(body) { this.body = body; return this; } });
 const request = (body) => ({ async *[Symbol.asyncIterator]() { if (body) yield JSON.stringify(body); } });

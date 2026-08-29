@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleRoutingAdminRoute } from '../src/api/routes/routing-admin.mjs';
+import { handleRoutingAdminRoute } from '../../../src/api/routes/routing-admin.mjs';
 
 const response = () => ({ json: jest.fn() });
 const request = (body = {}) => ({ async *[Symbol.asyncIterator]() { yield JSON.stringify(body); } });

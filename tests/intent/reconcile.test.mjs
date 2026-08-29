@@ -1,6 +1,6 @@
 import { describe, expect, test, jest } from '@jest/globals';
-import fixture from '../contracts/supervisor-intent.fixture.json' with { type: 'json' };
-import { reconcileIntent } from '../src/intent/reconcile.mjs';
+import fixture from '../../contracts/supervisor-intent.fixture.json' with { type: 'json' };
+import { reconcileIntent } from '../../src/intent/reconcile.mjs';
 
 describe('intent reconciliation', () => {
   test('applies and reloads a safe change', async () => { const reload = jest.fn(); const desired = structuredClone(fixture); desired.routing.healthIntervalMs = 2000; const result = await reconcileIntent({ desired, active: fixture, apply: async value => value, reload }); expect(result.status).toBe('applied'); expect(reload).toHaveBeenCalled(); });

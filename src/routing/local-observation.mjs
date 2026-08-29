@@ -10,5 +10,5 @@ export async function refreshLocalObservation({ observationStore, getStatus, env
 
 export async function refreshPeerObservations({ observationStore, environment = process.env, token = environment.ROOT_TOKEN, fetchImpl = fetch } = {}) {
   const peers = (environment.ELERA_PEERS ?? '').split(',').map((peer) => peer.trim()).filter(Boolean);
-  for (const peer of peers) { try { const response = await fetchImpl(`${peer.replace(/\/$/, '')}/api/v1/cluster/observations`, { headers: { accept: 'application/json', authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(500) }); if (response.ok) for (const item of (await response.json()).data ?? []) observationStore.upsert(item); } catch { /* peer refresh is best effort; caller retains its safe fallback */ } }
+  for (const peer of peers) { try { const response = await fetchImpl(`${peer.replace(/\/$/, '')}/api/v1/cluster/observations`, { headers: { accept: 'application/json', authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(500) }); if (!response.ok) continue; for (const item of (await response.json()).data) observationStore.upsert(item); } catch { /* peer refresh is best effort; caller retains its safe fallback */ } }
 }

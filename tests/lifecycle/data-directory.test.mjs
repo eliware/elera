@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { jest, test, describe, expect } from '@jest/globals';
-import { inspectDataDirectory } from '../src/lifecycle/data-directory.mjs';
+import { inspectDataDirectory } from '../../src/lifecycle/data-directory.mjs';
 
 function tempDirectory() { return fs.mkdtempSync(path.join(os.tmpdir(), 'elera-data-')); }
 

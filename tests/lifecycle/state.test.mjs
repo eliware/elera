@@ -1,5 +1,5 @@
 import { expect, test, jest } from '@jest/globals';
-import { createLifecycleState } from '../src/lifecycle/state.mjs';
+import { createLifecycleState } from '../../src/lifecycle/state.mjs';
 
 test('tracks valid lifecycle transitions and notifies changes', () => {
   const changes = []; const state = createLifecycleState({ onChange: (value) => changes.push(value) });
@@ -12,4 +12,10 @@ test('tracks valid lifecycle transitions and notifies changes', () => {
 test('rejects invalid lifecycle states', () => {
   expect(() => createLifecycleState({ initial: 'broken' })).toThrow('invalid lifecycle');
   const state = createLifecycleState(); expect(() => state.set('broken')).toThrow('invalid lifecycle');
+});
+
+test('allows a missing change callback and preserves the current state for repeated sets', () => {
+  const state = createLifecycleState({ initial: 'draining' });
+  expect(state.set('draining')).toBe('draining');
+  expect(state.get()).toBe('draining');
 });

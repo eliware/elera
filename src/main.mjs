@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createDbFromEnvironment } from "@eliware/elera-lib";
 import { log, registerHandlers, registerSignals } from "@eliware/common";
 import { loadSupervisorConfig, mariaDbArguments } from "./config.mjs";
 import { createHealthService } from "./health.mjs";
@@ -10,6 +9,7 @@ import { createEleraBootstrap, waitForSql } from "./lifecycle/startup.mjs";
 import { createBootstrapCredentialLease } from "./bootstrap/lease.mjs";
 import { createMetadataService } from "./metadata/service.mjs";
 import { createManagedMetadata } from "./metadata/managed.mjs";
+import { createApplicationService } from "./metadata/applications.mjs";
 import { createMetadataReconciler } from "./metadata/reconcile.mjs";
 import { createArtifactStore } from "./metadata/artifacts.mjs";
 import { createManagedAccounts } from "./accounts/managed.mjs";
@@ -41,6 +41,7 @@ import { runtimeIdentity } from "./runtime/identity.mjs";
 import { createColdBootstrapEvidence } from "./cluster/cold-bootstrap/peer-evidence.mjs";
 import { createColdBootstrapCoordinator } from "./cluster/cold-bootstrap/coordinator.mjs";
 import { createColdBootstrapAction } from "./cluster/cold-bootstrap/action.mjs";
+import { createSupervisorSqlClient } from "./internal/sql/client.mjs";
 import { shutdownCondition } from "./cluster/shutdown-condition.mjs";
 import { createStartupEvidenceServer } from "./cluster/cold-bootstrap/startup-evidence-server.mjs";
 import { createStartupLocalEvidence } from "./cluster/cold-bootstrap/startup-local-evidence.mjs";
@@ -126,6 +127,9 @@ const managed = createManagedMetadata({
   query: (...args) => db.query(...args),
   credentialKey: process.env.ELERA_CREDENTIAL_KEY,
 });
+const applications = createApplicationService({
+  query: (...args) => db.query(...args),
+});
 const managedAccounts = createManagedAccounts({
   query: (...args) => db.query(...args),
 });
@@ -198,6 +202,7 @@ const control = createControlApi({
   db: { query: (...args) => db.query(...args) },
   metadata,
   managed,
+  applications,
   reconciler,
   artifactStore,
   routingBundles,
@@ -453,7 +458,14 @@ async function main() {
       restarting = value;
     },
   });
-  db = await createDbFromEnvironment({ env: dbEnv, log });
+  db = createSupervisorSqlClient({
+    host: dbEnv.MYSQL_HOST,
+    port: dbEnv.MYSQL_PORT,
+    user: dbEnv.MYSQL_USER,
+    password: dbEnv.MYSQL_PASSWORD,
+    database: dbEnv.MYSQL_DATABASE,
+    socketPath: dbEnv.MYSQL_SOCKET,
+  });
   probes.listen(config.httpPort, "0.0.0.0", () =>
     log.info("HTTP listener started", { port: config.httpPort }),
   );

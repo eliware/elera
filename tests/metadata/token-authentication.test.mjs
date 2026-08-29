@@ -17,3 +17,8 @@ test('accepts a binary stored digest and rejects malformed values', () => {
   expect(tokenMatchesHash('token', Buffer.from('00', 'hex'))).toBe(false);
   expect(tokenMatchesHash('token', undefined)).toBe(false);
 });
+test('handles short binary digests and non-string tokens safely', () => {
+  expect(tokenMatchesHash(123, '00')).toBe(false);
+  expect(tokenMatchesHash('token', Buffer.from('00', 'hex'))).toBe(false);
+  expect(tokenMatchesHash('token', null)).toBe(false);
+});

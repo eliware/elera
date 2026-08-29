@@ -34,7 +34,7 @@ documented. Every sprint ends with an interoperability smoke test.
 ### Sprint 1 certification evidence
 
 - Production image builds from the Elera repository context with the published
-  `@eliware/elera-lib@0.1.11` resolved from npm.
+  `@eliware/elera-lib@0.2.0` resolved from npm.
 - The standalone supervisor exposes `/healthz` before MariaDB is ready and
   issues an advertised `elera-single:3306` bundle to remote consumers.
 - `elera-cli sql-smoke` passes from the separate `backup-dev` container through
@@ -265,40 +265,48 @@ checksum verification, age process failures, GitOps-mounted input resolution,
 materialization cleanup, and metadata-first backup/restore sidecars. All three
 repositories pass strict 100×4 coverage with zero lint warnings.
 
-## Sprint 10 — VyOS HTTP migration and legacy removal
+## Sprint 10 — Local lab validation
 
 ### Supervisor and `elera-lib`
 
-- [x] Remove the transitional agent-check listeners `33060`/`33070`; they are not part of the target architecture.
-- [ ] Validate direct application-to-node `3306` access and NetworkPolicies.
+- [x] Keep the supervisor image free of transitional agent-check listeners `33060`/`33070`.
+- [~] Validate direct application-to-node `3306` access and lab NetworkPolicies.
 
 ### CLI and operations
 
-- [x] Provide migration diagnostics and rollback checks for the HTTP-only Docker migration path.
-- [ ] Verify graceful drains while changing VyOS routing.
+- [x] Provide diagnostics and rollback checks for the HTTP-only lab routing path.
+- [~] Verify graceful drains through the lab HAProxy/Cilium simulation.
 
 ### VyOS interoperability
 
-- [x] Configure HAProxy as an HTTP-only supervisor load balancer.
+- [x] Configure the lab HAProxy as an HTTP-only supervisor load balancer.
 - [x] Validate `/healthz`, `/readyz`, WebSocket upgrades/timeouts, and stateless API failover at the Docker/integration-test layer.
-- [ ] Remove MySQL HAProxy frontends, `agent-check`, `elera-check.exe`, installer, and systemd units.
+- [ ] Validate the complete fresh-init, bootstrap, join, routing, drain, restart, failure, backup, and restore lifecycle.
 
-Docker-only Sprint 10 evidence: Compose configuration validates, the supervisor
-image builds successfully, all three direct supervisor HTTP ports and the
-HAProxy VIP respond to `/healthz`, and HAProxy uses one-second HTTP readiness
-checks with no SQL backend or agent-check listener. Kubernetes NetworkPolicies,
-StatefulSet behavior, persistent-volume lifecycle, and pod disruption testing
-are intentionally deferred to the Kubernetes deployment phase.
+Status: `[x]` means verified complete, `[~]` means partially verified, and `[ ]`
+means not started or not yet proven. Sprint 10 is local-only. Its evidence must
+cover the complete Docker lab:
+three-node Elera cluster, standalone Elera node, HTTP-only HAProxy simulation,
+example clients, dev/NAS backup and restore, fresh initialization, Galera
+bootstrap/join, routing updates, WebSocket fallback, graceful drains, rolling
+restarts, failure recovery, and credential/metadata restoration. The existing
+production MySQL cluster, its HAProxy SQL frontends, `agent-check`,
+`elera-check.exe`, installer, and systemd units remain in service and are out
+of scope for removal. Kubernetes validation is deferred to Sprint 11.
 
-## Sprint 11 — Application migration and release
+## Sprint 11 — Kubernetes validation
 
 ### All repositories
 
-- [ ] Migrate an internal application from `@eliware/mysql` to generic `@eliware/elera-lib`.
-- [ ] Validate writer assignment, reader failover, supervisor failure, event-stream fallback, and graceful drains.
+- [ ] Deploy the released Elera image and manifests to the isolated Kubernetes environment.
+- [ ] Validate PVC binding, worker placement, anti-affinity, NetworkPolicies, probes, PDB behavior, and Argo ordering.
+- [ ] Validate writer assignment, reader failover, supervisor failure, event-stream fallback, graceful drains, and rolling worker reboots.
+- [ ] Validate fresh initialization, Galera bootstrap/join, cold recovery, quorum loss, split-brain refusal, and controlled recovery.
+- [ ] Validate backup/restore and restore verification against standalone Elera.
 - [x] Replace local links with released package versions and verify package/image contents.
 
 ### Release interoperability
 
-- [ ] Publish packages and the supervisor image only from authorized `v*` tags.
-- [ ] Complete a production-like three-node acceptance run and document rollback.
+- [ ] Verify image signature/attestation, digest pinning, SBOM, vulnerability evidence, and release provenance.
+- [ ] Complete the Kubernetes acceptance run and document rollback and operational handoff.
+- [ ] Keep application migration and legacy MySQL/HAProxy removal out of Sprint 11; schedule them only after all consumers migrate.

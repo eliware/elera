@@ -1,5 +1,5 @@
 import { afterEach, expect, test, jest } from '@jest/globals';
-import { createRoutingEventBus } from '../src/routing/event-bus.mjs';
+import { createRoutingEventBus } from '../../src/routing/event-bus.mjs';
 
 let bus;
 afterEach(() => bus?.close());

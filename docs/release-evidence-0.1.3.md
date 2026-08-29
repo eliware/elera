@@ -22,12 +22,12 @@ configuration so Kubernetes ConfigMap mounts can remain read-only.
 | Application tests | Verified locally | `npm test`: 100×4 coverage, zero lint warnings. |
 | Kubernetes-style runtime test | Verified locally | Writable runtime state is separate from read-only static configuration. |
 | Galera failure tests | Pending lab validation | SST/IST, quorum loss, shutdown, drain, and recovery scenarios. |
-| Compose bootstrap default | Verified safe | All services default to `ELERA_BOOTSTRAP=false`; first-node bootstrap is explicit. |
+| Compose bootstrap default | Verified safe | Services do not configure startup initialization; first-node bootstrap is explicit. |
 | Compose cluster restart/rejoin | Not passed | Existing persisted lab volumes still had the first node configured for bootstrap; the hardened image correctly refused it and the remaining nodes stayed non-Primary. |
 
 ## Rollback
 
 Rollback uses the previous approved image digest and matching GitOps commit.
-Do not enable `ELERA_BOOTSTRAP` during rollback. The GitOps digest must not be
+Do not enable initialization during rollback. The GitOps digest must not be
 updated to this release until DevOps publishes and independently verifies the
 image and the writable `/run/elera` mount is present in the candidate manifests.

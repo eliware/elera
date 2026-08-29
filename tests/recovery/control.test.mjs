@@ -1,6 +1,6 @@
 import { expect, jest, test } from '@jest/globals';
-import { createRecoveryControl } from '../src/recovery/control.mjs';
-import { createRecoveryState } from '../src/cluster/cold-bootstrap/recovery-state.mjs';
+import { createRecoveryControl } from '../../src/recovery/control.mjs';
+import { createRecoveryState } from '../../src/cluster/cold-bootstrap/recovery-state.mjs';
 
 test('records acknowledged and aborted recovery decisions', () => {
   const log = { warn: jest.fn() };
@@ -19,4 +19,18 @@ test('bounds the recovery event history and supplies default reasons', () => {
   expect(control.events()).toHaveLength(100);
   control.acknowledge();
   expect(control.events().at(-1).reason).toBe('operator acknowledged recovery');
+});
+
+test('records custom events with timestamps and returns defensive event copies', () => {
+  const control = createRecoveryControl({ state: createRecoveryState(), now: () => 1000 });
+  const event = control.record('recovery.test', { node: 'one' });
+  expect(event).toMatchObject({ type: 'recovery.test', at: new Date(1000).toISOString(), node: 'one' });
+  const events = control.events(); events.pop();
+  expect(control.events()).toHaveLength(1);
+});
+
+test('exposes the current recovery snapshot through status', () => {
+  const state = createRecoveryState('cluster-unavailable');
+  const control = createRecoveryControl({ state });
+  expect(control.status()).toEqual({ state: 'cluster-unavailable' });
 });

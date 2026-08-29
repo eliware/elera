@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleClusterRoute } from '../src/api/routes/cluster.mjs';
+import { handleClusterRoute } from '../../../src/api/routes/cluster.mjs';
 
 const response = () => ({ json: jest.fn() });
 const request = (body = {}) => ({ async *[Symbol.asyncIterator]() { yield JSON.stringify(body); } });

@@ -1,5 +1,5 @@
 import { expect, jest, test } from "@jest/globals";
-import { handleArtifactRoute } from "../src/api/routes/artifacts.mjs";
+import { handleArtifactRoute } from "../../../src/api/routes/artifacts.mjs";
 
 const request = {
   async *[Symbol.asyncIterator]() {

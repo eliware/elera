@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleColdBootstrapEvidence } from '../src/api/routes/cold-bootstrap-evidence.mjs';
+import { handleColdBootstrapEvidence } from '../../../src/api/routes/cold-bootstrap-evidence.mjs';
 
 test('handles cold-bootstrap evidence route', async () => {
   const response = { json: jest.fn() };

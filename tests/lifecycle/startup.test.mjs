@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { createEleraBootstrap, waitForSql } from '../src/lifecycle/startup.mjs';
+import { createEleraBootstrap, waitForSql } from '../../src/lifecycle/startup.mjs';
 
 test('waitForSql retries until health succeeds', async () => {
   const health = { status: jest.fn().mockRejectedValueOnce(new Error('starting')).mockResolvedValueOnce({ ready: true }) };

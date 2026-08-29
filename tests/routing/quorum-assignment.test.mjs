@@ -22,3 +22,15 @@ test('requires assignment dependencies and reports persistence errors', async ()
   await expect(coordinator.write('app', 'node')).rejects.toThrow('storage');
   expect(await coordinator.read('app')).toBeUndefined();
 });
+
+test('rethrows persistence errors when no error logger is configured', async () => {
+  const value = context();
+  value.assignmentStore.set.mockRejectedValue(new Error('storage unavailable'));
+  await expect(createQuorumAssignmentCoordinator(value).write('app', 'node')).rejects.toThrow('storage unavailable');
+});
+
+test('derives quorum size from observations when no cluster size is configured', async () => {
+  const value = context();
+  const coordinator = createQuorumAssignmentCoordinator({ ...value, environment: {} });
+  await expect(coordinator.write('app', 'node')).resolves.toBe('node');
+});

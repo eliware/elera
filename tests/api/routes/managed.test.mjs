@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleManagedRoute } from '../src/api/routes/managed.mjs';
+import { handleManagedRoute } from '../../../src/api/routes/managed.mjs';
 
 const request = (body = {}) => ({ url: 'http://localhost/api?v=1&application=app', async *[Symbol.asyncIterator]() { if (Object.keys(body).length) yield JSON.stringify(body); } });
 const context = (method, path, body = {}) => { const response = { json: jest.fn() }; const managed = { listDatabases: jest.fn(async () => ['app']), listIdentities: jest.fn(async () => []), createDatabase: jest.fn(async () => ({ database: 'app' })), createIdentity: jest.fn(async () => ({ identity: 'id' })), rotateIdentity: jest.fn(async () => ({})), issueToken: jest.fn(async () => ({})), revokeToken: jest.fn(async () => ({})), revokeIdentity: jest.fn(async () => ({})) }; return { method, path, request: request(body), response, managed, auth: { scopes: ['metadata:read', 'database:read', 'database:provision', 'identity:read', 'identity:provision', 'identity:rotate', 'token:create', 'token:revoke', 'identity:revoke'] } }; };

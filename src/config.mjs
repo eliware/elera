@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadIntent } from './intent/model.mjs';
 import { runtimeIdentity } from './runtime/identity.mjs';
+import { clientDrainTimeout } from '@eliware/elera-lib';
 const persistedIntent = (environment) => { try { return JSON.parse(readFileSync(join(environment.ELERA_CONFIG_STATE_DIR ?? `${environment.MARIADB_DATA_DIR ?? '/var/lib/mysql'}/elera-state`, 'active.intent.json'), 'utf8')); } catch { return undefined; } };
 
 export function loadSupervisorConfig(environment = process.env, intent = undefined) {
@@ -10,7 +11,7 @@ export function loadSupervisorConfig(environment = process.env, intent = undefin
   return Object.freeze({
     httpPort: number('ELERA_HTTP_PORT', 8080),
     clusterSize: intent?.cluster?.members?.length ?? 1,
-    timeoutMs: Number(environment.ELERA_QUERY_TIMEOUT_MS ?? 5000), drainTimeoutMs: Number(environment.ELERA_DRAIN_TIMEOUT_MS ?? 45000), shutdownTimeoutMs: Number(environment.ELERA_SHUTDOWN_TIMEOUT_MS ?? 60000), startupTimeoutMs: Number(environment.ELERA_STARTUP_TIMEOUT_MS ?? 30000), dataDir: intent?.mariadb?.dataDir ?? environment.MARIADB_DATA_DIR ?? '/var/lib/mysql', elera: (intent?.cluster?.members?.length ?? 1) > 1,
+    timeoutMs: Number(environment.ELERA_QUERY_TIMEOUT_MS ?? 5000), drainTimeoutMs: clientDrainTimeout(environment.ELERA_DRAIN_TIMEOUT_MS ?? 45000), shutdownTimeoutMs: Number(environment.ELERA_SHUTDOWN_TIMEOUT_MS ?? 60000), startupTimeoutMs: Number(environment.ELERA_STARTUP_TIMEOUT_MS ?? 30000), dataDir: intent?.mariadb?.dataDir ?? environment.MARIADB_DATA_DIR ?? '/var/lib/mysql', elera: (intent?.cluster?.members?.length ?? 1) > 1,
     intent, runtimeNodeName: environment.RUNTIME_NODE_NAME ?? runtimeIdentity().name,
     environment,
   });

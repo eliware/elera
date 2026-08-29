@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { createBootstrapCredentialLease } from '../src/bootstrap/lease.mjs';
+import { createBootstrapCredentialLease } from '../../src/bootstrap/lease.mjs';
 
 test('creates a local bootstrap bundle for CLI SQL smoke tests', () => {
   const lease = createBootstrapCredentialLease({ RUNTIME_NODE_ADDRESS: '127.0.0.1' });

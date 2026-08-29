@@ -30,6 +30,6 @@ before updating GitOps.
 ## Rollback and limitations
 
 Rollback uses the previous approved image digest and matching GitOps commit.
-Do not enable `ELERA_BOOTSTRAP` during rollback. The image does not repair
+Do not enable initialization during rollback. The image does not repair
 stale or corrupted data and does not claim SST/IST or Kubernetes failure
 behavior until the isolated lab evidence is attached.

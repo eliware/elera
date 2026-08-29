@@ -13,7 +13,7 @@ Kubernetes-style runtime-path validation.
 | Read-only root | Verified locally | Image starts with a read-only root filesystem and read-only `/etc/elera/supervisor.yaml` when runtime mounts are supplied. |
 | Application tests | Verified locally | `npm test`: 100×4 coverage, zero lint warnings. |
 | Image build | Verified locally | Elera, HAProxy, and backup/NAS lab images build successfully. |
-| Fresh cluster safety | Verified locally | All three fresh nodes refuse implicit bootstrap when `ELERA_BOOTSTRAP=false`. |
+| Fresh cluster safety | Verified locally | All three fresh nodes refuse implicit bootstrap during ordinary startup. |
 | MariaDB/Galera versions | Build input | MariaDB 12.3.3 and Galera 4 from the configured repositories. |
 | SBOM and vulnerability scan | Required at release | Generate and review final registry-image reports. |
 | Signing and attestation | Required at release | Attach and independently verify image signature and provenance. |

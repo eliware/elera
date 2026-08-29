@@ -1,5 +1,5 @@
 import { test, expect, jest } from '@jest/globals';
-import { createDrainEventPublisher } from '../src/lifecycle/drain-events.mjs';
+import { createDrainEventPublisher } from '../../src/lifecycle/drain-events.mjs';
 
 test('rejects incomplete event dependencies', () => {
   expect(() => createDrainEventPublisher()).toThrow('drain event dependencies');

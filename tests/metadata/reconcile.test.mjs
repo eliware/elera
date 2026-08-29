@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { createMetadataReconciler } from '../src/metadata/reconcile.mjs';
+import { createMetadataReconciler } from '../../src/metadata/reconcile.mjs';
 
 test('plans and applies missing metadata idempotently', async () => {
   const calls = [];

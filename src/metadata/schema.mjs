@@ -42,4 +42,14 @@ export const META_MIGRATIONS = [
       "CREATE TABLE IF NOT EXISTS elera_meta.routing_assignments (application_name VARCHAR(255) PRIMARY KEY, writer_host VARCHAR(255) NOT NULL, bundle_version VARCHAR(128) NOT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
     ],
   },
+  {
+    version: 6,
+    name: "application-identifiers-and-admin-tokens",
+    statements: [
+      "ALTER TABLE elera_meta.applications ADD COLUMN IF NOT EXISTS application_id VARCHAR(32) NULL",
+      "ALTER TABLE elera_meta.scoped_tokens ADD COLUMN IF NOT EXISTS token_id VARCHAR(32) NULL",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_id ON elera_meta.applications(application_id)",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_scoped_tokens_id ON elera_meta.scoped_tokens(token_id)",
+    ],
+  },
 ];

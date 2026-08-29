@@ -10,3 +10,25 @@ test('persists application writer assignments atomically', async () => {
 });
 test('loads persisted assignments and supports memory-only stores', async () => { const store = createAssignmentStore({ path: 'state.json', read: async () => JSON.stringify({ app: 'elera-2' }) }); expect(await store.get('app')).toBe('elera-2'); const memory = createAssignmentStore(); await memory.set('app', 'elera-1'); expect(await memory.get('app')).toBe('elera-1'); });
 test('surfaces persisted-state read failures', async () => { const store = createAssignmentStore({ path: 'state.json', read: async () => { throw new Error('read failed'); } }); await expect(store.get('app')).rejects.toThrow('read failed'); });
+
+test('loads every persisted assignment and exposes absent values', async () => {
+  const store = createAssignmentStore({ path: 'state.json', read: async () => JSON.stringify({ one: 'node-1', two: 'node-2' }) });
+  expect(store.peek('one')).toBeUndefined();
+  expect(await store.get('missing')).toBeUndefined();
+  expect(store.applications()).toEqual(['one', 'two']);
+  expect(store.peek('two')).toBe('node-2');
+});
+
+test('ignores a missing optional state file but rejects malformed state', async () => {
+  const missing = createAssignmentStore({ path: 'state.json', read: async () => { throw Object.assign(new Error('missing'), { code: 'ENOENT' }); } });
+  await expect(missing.get('app')).resolves.toBeUndefined();
+  const malformed = createAssignmentStore({ path: 'state.json', read: async () => '{bad' });
+  await expect(malformed.get('app')).rejects.toThrow();
+});
+
+test('surfaces atomic persistence failures', async () => {
+  const store = createAssignmentStore({ path: 'state.json', read: async () => JSON.stringify({}), makeDirectory: async () => {}, write: async () => { throw new Error('write failed'); } });
+  await expect(store.set('app', 'node')).rejects.toThrow('write failed');
+  const moved = createAssignmentStore({ path: 'state.json', read: async () => JSON.stringify({}), makeDirectory: async () => {}, write: async () => {}, move: async () => { throw new Error('rename failed'); } });
+  await expect(moved.set('app', 'node')).rejects.toThrow('rename failed');
+});

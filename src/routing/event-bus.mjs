@@ -1,10 +1,12 @@
 import { log as defaultLog } from '@eliware/common';
+import { validateRoutingEvent } from '@eliware/elera-lib';
 
 export function createRoutingEventBus({ heartbeatMs = 45000, log = defaultLog, setIntervalImpl = setInterval } = {}) {
   const clients = new Set();
   let last = null;
   function publish(event) {
     if (!event || typeof event !== 'object') throw new TypeError('routing event is required');
+    if (typeof event.type === 'string' && event.type.startsWith('routing.')) validateRoutingEvent(event);
     last = event;
     for (const client of clients) {
       try { if (!client.filter || client.filter(event)) client.send(event); } catch (error) { log.warn?.('Routing event delivery failed', { error }); clients.delete(client); }

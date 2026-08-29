@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { isQuorumReady } from '../src/cluster/quorum-readiness.mjs';
+import { isQuorumReady } from '../../src/cluster/quorum-readiness.mjs';
 
 describe('quorum readiness', () => {
   test.each([[3, 2, true], [3, 1, false], [3, 0, false], [1, 1, true]])('requires majority for %i expected members and %i actual members', (expected, actual, ready) => {

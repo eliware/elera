@@ -1,5 +1,5 @@
 import { expect, jest, test } from "@jest/globals";
-import { handleRoutingRoute } from "../src/api/routes/routing.mjs";
+import { handleRoutingRoute } from "../../../src/api/routes/routing.mjs";
 
 const request = (body = {}) => ({
   url: "http://localhost/api",

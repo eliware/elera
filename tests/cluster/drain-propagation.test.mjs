@@ -1,6 +1,6 @@
 import { expect, jest, test } from '@jest/globals';
-import { createDrainManager } from '../src/lifecycle/drain-manager.mjs';
-import { createDrainPropagation } from '../src/cluster/drain-propagation.mjs';
+import { createDrainManager } from '../../src/lifecycle/drain-manager.mjs';
+import { createDrainPropagation } from '../../src/cluster/drain-propagation.mjs';
 
 test('propagates drain and undrain to peers and avoids loops for propagated requests', async () => {
   const fetchImpl = jest.fn(async () => ({ ok: true, status: 200 }));

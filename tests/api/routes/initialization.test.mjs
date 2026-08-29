@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleInitializationRoute } from '../src/api/routes/initialization.mjs';
+import { handleInitializationRoute } from '../../../src/api/routes/initialization.mjs';
 
 const response = () => ({ json: jest.fn() });
 const request = (body) => ({ async *[Symbol.asyncIterator]() { yield JSON.stringify(body); } });

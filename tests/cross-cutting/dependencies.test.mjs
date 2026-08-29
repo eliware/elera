@@ -8,8 +8,7 @@ describe('shared dependencies', () => {
     expect(typeof common.path).toBe('function');
     expect(typeof common.registerHandlers).toBe('function');
     expect(typeof common.registerSignals).toBe('function');
-    expect(typeof mysql.createDb).toBe('function');
-    expect(typeof mysql.createDbFromEnvironment).toBe('function');
-    expect(typeof mysql.classifyQuery).toBe('function');
+    expect(typeof mysql.validateBundle).toBe('function');
+    expect(typeof mysql.validateRoutingNode).toBe('function');
   });
 });

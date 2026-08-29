@@ -4,7 +4,7 @@ import { expect, jest, test } from '@jest/globals';
 const child = new EventEmitter(); child.exitCode = null; child.kill = jest.fn(() => { child.exitCode = 0; queueMicrotask(() => child.emit('exit', 0, 'SIGTERM')); });
 const spawn = jest.fn(() => { queueMicrotask(() => child.emit('spawn')); return child; });
 jest.unstable_mockModule('node:child_process', () => ({ spawn }));
-const { createMariaDbProcess } = await import('../src/lifecycle/mariadb-process.mjs');
+const { createMariaDbProcess } = await import('../../src/lifecycle/mariadb-process.mjs');
 
 test('stopping before start is a no-op', async () => { const process = createMariaDbProcess({ args: [], log: { error: jest.fn() } }); await expect(process.stop(1)).resolves.toEqual({ stopped: true, forced: false }); });
 test('stopping an already exited child is a no-op', async () => { child.exitCode = null; const process = createMariaDbProcess({ args: [], log: { error: jest.fn() } }); await process.start(); child.exitCode = 0; await expect(process.stop(1)).resolves.toEqual({ stopped: true, forced: false }); child.exitCode = null; });

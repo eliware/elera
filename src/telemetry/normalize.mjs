@@ -4,13 +4,18 @@ export function normalizeTelemetryReport(report, receivedAt) {
   if (!report || report.type !== 'client.telemetry' || typeof report.application !== 'string' || !report.application) return undefined;
   return {
     application: report.application,
+    credentialName: typeof report.credentialName === 'string' ? report.credentialName : undefined,
+    database: typeof report.database === 'string' ? report.database : undefined,
+    scopes: Array.isArray(report.scopes) ? [...report.scopes] : undefined,
     queries: nonNegative(report.queries),
     failures: nonNegative(report.failures),
     retries: nonNegative(report.retries),
     reconnects: nonNegative(report.reconnects),
+    reconnectDelayMs: nonNegative(report.reconnectDelayMs),
     failoverCount: nonNegative(report.failoverCount),
     inflight: nonNegative(report.inflight),
     avgLatencyMs: nonNegative(report.avgLatencyMs),
+    sentAt: typeof report.sentAt === 'string' ? report.sentAt : undefined,
     receivedAt,
   };
 }

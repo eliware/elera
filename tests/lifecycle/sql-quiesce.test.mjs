@@ -1,6 +1,6 @@
 import { expect, jest, test } from '@jest/globals';
-import { createDrainManager } from '../src/lifecycle/drain-manager.mjs';
-import { createSqlQuiesce } from '../src/lifecycle/sql-quiesce.mjs';
+import { createDrainManager } from '../../src/lifecycle/drain-manager.mjs';
+import { createSqlQuiesce } from '../../src/lifecycle/sql-quiesce.mjs';
 
 test('drains tracked work and provides a settle window for direct SQL sessions', async () => {
   const drain = createDrainManager();

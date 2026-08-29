@@ -40,8 +40,8 @@ uses `pending`, `collecting-evidence`, `awaiting-quorum`, `recovery-authorized`,
 
 ## Startup and lifecycle
 
-- First initialization: allowed only when `ELERA_BOOTSTRAP=true` and the data
-  directory is genuinely empty and writable.
+- First initialization: performed only by an explicit authenticated
+  `elera-cli` operation; startup environment flags do not enable it.
 - Ordinary restart: an initialized directory starts normally; no system-table
   initialization occurs.
 - Rejoin: a valid existing Galera directory starts without
@@ -71,12 +71,11 @@ The supervisor writes `active.intent.json`, `last-known-good.intent.json`, and
 `mariadb.cnf` there. Startup fails if that directory is unavailable or
 unwritable.
 
-`ELERA_BOOTSTRAP=false` never runs `mariadb-install-db`, erases data, or
-reinitializes a directory. A non-empty directory without the MariaDB `mysql`
-system database is rejected. `ELERA_BOOTSTRAP=true` is also rejected when the
-directory is already initialized; it is valid only for explicit first
-initialization of an empty directory. The entrypoint does not attempt to repair
-stale or corrupted data.
+Normal startup never runs `mariadb-install-db`, erases data, or reinitializes a
+directory. A non-empty directory without the MariaDB `mysql` system database is
+rejected. The entrypoint does not attempt to repair stale or corrupted data.
+First initialization is an explicit authenticated `elera-cli` workflow and is
+never enabled by container environment variables.
 
 Failed SST/IST, non-Primary state, stale/corrupt data, and insufficient or
 read-only storage result in readiness failure or process failure and require

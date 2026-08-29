@@ -44,3 +44,9 @@ test('supports every valid recovery path and rejects invalid state names', () =>
   expect(join.snapshot()).toMatchObject({ state: 'complete' });
   expect(() => join.set('not-a-state')).toThrow('invalid recovery state');
 });
+
+test('supports idempotent transitions and preserves falsy optional details as absent', () => {
+  const state = createRecoveryState('joining');
+  expect(state.set('joining', { reason: '', epoch: 0 })).toEqual({ state: 'joining' });
+  expect(state.set('joining', { reason: 'still joining', epoch: 'e2' })).toEqual({ state: 'joining', reason: 'still joining', epoch: 'e2' });
+});

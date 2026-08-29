@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { createRoutingEventSnapshot } from '../src/routing/event-snapshot.mjs';
+import { createRoutingEventSnapshot } from '../../src/routing/event-snapshot.mjs';
 
 test('creates stable versioned routing events and advances on changes', () => {
   const node = { nodeId: 'n', address: 'db', sqlPort: 3306, synced: true, primary: 'Primary', health: 'ok', observedAt: Date.now() };

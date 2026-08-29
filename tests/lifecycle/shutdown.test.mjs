@@ -1,6 +1,6 @@
 import { expect, test, jest } from '@jest/globals';
-import { createShutdown } from '../src/lifecycle/shutdown.mjs';
-import { createLifecycleState } from '../src/lifecycle/state.mjs';
+import { createShutdown } from '../../src/lifecycle/shutdown.mjs';
+import { createLifecycleState } from '../../src/lifecycle/state.mjs';
 
 test('orders drain, service closure, MariaDB stop, and cleanup', async () => {
   const calls = []; const lifecycle = createLifecycleState();
@@ -35,14 +35,7 @@ test('propagates shutdown drain before notifying clients and tolerates peer fail
 
 test('continues local shutdown when routing shutdown notification fails', async () => {
   const calls = [];
-  const shutdown = createShutdown({
-    lifecycle: createLifecycleState(),
-    sqlQuiesce: { begin: async () => calls.push('quiesce') },
-    drain: { wait: async () => {} },
-    routingStream: { shutdown: async () => { throw new Error('socket closed'); }, close: () => calls.push('stream') },
-    getMariaProcess: () => ({ stop: async () => { calls.push('maria'); return { forced: false }; } }),
-    log: { warn: jest.fn() }
-  });
+  const shutdown = createShutdown({ lifecycle: createLifecycleState(), sqlQuiesce: { begin: async () => calls.push('quiesce') }, drain: { wait: async () => {} }, routingStream: { shutdown: async () => { throw new Error('socket closed'); }, close: () => calls.push('stream') }, getMariaProcess: () => ({ stop: async () => { calls.push('maria'); return { forced: false }; } }), log: { warn: jest.fn() } });
   await expect(shutdown('SIGTERM')).resolves.toMatchObject({ state: 'stopped' });
   expect(calls).toEqual(['quiesce', 'stream', 'maria']);
 });

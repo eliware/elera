@@ -1,7 +1,7 @@
 import { expect, jest, test } from '@jest/globals';
-import { handleRecoveryRoute } from '../src/api/routes/recovery.mjs';
-import { createRecoveryControl } from '../src/recovery/control.mjs';
-import { createRecoveryState } from '../src/cluster/cold-bootstrap/recovery-state.mjs';
+import { handleRecoveryRoute } from '../../../src/api/routes/recovery.mjs';
+import { createRecoveryControl } from '../../../src/recovery/control.mjs';
+import { createRecoveryState } from '../../../src/cluster/cold-bootstrap/recovery-state.mjs';
 
 const request = (body = {}) => ({ async *[Symbol.asyncIterator]() { yield JSON.stringify(body); } });
 const response = () => ({ json: jest.fn() });

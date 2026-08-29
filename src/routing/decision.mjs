@@ -20,6 +20,16 @@ function eligible(observations) {
   );
 }
 
+function routeNode(item, weights) {
+  const weight = weights[item.nodeId] ?? item.weight;
+  return {
+    host: item.address,
+    port: Number(item.sqlPort ?? 3306),
+    nodeId: item.nodeId,
+    ...(weight === undefined ? {} : { weight: Number(weight) }),
+  };
+}
+
 export function calculateRoutes({
   application,
   observations = [],
@@ -58,23 +68,13 @@ export function calculateRoutes({
     const primary = [
       writer,
       ...ordered.filter((item) => item.nodeId !== writer.nodeId),
-    ].map((item) => ({
-      host: item.address,
-      port: Number(item.sqlPort ?? 3306),
-      // Writer preference is explicit in `writer`; failover is represented by
-      // list order, never by the legacy 100/0/0 weight convention.
-      weight: Number(weights[item.nodeId] ?? item.weight ?? 1),
-    }));
-    const balanced = ordered.map((item) => ({
-      host: item.address,
-      port: Number(item.sqlPort ?? 3306),
-      weight: Number(weights[item.nodeId] ?? item.weight ?? 100),
-    }));
+    ].map((item) => routeNode(item, weights));
+    const balanced = ordered.map((item) => routeNode(item, weights));
     const bundleVersion = createHash("sha256")
       .update(JSON.stringify({ primary, balanced }))
       .digest("hex")
       .slice(0, 16);
-    const failover = primary.slice(1).map(({ host, port }) => ({ host, port }));
-    return { writer: { host: primary[0].host, port: primary[0].port }, failover, readers: balanced.map(({ host, port }) => ({ host, port })), primary, balanced, bundleVersion };
+    const failover = primary.slice(1);
+    return { writer: primary[0], failover, readers: balanced, primary, balanced, bundleVersion };
   }
 }

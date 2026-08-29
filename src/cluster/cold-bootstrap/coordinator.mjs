@@ -8,12 +8,20 @@ export function createColdBootstrapCoordinator({ nodes, local, remote, bootstrap
   return createColdBootstrapService({
     nodes,
     readState: async (node) => (await evidence(node)).state,
-    recover: async (node) => (await evidence(node)).state,
+    recover: async (dataDir) => {
+      const node = nodes.find((candidate) => candidate.dataDir === dataDir);
+      return (await evidence(node)).state;
+    },
     isOnline: async (node) => (await evidence(node)).active,
     bootstrap: async (node) => {
-      if (node.local) return bootstrapLocal();
-      if (typeof bootstrapRemote !== 'function') throw Object.assign(new Error('remote cold bootstrap is not configured'), { statusCode: 503 });
-      return bootstrapRemote(node);
+      const target = nodes.find((candidate) => candidate.name === node);
+      if (target.local) {
+        return bootstrapLocal();
+      }
+      if (typeof bootstrapRemote !== 'function') {
+        throw Object.assign(new Error('remote cold bootstrap is not configured'), { statusCode: 503 });
+      }
+      return bootstrapRemote(target);
     },
     verifyCandidate: async (candidate) => {
       const current = await evidence(nodes.find((node) => node.name === candidate.node));

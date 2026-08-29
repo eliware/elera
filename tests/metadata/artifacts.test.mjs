@@ -1,5 +1,5 @@
 import { expect, test } from "@jest/globals";
-import { createArtifactStore } from "../src/metadata/artifacts.mjs";
+import { createArtifactStore } from "../../src/metadata/artifacts.mjs";
 
 test("stores, lists, verifies, retrieves, and removes encrypted artifact metadata", async () => {
   const calls = [];

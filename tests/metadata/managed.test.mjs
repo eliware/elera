@@ -1,5 +1,5 @@
-import { createManagedMetadata } from '../src/metadata/managed.mjs';
-import { createSecretBox } from '../src/metadata/secret-box.mjs';
+import { createManagedMetadata } from '../../src/metadata/managed.mjs';
+import { createSecretBox } from '../../src/metadata/secret-box.mjs';
 import { createHash } from 'node:crypto';
 
 test('manages databases, identities, and scoped tokens without exposing policy SQL', async () => {
@@ -24,6 +24,35 @@ test('normalizes array and serialized grants when listing identities', async () 
     { name: 'array-grants', application: 'payments', grants: ['SELECT'] },
     { name: 'serialized-grants', application: 'payments', grants: ['UPDATE'] }
   ]);
+});
+
+test('resolves scoped tokens to their application, database, identity, and scopes', async () => {
+  const token = 'runtime-token';
+  const hash = createHash('sha256').update(token).digest('hex');
+  let authenticationSql;
+  const managed = createManagedMetadata({ query: async (sql) => {
+    authenticationSql = sql;
+    return [[{ name: 'runtime-token', application: 'payments', database: 'billing', identity: 'web', token_hash: hash, scopes_json: '["database:read"]' }]];
+  } });
+
+  await expect(managed.authenticate(token)).resolves.toEqual({
+    name: 'runtime-token', application: 'payments', database: 'billing', identity: 'web', scopes: ['database:read']
+  });
+  expect(authenticationSql).toContain('LEFT JOIN');
+  expect(authenticationSql).toContain('database_name AS database');
+});
+
+test('keeps app-admin tokens application-scoped without assigning a database identity', async () => {
+  const token = 'app-admin-token';
+  const hash = createHash('sha256').update(token).digest('hex');
+  const managed = createManagedMetadata({ query: async () => [[{
+    name: 'app-admin-token', application: 'payments', database: null, identity: null,
+    token_hash: hash, scopes_json: '["app:admin"]'
+  }]] });
+
+  await expect(managed.authenticate(token)).resolves.toEqual({
+    name: 'app-admin-token', application: 'payments', database: null, identity: null, scopes: ['app:admin']
+  });
 });
 
 test('validates managed names, purposes, and grants', async () => {

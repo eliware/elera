@@ -1,3 +1,3 @@
-import { ensureReplicationAccounts } from '../src/metadata/accounts.mjs';
+import { ensureReplicationAccounts } from '../../src/metadata/accounts.mjs';
 test('does not create obsolete supervisor or health accounts', async () => { const sql = []; const accounts = await ensureReplicationAccounts({ query: async statement => sql.push(statement), environment: { ELERA_SST_USER: 'sst', ELERA_SST_PASSWORD: 'secret', ELERA_HEALTH_USER: 'health', ELERA_HEALTH_PASSWORD: 'health-secret' } }); expect(accounts).toEqual([]); expect(sql).toEqual([]); });
 test('does not mutate SQL when accounts are not configured', async () => { const calls = []; const query = async statement => calls.push(statement); expect(await ensureReplicationAccounts({ query, environment: {} })).toEqual([]); expect(calls).toEqual([]); });

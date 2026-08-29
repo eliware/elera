@@ -59,8 +59,8 @@ for the next image candidate.
 ### Runtime safety
 
 - Require `MARIADB_ROOT_PASSWORD` for explicit first initialization.
-- Keep all Compose services at `ELERA_BOOTSTRAP=false` by default so a local
-  `.env` cannot silently enable initialization.
+- Keep initialization disabled during ordinary Compose startup so a local
+  `.env` cannot silently enable initialization; initialization is CLI-driven.
 - Preserve fail-closed handling for empty, suspicious, stale, or initialized
   MariaDB data directories.
 

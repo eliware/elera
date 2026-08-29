@@ -35,7 +35,7 @@
         "contracts": "node scripts/verify-contracts.mjs",
         "test": "eliware-test",
         "lint": "eliware-test --lint",
-        "audit": "npm audit --omit=dev --audit-level=moderate",
+        "audit": "node scripts/run-audit.mjs",
         "pack": "npm pack --dry-run"
     },
     "dependencies": {
@@ -47,7 +47,7 @@
     },
     "devDependencies": {
         "@eliware/elera-client": "0.3.0",
-        "@eliware/test": "^2.1.0",
+        "@eliware/test": "^2.1.3",
         "ajv": "^8.20.0",
         "ajv-formats": "^3.0.1"
     },

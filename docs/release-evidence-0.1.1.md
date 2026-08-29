@@ -27,5 +27,5 @@ lab and are not claimed by the local unit/smoke results.
 ## Rollback
 
 Rollback must use the previously approved image digest and its matching GitOps
-manifest. Do not change `ELERA_BOOTSTRAP` during a routine rollback. Any
+manifest. Do not enable initialization during a routine rollback. Any
 cluster bootstrap or recovery remains an explicit, audited operator action.
