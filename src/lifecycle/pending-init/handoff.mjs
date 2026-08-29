@@ -12,6 +12,7 @@ export const createClusterHandoff = ({
     env: {
       ...environment,
       ELERA_CLUSTER_BOOTSTRAP: bootstrapCluster ? "true" : "false",
+      ELERA_EXPLICIT_START_MODE: bootstrapCluster ? "bootstrap" : "join",
     },
     stdio: "inherit",
   });

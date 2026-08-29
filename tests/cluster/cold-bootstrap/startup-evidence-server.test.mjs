@@ -40,3 +40,20 @@ test('rejects unauthorized and malformed lease requests', async () => {
   const unauthorized = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { connection: 'close' }, body: '{}' }); expect(unauthorized.status).toBe(401); await unauthorized.text();
   const malformed = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { authorization: 'Bearer secret', connection: 'close' }, body: '{' }); expect(malformed.status).toBe(400); await malformed.text(); await service.close();
 });
+
+test('serves and authorizes completion events', async () => {
+  const completion = { read: () => ({ epoch: 'e1', status: 'complete' }) };
+  const service = createStartupEvidenceServer({ port: 0, token: 'secret', evidence: async () => ({}), completion });
+  await service.listen(); const port = service.server.address().port;
+  const missing = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/completion`, { headers: { connection: 'close' } });
+  expect(missing.status).toBe(401); await missing.text();
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/completion`, { headers: { authorization: 'Bearer secret', connection: 'close' } });
+  expect(response.status).toBe(200); await expect(response.json()).resolves.toMatchObject({ data: { epoch: 'e1' } }); await service.close();
+});
+
+test('returns not found when completion is unavailable and maps lease errors', async () => {
+  const service = createStartupEvidenceServer({ port: 0, evidence: async () => ({}), completion: { read: () => undefined }, lease: { claim: async () => { throw Object.assign(new Error('conflict'), { statusCode: 409 }); } } });
+  await service.listen(); const port = service.server.address().port;
+  const completion = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/completion`, { headers: { connection: 'close' } }); expect(completion.status).toBe(404); await completion.text();
+  const lease = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { connection: 'close' }, body: '{}' }); expect(lease.status).toBe(409); await lease.text(); await service.close();
+});

@@ -1,0 +1,119 @@
+import { expect, jest, test } from '@jest/globals';
+import { createColdRecoveryProtocol } from '../../../src/cluster/cold-bootstrap/protocol.mjs';
+
+const evidence = (node, seqno) => ({ node, state: { uuid: 'cluster', seqno, safeToBootstrap: false }, active: false, generation: 1, observedAt: new Date().toISOString() });
+const makeProtocol = () => {
+  const store = { value: undefined, read: jest.fn(async function () { return this.value; }), write: jest.fn(async function (value) { this.value = value; return value; }) };
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', url: 'http://a', local: true }, { name: 'b', url: 'http://b' }, { name: 'c', url: 'http://c' }], localEvidence: async () => evidence('a', 3), fetchEvidence: async (url) => evidence(url.slice(-1), 2), store });
+  return { protocol, store };
+};
+
+test('plans a deterministic epoch from complete peer evidence', async () => {
+  const { protocol } = makeProtocol();
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, phase: 'evidence', winner: { node: 'a' }, quorum: ['a', 'b', 'c'] });
+});
+
+test('publishes lifecycle events for evidence, candidate, authorization, bootstrap, and completion', async () => {
+  const events = [];
+  const eventProtocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }, { name: 'c', url: 'c' }], localEvidence: async () => evidence('a', 3), fetchEvidence: async (url) => evidence(url, 2), store: { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; } }, publishEvent: async (event) => events.push(event) });
+  const plan = await eventProtocol.plan();
+  await eventProtocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] });
+  await eventProtocol.beginBootstrap({ epoch: plan.epoch, winner: 'a' });
+  await eventProtocol.complete({ epoch: plan.epoch, winner: 'a', clusterId: 'cluster', membership: ['a', 'b', 'c'] });
+  expect(events.map((event) => event.type)).toEqual(['recovery.evidence-collected', 'recovery.candidate-selected', 'recovery.bootstrap-authorized', 'recovery.bootstrap-started', 'recovery.bootstrap-complete']);
+});
+
+test('requires the exact epoch and quorum before authorization', async () => {
+  const { protocol } = makeProtocol();
+  const plan = await protocol.plan();
+  await expect(protocol.authorize({ epoch: 'stale', acknowledgements: ['a', 'b'] })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a'] })).rejects.toThrow('quorum');
+  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] })).resolves.toMatchObject({ phase: 'authorized', acknowledgements: 2 });
+});
+
+test('rejects stale or malformed evidence before candidate selection', async () => {
+  const store = { async read() {}, async write() {} };
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => ({ node: 'a', state: { uuid: 'cluster', seqno: 1, safeToBootstrap: false }, active: false, generation: 1, observedAt: new Date(Date.now() - 20000).toISOString() }), fetchEvidence: async () => undefined, store, maxEvidenceAgeMs: 1000 });
+  await expect(protocol.plan()).resolves.toMatchObject({ mode: 'blocked', code: 'STALE_RECOVERY_EVIDENCE' });
+});
+
+test('validates required protocol dependencies and exposes collected evidence', async () => {
+  expect(() => createColdRecoveryProtocol()).toThrow('dependencies are required');
+  expect(() => createColdRecoveryProtocol({ nodes: [], localEvidence: jest.fn(), fetchEvidence: jest.fn(), store: {} })).toThrow('dependencies are required');
+  const local = evidence('a', 3);
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => local, fetchEvidence: async () => local, store: { async read() {}, async write(value) { return value; } } });
+  await expect(protocol.evidence()).resolves.toMatchObject([{ node: 'a', uuid: 'cluster', seqno: 3 }]);
+});
+test('normalizes top-level evidence and rejects unknown completion epochs', async () => {
+  const item = { node: 'a', uuid: 'cluster', seqno: 1, savedSeqno: 1, recoveredSeqno: 1, safeToBootstrap: false, active: false, generation: 1, observedAt: new Date().toISOString(), dataDirectory: { valid: true } };
+  const store = { async read() {}, async write(value) { return value; } };
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => item, fetchEvidence: async () => item, store });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true });
+  await expect(protocol.authorize({ epoch: 'wrong', acknowledgements: 'a' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(protocol.complete({ epoch: 'wrong', membership: ['a'] })).rejects.toMatchObject({ statusCode: 409 });
+  const plan = await protocol.plan();
+  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: 'not-an-array' })).rejects.toThrow('quorum');
+  await expect(protocol.beginBootstrap()).rejects.toMatchObject({ statusCode: 409 });
+});
+
+test('fails closed when evidence collection throws and can retry with fresh evidence', async () => {
+  let fail = true;
+  const events = [];
+  const store = { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; return value; } };
+  const protocol = createColdRecoveryProtocol({
+    nodes: [{ name: 'a', local: true }],
+    localEvidence: async () => { if (fail) throw Object.assign(new Error('data directory unavailable'), { code: 'DATA_DIRECTORY_INVALID' }); return evidence('a', 1); },
+    fetchEvidence: async () => undefined,
+    store,
+    publishEvent: async (event) => events.push(event),
+  });
+  await expect(protocol.plan()).resolves.toMatchObject({ mode: 'blocked', code: 'DATA_DIRECTORY_INVALID' });
+  fail = false;
+  await expect(protocol.retry()).resolves.toMatchObject({ mode: 'bootstrap', eligible: true });
+  expect(events.map(({ type }) => type)).toEqual(['recovery.refused', 'recovery.evidence-collected', 'recovery.candidate-selected']);
+});
+
+test('joins when a peer already reports an active Primary component', async () => {
+  const active = { ...evidence('b', 2), active: true };
+  const store = { async read() {}, async write(value) { return value; } };
+  const protocol = createColdRecoveryProtocol({
+    nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }],
+    localEvidence: async () => evidence('a', 1),
+    fetchEvidence: async () => active,
+    store,
+  });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'join', reason: 'primary component already exists' });
+});
+
+test('blocks ambiguous candidate decisions and exposes pending status', async () => {
+  const store = { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; return value; } };
+  const same = (node) => ({ ...evidence(node, 4), state: { uuid: node === 'a' ? 'u1' : 'u2', seqno: 4, safeToBootstrap: false } });
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }], localEvidence: async () => same('a'), fetchEvidence: async () => same('b'), store });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked' });
+  await expect(protocol.status()).resolves.toMatchObject({ phase: 'blocked' });
+});
+
+test('rejects invalid completion and preserves the authorized epoch', async () => {
+  const { protocol } = makeProtocol();
+  const plan = await protocol.plan();
+  await protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] });
+  await expect(protocol.complete({ epoch: plan.epoch, winner: 'a', clusterId: 'cluster', membership: ['a'] })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(protocol.beginBootstrap({ epoch: plan.epoch, winner: 'wrong' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(protocol.authorize({ epoch: 'old', acknowledgements: ['a', 'b'] })).rejects.toMatchObject({ statusCode: 409 });
+});
+
+test('blocks when the candidate cannot be revalidated before bootstrap', async () => {
+  const store = { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; return value; } };
+  let unavailable = false;
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => { if (unavailable) throw new Error('revalidation unavailable'); return evidence('a', 1); }, fetchEvidence: async () => undefined, store });
+  const plan = await protocol.plan();
+  await protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a'] });
+  unavailable = true;
+  await expect(protocol.beginBootstrap({ epoch: plan.epoch, winner: 'a' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(protocol.status()).resolves.toMatchObject({ phase: 'blocked', reason: 'revalidation unavailable' });
+});
+
+test('returns pending status when no recovery epoch is persisted', async () => {
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => evidence('a', 1), fetchEvidence: async () => undefined, store: { async read() { return undefined; }, async write(value) { return value; } } });
+  await expect(protocol.status()).resolves.toEqual({ phase: 'pending' });
+});

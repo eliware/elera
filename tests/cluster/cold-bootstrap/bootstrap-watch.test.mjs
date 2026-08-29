@@ -12,4 +12,11 @@ test('times out and invokes fencing callback', async () => {
   expect(onTimeout).toHaveBeenCalledTimes(1);
 });
 
+test('supports seed readiness before full cluster quorum exists', async () => {
+  const onTimeout = jest.fn(); const health = { status: async () => ({ ready: false, values: { wsrep_local_state_comment: 'Synced', wsrep_ready: 'ON', wsrep_cluster_status: 'Primary' } }) };
+  const watch = createBootstrapWatch({ health, timeoutMs: 1, isReady: (result) => result.values.wsrep_local_state_comment === 'Synced', onTimeout });
+  await expect(watch()).resolves.toEqual({ ready: true });
+  expect(onTimeout).not.toHaveBeenCalled();
+});
+
 test('validates dependencies', () => expect(() => createBootstrapWatch()).toThrow('bootstrap watch dependencies are required'));

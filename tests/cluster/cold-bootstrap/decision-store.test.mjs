@@ -7,6 +7,12 @@ test('persists and reads a recovery decision atomically', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'elera-recovery-')); const store = createRecoveryDecisionStore(join(directory, 'decision.json'));
   await expect(store.read()).resolves.toBeUndefined(); await store.write({ epoch: 'e1', winner: 'a' }); await expect(store.read()).resolves.toEqual({ epoch: 'e1', winner: 'a' }); await expect(readFile(join(directory, 'decision.json'), 'utf8')).resolves.toContain('e1'); await rm(directory, { recursive: true, force: true });
 });
+test('rejects a transition based on a stale epoch', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'elera-decision-')); const path = join(directory, 'decision.json'); const store = createRecoveryDecisionStore(path);
+  await store.write({ epoch: 'new', phase: 'evidence' });
+  await expect(store.write({ epoch: 'old', phase: 'authorized' }, { expectedEpoch: 'old' })).rejects.toMatchObject({ code: 'RECOVERY_EPOCH_CONFLICT' });
+  await rm(directory, { recursive: true, force: true });
+});
 
 test('requires a decision path', () => expect(() => createRecoveryDecisionStore()).toThrow('recovery decision path is required'));
 

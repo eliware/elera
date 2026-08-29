@@ -22,3 +22,8 @@ test('handles each optional initialization value independently', async () => {
   const db = { query: jest.fn(async () => [[]]) };
   for (const body of [{ confirm: true, database: 'app' }, { confirm: true, user: 'runtime', password: 'secret' }]) await expect(handleInitializationRoute({ method: 'POST', path: '/api/v1/initialization/apply', request: request(body), response: response(), db, environment: {}, dataDir: 'missing' })).resolves.toBe(true);
 });
+test('uses the metadata initializer when configured', async () => {
+  const initialize = jest.fn(async () => ({ database: 'elera_meta', initialized: true }));
+  await expect(handleInitializationRoute({ method: 'POST', path: '/api/v1/initialization/apply', request: request({ confirm: true }), response: response(), metadata: { initialize }, environment: { ELERA_DEBUG: '1' }, dataDir: 'missing' })).resolves.toBe(true);
+  expect(initialize).toHaveBeenCalledWith({ ELERA_DEBUG: '1' });
+});

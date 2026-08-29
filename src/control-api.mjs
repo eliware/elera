@@ -20,20 +20,22 @@ import { handleArtifactRoute } from './api/routes/artifacts.mjs';
 import { isInternalPeerRequest } from './api/internal-auth.mjs';
 import { handleRecoveryRoute } from './api/routes/recovery.mjs';
 import { handleRoutingAdminRoute } from './api/routes/routing-admin.mjs';
+import { handleColdRecoveryRoute } from './api/routes/cold-recovery.mjs';
 
-export function createControlApi({ db, getStatus, getTraffic, getTelemetry, getTelemetryDetails, setDrain, bootstrap, coldBootstrap, getColdBootstrap, coldEvidence, getColdEvidence, coldBootstrapLocal, getColdBootstrapLocal, lifecycle, getConfig, getActiveIntent, leaseCredentials, routingBundles, routingEvent, recovery, metadata, managed, reconciler, artifactStore, observations = [], observationStore, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
+export function createControlApi({ db, getStatus, getTraffic, getTelemetry, getTelemetryDetails, setDrain, bootstrap, coldBootstrap, getColdBootstrap, coldEvidence, getColdEvidence, coldBootstrapLocal, getColdBootstrapLocal, getColdRecoveryProtocol, lifecycle, getConfig, getActiveIntent, leaseCredentials, routingBundles, routingEvent, recovery, metadata, managed, reconciler, artifactStore, observations = [], observationStore, environment = process.env, log, dataDir = environment.MARIADB_DATA_DIR ?? '/var/lib/mysql' }) {
   const token = environment.ROOT_TOKEN;
   const response = (target, request) => ({ json: (status, body) => json(target, status, { apiVersion: 'v1', requestId: request.headers?.['x-request-id'] ?? `req-${generateSnowflake()}`, ...body }) });
   const handler = async (request, target) => {
     if (!request.url?.startsWith('/api/v1/')) return false;
     const supplied = request.headers?.authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
-    const scoped = supplied && await metadata?.authenticate?.(supplied);
-    if (!tokenMatches(request, token) && !scoped) { json(target, 401, { ok: false, error: 'authentication required' }); return true; }
+    const root = tokenMatches(request, token);
+    const scoped = !root && supplied && await (managed ?? metadata)?.authenticate?.(supplied);
+    if (!root && !scoped) { json(target, 401, { ok: false, error: 'authentication required' }); return true; }
     const out = response(target, request); const url = new URL(request.url, 'http://localhost');
     try {
       const internal = isInternalPeerRequest(request, environment, token);
-      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, getTelemetry, getTelemetryDetails, setDrain, bootstrap, coldBootstrap: coldBootstrap ?? getColdBootstrap?.(), coldEvidence: coldEvidence ?? getColdEvidence?.(), coldBootstrapLocal: coldBootstrapLocal ?? getColdBootstrapLocal, lifecycle, getConfig, getActiveIntent, metadata, managed, auth: tokenMatches(request, token) ? { root: true, scopes: ['*'] } : scoped, observations, observationStore, routingEvent, recovery, environment, dataDir, internal };
-      if (await handleStatusRoute(context) || await handleTelemetryRoute(context) || await handleIntentRoute(context) || await handleAccountRoute(context) || await handleRecoveryRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context) || (metadata && await handleMetadataRoute(context)) || await handleObservationRoute(context) || await handleManagedRoute(context) || await handleReconcileRoute({ ...context, reconciler }) || await handleArtifactRoute({ ...context, artifactStore }) || await handleRoutingAdminRoute({ ...context, routingBundles }) || await handleRoutingRoute({ ...context, routingBundles }) || handleRoutingResyncRoute({ ...context, getEvent: routingEvent })) return true;
+      const context = { method: request.method, path: url.pathname, url, request, response: out, db, getStatus, getTraffic, getTelemetry, getTelemetryDetails, setDrain, bootstrap, coldBootstrap: coldBootstrap ?? getColdBootstrap?.(), coldEvidence: coldEvidence ?? getColdEvidence?.(), coldBootstrapLocal: coldBootstrapLocal ?? getColdBootstrapLocal, coldRecoveryProtocol: getColdRecoveryProtocol?.(), lifecycle, getConfig, getActiveIntent, metadata, managed, auth: root ? { root: true, scopes: ['*'] } : scoped, observations, observationStore, routingEvent, recovery, environment, dataDir, internal };
+      if (await handleStatusRoute(context) || await handleTelemetryRoute(context) || await handleIntentRoute(context) || await handleAccountRoute(context) || await handleRecoveryRoute(context) || await handleColdRecoveryRoute(context) || await handleClusterRoute(context) || await handleTrafficRoute(context) || await handleInitializationRoute(context) || (metadata && await handleMetadataRoute(context)) || await handleObservationRoute(context) || await handleManagedRoute(context) || await handleReconcileRoute({ ...context, reconciler }) || await handleArtifactRoute({ ...context, artifactStore }) || await handleRoutingAdminRoute({ ...context, routingBundles }) || await handleRoutingRoute({ ...context, routingBundles }) || handleRoutingResyncRoute({ ...context, getEvent: routingEvent })) return true;
       if (request.method === 'POST' && url.pathname === '/api/v1/credentials/lease') {
         const leaseRequest = validateCredentialLeaseRequest(await readBody(request));
         if (typeof leaseCredentials !== 'function') { out.json(501, { ok: false, operation: 'credentials.lease', error: 'credential leasing is not configured' }); return true; }

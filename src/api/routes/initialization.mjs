@@ -7,6 +7,7 @@ export async function handleInitializationRoute({
   request,
   response,
   db,
+  metadata,
   environment,
   dataDir,
 }) {
@@ -46,14 +47,15 @@ export async function handleInitializationRoute({
         statusCode: 409,
       });
     const database = "elera_meta";
-    await db.query("CREATE DATABASE IF NOT EXISTS `elera_meta`");
-    await db.query("FLUSH PRIVILEGES");
+    const data = typeof metadata?.initialize === "function"
+      ? await metadata.initialize(environment)
+      : (await db.query("CREATE DATABASE IF NOT EXISTS `elera_meta`"), await db.query("FLUSH PRIVILEGES"), { database });
     response.json(200, {
       ok: true,
       operation: "initialization.apply",
       changed: true,
       status: "completed",
-      data: { database },
+      data,
     });
     return true;
   }

@@ -1,25 +1,49 @@
 # Cold recovery contract
 
-Cold recovery is a coordinated startup mode, not a side effect of a missing
-peer. Each supervisor reads its local `grastate.dat`; when its persisted
-sequence number is `-1`, it obtains a recovered position from `wsrep-recover`.
-Supervisors exchange the complete evidence set, require matching Galera UUIDs,
-select one unique highest-sequence candidate (or the sole valid
-`safe_to_bootstrap` candidate), and derive a recovery epoch from that evidence.
+Cold recovery is a quorum-certified startup protocol. It is not inferred from
+peer absence, readiness failure, or a missing data directory.
 
-Only the candidate that acquires a quorum-backed lease for that epoch may start
-with `--wsrep-new-cluster`. Every other member starts join-only. A missing
-member, conflicting UUID, equal candidates, unavailable sequence numbers,
-stale/foreign data, or lost quorum leaves the cluster non-Primary and requires
-explicit operator recovery. No ordinary startup edits state files, deletes
-data, runs `mariadb-install-db`, forces `safe_to_bootstrap`, or invokes
-`galera_new_cluster`.
+Each supervisor publishes authenticated evidence containing its Galera UUID,
+saved and recovered sequence numbers, `safe_to_bootstrap`, data-directory
+validity, current `Primary`/`Synced` state, evidence generation, and timestamp.
+Evidence must be complete, fresh, and from the same cluster UUID.
 
-The recovery decision is persisted under the runtime state directory. The
-supervisor exposes its state through status and readiness responses. Readiness
-is not granted until the local node is `Synced` in a confirmed `Primary` view.
-If the authorized winner fails to form that view before the recovery timeout,
-the attempt is fenced, marked `cluster-unavailable`, and MariaDB is stopped.
+Supervisors select the sole valid `safe_to_bootstrap` member, or otherwise the
+highest recovered sequence number. A node-name tie-break is permitted only
+when UUID and sequence number are identical. Conflicting histories, divergent
+UUIDs, stale evidence, or insufficient quorum block recovery.
 
-Fresh initialization and destructive recovery remain explicit authenticated
-operator workflows and are separate from automatic controlled cold recovery.
+The result is an atomically persisted recovery epoch containing the cluster
+UUID, evidence digest, winner, sequence number, timestamp, and quorum members.
+Its legal progression is `evidence` → `authorized` → `bootstrapping` →
+`complete`. Blocked epochs may only be retried after fresh evidence is
+collected.
+
+Only the exact epoch’s quorum may authorize recovery, and only its winner may
+start with `--wsrep-new-cluster`. The winner must reach `Primary`, `Synced`,
+and `wsrep_ready=ON` before publishing an authenticated `bootstrap-complete`
+handoff. Joiners remain stopped until that matching handoff is observed, then
+join normally and verify UUID, SST/IST completion, membership, and `Synced`.
+
+Readiness remains `503` while recovery is pending, blocked, bootstrapping, or
+joining. Failed bootstrap, failed SST/IST, corrupted state, stale epochs, or
+lost quorum fail closed. No recovery path deletes data, runs
+`mariadb-install-db`, deletes data, or mutates a suspicious data directory
+implicitly. The explicit winner-only, quorum-authorized bootstrap step may
+promote `safe_to_bootstrap` in `grastate.dat` immediately before starting
+MariaDB with `--wsrep-new-cluster`; this is auditable and never occurs during
+ordinary startup.
+
+Recovery endpoints:
+
+- `GET /api/v1/cluster/cold-recovery/evidence`
+- `GET /api/v1/cluster/cold-recovery/status`
+- `POST /api/v1/cluster/cold-recovery/plan`
+- `POST /api/v1/cluster/cold-recovery/retry`
+- `POST /api/v1/cluster/cold-recovery/authorize`
+- `POST /api/v1/cluster/cold-recovery/bootstrap`
+- `POST /api/v1/cluster/cold-recovery/complete`
+
+Write endpoints require the recovery-write scope or authenticated internal
+peer access. Evidence, decisions, authorizations, bootstrap, join, block, and
+refusal outcomes are auditable.

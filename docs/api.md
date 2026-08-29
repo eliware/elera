@@ -216,6 +216,13 @@ verification. `elera-cli` continues to stream dumps through native
 - [x] `POST /api/v1/traffic/drain` — stop issuing local routes.
 - [x] `POST /api/v1/traffic/undrain` — resume issuing local routes.
 - [x] `GET /api/v1/recovery/status` — inspect the current cold-recovery decision state.
+- [x] `GET /api/v1/cluster/cold-recovery/evidence` — inspect fresh quorum evidence.
+- [x] `GET /api/v1/cluster/cold-recovery/status` — inspect the persisted recovery epoch.
+- [x] `POST /api/v1/cluster/cold-recovery/plan` — calculate a deterministic candidate.
+- [x] `POST /api/v1/cluster/cold-recovery/retry` — discard a blocked decision and recollect evidence.
+- [x] `POST /api/v1/cluster/cold-recovery/authorize` — authorize the exact epoch with quorum.
+- [x] `POST /api/v1/cluster/cold-recovery/bootstrap` — mark the authorized winner as bootstrapping.
+- [x] `POST /api/v1/cluster/cold-recovery/complete` — publish verified bootstrap completion.
 - [x] `GET /api/v1/recovery/events` — inspect recent recovery decisions.
 - [x] `POST /api/v1/recovery/acknowledge` — record an operator acknowledgement without granting bootstrap authority; requires `recovery:acknowledge` and `confirm: true`.
 - [x] `POST /api/v1/recovery/abort` — abort recovery and mark the cluster unavailable; requires `recovery:abort` and `confirm: true`.

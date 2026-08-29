@@ -8,7 +8,7 @@ async function readRequestBody(request) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-export function createStartupEvidenceServer({ port, evidence, lease, token, log = {} } = {}) {
+export function createStartupEvidenceServer({ port, evidence, lease, completion, token, log = {} } = {}) {
   if (!Number.isInteger(port) || typeof evidence !== 'function') throw new TypeError('startup evidence server dependencies are required');
   const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && request.url === '/healthz') { response.writeHead(200, { 'content-type': 'text/plain' }).end('ok\n'); return; }
@@ -21,6 +21,13 @@ export function createStartupEvidenceServer({ port, evidence, lease, token, log 
         const data = await lease.claim(JSON.parse(body));
         response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true, data }));
       } catch (error) { response.writeHead(error.statusCode ?? 400).end(JSON.stringify({ ok: false, error: error.message })); }
+      return;
+    }
+    if (request.method === 'GET' && request.url === '/api/v1/cluster/cold-bootstrap/completion') {
+      if (token && request.headers.authorization !== `Bearer ${token}`) { response.writeHead(401).end(); return; }
+      const data = completion?.read();
+      if (!data) { response.writeHead(404).end(); return; }
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true, data }));
       return;
     }
     if (request.method !== 'GET' || request.url !== '/api/v1/cluster/cold-bootstrap/evidence') { response.writeHead(404).end(); return; }
