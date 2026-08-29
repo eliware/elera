@@ -1,5 +1,22 @@
 import { jest } from '@jest/globals';
-import { createRoutingBundleService } from '../src/routing/bundle-service.mjs';
+import { createRoutingBundleService as createProductionRoutingBundleService } from '../src/routing/bundle-service.mjs';
+
+function createRoutingBundleService(options = {}) {
+  const values = new Map();
+  const assignmentStore = options.assignmentStore ?? {
+    get: async (application) => values.get(application),
+    set: async (application, node) => { values.set(application, node); return node; },
+    peek: (application) => values.get(application),
+  };
+  return createProductionRoutingBundleService({ ...options, assignmentStore });
+}
+
+test('builds the persistent assignment store from configured paths', () => {
+  const dependencies = { managed: { lease: async () => ({}) }, observationStore: { snapshot: () => [] } };
+  expect(createProductionRoutingBundleService({ ...dependencies, environment: { ELERA_ASSIGNMENTS_PATH: 'assignments.json' } })).toBeDefined();
+  expect(createProductionRoutingBundleService({ ...dependencies, environment: { MARIADB_DATA_DIR: 'mysql' } })).toBeDefined();
+  expect(createProductionRoutingBundleService({ ...dependencies, environment: {} })).toBeDefined();
+});
 
 test('combines managed credentials with current eligible routes', async () => {
   const service = createRoutingBundleService({ managed: { lease: async () => ({ application: 'app', database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'fallback', port: 3306 }], balanced: [{ host: 'fallback', port: 3306 }] }, expiresAt: '2099-01-01T00:00:00Z' }) }, observationStore: { snapshot: () => [{ nodeId: 'n', address: 'node', sqlPort: 3306, synced: true, primary: 'Primary', health: 'ok', observedAt: Date.now() }] } });
