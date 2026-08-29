@@ -31,6 +31,12 @@ directory causes startup to fail closed.
 `/healthz` is a liveness endpoint and returns `200 ok` while the supervisor
 process is alive. `/readyz` returns `200` only when MariaDB is accepting work
 and the local readiness policy is satisfied; otherwise it returns `503`.
+During cold recovery it remains `503` for `pending`, `collecting-evidence`,
+`awaiting-quorum`, `cluster-unavailable`, and `blocked-ambiguous`.
+
+Cold-recovery state is included in status responses as `recovery.state` and
+uses `pending`, `collecting-evidence`, `awaiting-quorum`, `recovery-authorized`,
+`bootstrapping`, `joining`, `cluster-unavailable`, or `blocked-ambiguous`.
 
 ## Startup and lifecycle
 
@@ -43,8 +49,10 @@ and the local readiness policy is satisfied; otherwise it returns `503`.
   existing directory.
 - Bootstrap: explicit operator-controlled workflow only; it is never inferred
   from peer absence or readiness failure.
-- Recovery: explicit operator-controlled workflow only, with quorum/authority
-  checks performed by the supervisor.
+- Recovery: a controlled cold-start coordinator may recover automatically only
+  after collecting quorum-backed evidence and acquiring a single-winner
+  recovery lease. Ambiguous evidence remains blocked and requires an explicit
+  operator-controlled recovery workflow.
 - Shutdown lifecycle: the supervisor transitions through serving, draining,
   stopping, and stopped. On SIGTERM it marks readiness failed, removes itself
   from locally issued routes, broadcasts routing.drain, and lets
@@ -72,7 +80,9 @@ stale or corrupted data.
 
 Failed SST/IST, non-Primary state, stale/corrupt data, and insufficient or
 read-only storage result in readiness failure or process failure and require
-operator-controlled recovery. They do not trigger automatic cluster bootstrap.
+operator-controlled recovery unless a valid, quorum-backed cold-start decision
+authorizes exactly one winner. Provider-level automatic primary recovery is
+disabled to prevent concurrent bootstrap attempts.
 
 ## Configuration and secrets
 

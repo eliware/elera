@@ -99,6 +99,9 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [x] `GET /api/v1/routing/bundle` — return the complete credential and routing snapshot.
 - [x] `GET /api/v1/routing/stream` — upgrade to the authenticated routing WebSocket.
 - [x] `GET /api/v1/routing/resync` — return a current snapshot after reconnect.
+- [x] `GET /api/v1/routing/validate` — validate the authenticated application's current bundle and eligible route set.
+- [x] `GET /api/v1/routing/events` — inspect the latest in-memory routing event for an application.
+- [x] `POST /api/v1/routing/rebalance` — explicitly invalidate and recalculate one application's assignment; requires `routing:rebalance` and `confirm: true`.
 
 Bundles contain the database, identity, usable credentials, machine FQDNs on
 port `3306`, ordered writer and reader candidates, weights, a
@@ -212,6 +215,10 @@ verification. `elera-cli` continues to stream dumps through native
 - [x] `GET /api/v1/traffic/status` — inspect local eligibility and drain state.
 - [x] `POST /api/v1/traffic/drain` — stop issuing local routes.
 - [x] `POST /api/v1/traffic/undrain` — resume issuing local routes.
+- [x] `GET /api/v1/recovery/status` — inspect the current cold-recovery decision state.
+- [x] `GET /api/v1/recovery/events` — inspect recent recovery decisions.
+- [x] `POST /api/v1/recovery/acknowledge` — record an operator acknowledgement without granting bootstrap authority; requires `recovery:acknowledge` and `confirm: true`.
+- [x] `POST /api/v1/recovery/abort` — abort recovery and mark the cluster unavailable; requires `recovery:abort` and `confirm: true`.
 - [ ] `POST /api/v1/maintenance/start` — drain and enter maintenance.
 - [ ] `POST /api/v1/maintenance/stop` — exit maintenance safely.
 

@@ -31,7 +31,7 @@ REST is the management and recovery interface. The preferred routing channel
 is an authenticated WebSocket through the same HTTP VIP:
 
 ```text
-GET       /api/v1/routing/bundle
+GET       /api/v1/routing/bundle[?identity=<root-token-selector>]
 WebSocket /api/v1/routing/stream
 POST      /api/v1/routing/resync
 ```
@@ -41,6 +41,11 @@ recovery events, credential rotation notices, and heartbeats. It never carries
 SQL. SQL uses direct MariaDB connections on port `3306`. If the stream fails,
 the library reconnects with backoff and refreshes through REST before the
 current bundle expires.
+
+Scoped bearer tokens are self-describing: the supervisor resolves the token's
+application and identity (and therefore its database and credential) without
+an identity query parameter. A root token may select an identity explicitly;
+an identity selector that conflicts with a scoped token is rejected.
 
 On graceful node shutdown, the supervisor publishes a drain event, stops
 accepting new SQL work, allows active queries and transactions to complete,

@@ -42,6 +42,18 @@ import { createColdBootstrapEvidence } from "./cluster/cold-bootstrap/peer-evide
 import { createColdBootstrapCoordinator } from "./cluster/cold-bootstrap/coordinator.mjs";
 import { createColdBootstrapAction } from "./cluster/cold-bootstrap/action.mjs";
 import { shutdownCondition } from "./cluster/shutdown-condition.mjs";
+import { createStartupRecoveryDecision } from "./cluster/cold-bootstrap/startup-decision.mjs";
+import { createStartupEvidenceServer } from "./cluster/cold-bootstrap/startup-evidence-server.mjs";
+import { createStartupLocalEvidence } from "./cluster/cold-bootstrap/startup-local-evidence.mjs";
+import { createRecoveryDecisionStore } from "./cluster/cold-bootstrap/decision-store.mjs";
+import { createRecoveryLease } from "./cluster/cold-bootstrap/lease.mjs";
+import { readStateFile } from "./cluster/cold-bootstrap/state-file.mjs";
+import { spawn } from "node:child_process";
+import { createRecoveryState } from "./cluster/cold-bootstrap/recovery-state.mjs";
+import { createRecoveryControl } from "./recovery/control.mjs";
+import { createRecoveryAudit } from "./cluster/cold-bootstrap/audit.mjs";
+import { createBootstrapWatch } from "./cluster/cold-bootstrap/bootstrap-watch.mjs";
+import { startupArguments } from "./cluster/cold-bootstrap/startup-arguments.mjs";
 
 const config = loadSupervisorConfig();
 const identity = runtimeIdentity();
@@ -62,6 +74,9 @@ let shuttingDown = false;
 let restarting = false;
 const lifecycle = createLifecycleState({ initial: "serving", onChange: (state) => { telemetry.recordEvent(`lifecycle.${state}`); log.info("Supervisor lifecycle changed", { state }); } });
 const telemetry = createTelemetryCollector();
+const recoveryState = createRecoveryState(config.elera ? 'pending' : 'joining');
+const recovery = createRecoveryControl({ state: recoveryState, log });
+const recoveryAudit = createRecoveryAudit(log);
 let bootstrapMaria;
 let coldBootstrapLocal;
 let coldBootstrapService;
@@ -83,6 +98,7 @@ const health = createHealthService({
   elera: config.elera,
   clusterSize: config.clusterSize,
   getTelemetry: () => telemetry.summary(),
+  getRecoveryState: () => recoveryState.snapshot(),
   log,
 });
 const intentState = createIntentState({
@@ -141,7 +157,8 @@ const routingStream = createRoutingStream({
     if (!supplied) return false;
     if (process.env.ROOT_TOKEN && supplied === process.env.ROOT_TOKEN) return true;
     const auth = await metadata?.authenticate?.(supplied);
-    return Boolean(auth && (!auth.application || auth.application === application));
+    if (!auth || (application && auth.application && auth.application !== application)) return false;
+    return auth;
   },
   getEvent: routingEvent,
   bus: routingBus,
@@ -178,6 +195,7 @@ const control = createControlApi({
   artifactStore,
   routingBundles,
   routingEvent,
+  recovery,
   observationStore,
   lifecycle: createLifecycleManager({
     status: () => health.status(),
@@ -259,13 +277,48 @@ async function main() {
   // defaults may not describe the deployed cluster.
   routingEnvironment.ELERA_CLUSTER_SIZE = String(initialIntent.cluster.members.length);
   await intentState.apply(initialIntent);
-  const args = mariaDbArguments({
+  let args = mariaDbArguments({
     ...config,
     intentConfigPath: intentState.paths.renderedPath,
   });
   const localEvidence = createColdBootstrapEvidence({ localNode: identity, dataDir: config.dataDir, health, token: process.env.ROOT_TOKEN, log });
   coldEvidence = localEvidence.local;
   const members = initialIntent.cluster.members.map((member) => ({ ...member, local: member.name === identity.name, url: `http://${member.address}:${config.httpPort}` }));
+  let startupDecision = { mode: 'standalone', reason: 'single-node configuration' };
+  if (config.elera) {
+    recoveryState.set('collecting-evidence');
+    const startupEvidence = createStartupLocalEvidence({ node: identity, dataDir: config.dataDir, readState: (directory) => readStateFile(directory), runRecover: (directory) => runWsrepRecover(directory) });
+    const startupServer = createStartupEvidenceServer({ port: config.httpPort, token: process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN, evidence: startupEvidence, lease: createRecoveryLease('/run/elera/cold-recovery.lease'), log });
+    await startupServer.listen();
+    startupDecision = await createStartupRecoveryDecision({
+      nodes: members,
+      expectedNodeCount: initialIntent.cluster.members.length,
+      localEvidence: startupEvidence,
+      fetchEvidence: (node) => fetch(`${node.url}/api/v1/cluster/cold-bootstrap/evidence`, { headers: { authorization: `Bearer ${process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN}` }, signal: AbortSignal.timeout(config.timeoutMs) }).then(async (response) => { if (!response.ok) throw new Error(`peer returned ${response.status}`); return (await response.json()).data; }),
+    })();
+    recoveryAudit.evidence({ nodes: startupDecision.evidence?.length ?? 0, mode: startupDecision.mode });
+    if (startupDecision.winner) recoveryAudit.winner({ winner: startupDecision.winner, epoch: startupDecision.epoch });
+    recoveryState.set(startupDecision.mode === 'bootstrap' ? 'awaiting-quorum' : startupDecision.mode === 'join' ? 'joining' : 'blocked-ambiguous', { reason: startupDecision.reason, epoch: startupDecision.epoch });
+    await createRecoveryDecisionStore(process.env.ELERA_RECOVERY_DECISION_PATH ?? '/run/elera/cold-recovery.json').write(startupDecision);
+    if (startupDecision.localWinner === true && startupDecision.mode === 'bootstrap') {
+      const claims = await Promise.all(members.map(async (node) => {
+        const url = node.local ? `http://127.0.0.1:${config.httpPort}` : node.url;
+        try { const response = await fetch(`${url}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { authorization: `Bearer ${process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify({ epoch: startupDecision.epoch, winner: startupDecision.winner }), signal: AbortSignal.timeout(config.timeoutMs) }); const granted = response.ok && (await response.json()).data?.granted === true; recoveryAudit.lease({ node: node.name, granted, epoch: startupDecision.epoch }); return granted; } catch { recoveryAudit.lease({ node: node.name, granted: false, epoch: startupDecision.epoch }); return false; }
+      }));
+      if (claims.filter(Boolean).length >= Math.floor(members.length / 2) + 1) {
+        recoveryState.set('recovery-authorized', { reason: startupDecision.reason, epoch: startupDecision.epoch });
+        recoveryAudit.authorization({ winner: startupDecision.winner, epoch: startupDecision.epoch });
+        args = startupArguments(mariaDbArguments({ ...config, intentConfigPath: intentState.paths.renderedPath, environment: { ...config.environment, ELERA_CLUSTER_BOOTSTRAP: 'true' } }), startupDecision);
+      } else {
+        startupDecision = { ...startupDecision, mode: 'blocked', reason: 'recovery lease quorum was not acquired' };
+        recoveryState.set('blocked-ambiguous', { reason: startupDecision.reason, epoch: startupDecision.epoch });
+        log.warn('Cold recovery bootstrap refused without lease quorum', { epoch: startupDecision.epoch });
+      }
+    }
+    await startupServer.close();
+  }
+  if (config.elera && startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true) recoveryState.set('bootstrapping', { epoch: startupDecision.epoch });
+  log.info('Startup recovery decision completed', { mode: startupDecision.mode, winner: startupDecision.winner, epoch: startupDecision.epoch, reason: startupDecision.reason });
   coldBootstrapService = createColdBootstrapCoordinator({
     nodes: members,
     local: localEvidence.local,
@@ -283,6 +336,8 @@ async function main() {
     args,
     log,
     onUnexpectedExit: (code) => {
+      if (config.elera) recoveryState.set('cluster-unavailable', { reason: `mariadbd exited with ${code ?? 'unknown'}` });
+      if (config.elera) recoveryAudit.failure({ reason: `mariadbd exited with ${code ?? 'unknown'}` });
       if (!restarting && !shuttingDown) process.exit(code ?? 1);
     },
   });
@@ -315,7 +370,18 @@ async function main() {
     }
     return result;
   };
-  mariaProcess.start().catch((error) => {
+  mariaProcess.start().then(() => {
+    if (config.elera && startupDecision.mode === 'join') recoveryState.set('joining', { reason: startupDecision.reason });
+    if (config.elera && startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true) void createBootstrapWatch({
+      health,
+      timeoutMs: config.startupTimeoutMs,
+      onTimeout: async () => {
+        recoveryState.set('cluster-unavailable', { reason: 'bootstrap did not form a ready Primary view before timeout', epoch: startupDecision.epoch });
+        recoveryAudit.failure({ reason: 'bootstrap readiness timeout', epoch: startupDecision.epoch });
+        await mariaProcess.stop(config.shutdownTimeoutMs);
+      },
+    })();
+  }).catch((error) => {
     log.error("Failed to start mariadbd", { error });
     void signals.shutdown("mariadbd-error");
   });
@@ -395,6 +461,17 @@ async function main() {
     void publish();
   }
   log.info("Elera supervisor started");
+}
+
+function runWsrepRecover(directory) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('mariadbd', [`--datadir=${directory}`, '--user=mysql', '--skip-networking', '--wsrep-recover'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '';
+    child.stdout.on('data', (value) => { output += value; });
+    child.stderr.on('data', (value) => { output += value; });
+    child.once('error', reject);
+    child.once('exit', (code) => code === 0 ? resolve(output) : reject(new Error(`mariadbd wsrep recovery exited with ${code}`)));
+  });
 }
 main().catch((error) => {
   log.error("Supervisor startup failed", { error });

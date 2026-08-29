@@ -11,7 +11,8 @@ test('manages databases, identities, and scoped tokens without exposing policy S
   expect(await managed.listDatabases()).toHaveLength(1); expect(await managed.listIdentities('payments')).toHaveLength(1);
   const token = await managed.issueToken({ tokenName: 'app-token', application: 'payments', identity: 'runtime', scopes: ['database:read'] });
   expect(token.token).toBeTruthy(); expect((await managed.authenticate(token.token)).scopes).toEqual(['database:read']); expect(await managed.revokeToken('app-token')).toEqual({ name: 'app-token', revoked: true }); expect(await managed.revokeIdentity('runtime')).toEqual({ identity: 'runtime', revoked: true }); expect(calls.some((sql) => sql.includes('CREATE DATABASE'))).toBe(true);
-  await managed.issueToken({ tokenName: 'global-token' });
+  await expect(managed.issueToken({ tokenName: 'wrong-app-token', application: 'other', identity: 'runtime' })).rejects.toThrow('does not belong to application');
+  await expect(managed.issueToken({ tokenName: 'global-token' })).rejects.toThrow('application is invalid');
 });
 
 test('normalizes array and serialized grants when listing identities', async () => {
@@ -38,6 +39,7 @@ test('validates managed names, purposes, and grants', async () => {
   const unconfigured = createManagedMetadata({ query: async () => [[]] }); await expect(unconfigured.createIdentity({ application: 'app', databaseName: 'db', identity: 'id' })).rejects.toThrow('encryption'); await expect(unconfigured.rotateIdentity('id')).rejects.toThrow('encryption'); await expect(unconfigured.lease({ identity: 'id' })).rejects.toThrow('encryption');
   const rotating = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => sql.includes('SELECT username') ? [[{ username: 'payments_runtime' }]] : [[]] }); expect((await rotating.rotateIdentity('runtime')).rotated).toBe(true);
   const missingIdentity = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(missingIdentity.rotateIdentity('runtime')).rejects.toThrow('identity not found');
+  const tokenIdentityMissing = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(tokenIdentityMissing.issueToken({ tokenName: 'token', application: 'app', identity: 'id' })).rejects.toThrow('identity not found');
   const sealed = createSecretBox('test-key').seal('password'); const leasing = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[{ application: 'payments', database: 'billing', username: 'payments_runtime', credential_ciphertext: sealed }]] }); expect((await leasing.lease({ identity: 'runtime' })).password).toBe('password');
   const missingLease = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(missingLease.lease({ identity: 'runtime' })).rejects.toThrow('identity not found');
 });

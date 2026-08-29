@@ -7,7 +7,9 @@ export function createRoutingStream({ token, authorize, nodeIdentity, getEvent, 
   server.on('connection', (socket, request) => {
     if (stopping) { socket.close(1012, 'supervisor restarting'); return; }
     sockets.add(socket);
-    const application = new URL(request.url, 'http://localhost').searchParams.get('application') ?? 'default';
+    const application = request.eleraAuthorization?.application
+      ?? new URL(request.url, 'http://localhost').searchParams.get('application')
+      ?? 'default';
     const client = { send: (event) => socket.readyState === 1 && socket.send(JSON.stringify(event)), ping: () => socket.ping() };
     const unsubscribe = bus.subscribe(client, (event) => !event.application || event.application === application);
     const initial = getEvent(application); if (initial) client.send(initial);
@@ -20,8 +22,9 @@ export function createRoutingStream({ token, authorize, nodeIdentity, getEvent, 
     const supplied = request.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? new URL(request.url, 'http://localhost').searchParams.get('token');
     const url = new URL(request.url, 'http://localhost');
     if (!url.pathname.startsWith('/api/v1/routing/stream')) return false;
-    const permitted = authorize ? await authorize(supplied, url.searchParams.get('application') ?? 'default') : Boolean(token && supplied === token);
+    const permitted = authorize ? await authorize(supplied, url.searchParams.get('application')) : Boolean(token && supplied === token);
     if (!permitted) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); socket.destroy(); return false; }
+    request.eleraAuthorization = permitted;
     server.handleUpgrade(request, socket, head, (client) => server.emit('connection', client, request)); return true;
   }
   async function shutdown(event = {}, { code = 1012, reason = 'supervisor restarting' } = {}) {

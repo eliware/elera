@@ -50,3 +50,40 @@ test('handles authentication, unavailable services, and request errors', async (
   const rawErrorOut = response(); const rawFailing = makeApi({ getStatus: async () => { throw 'raw status failure'; } }); await rawFailing.handler(authorizedRequest('GET', '/api/v1/cluster/status'), rawErrorOut); expect(rawErrorOut.status).toBe(500);
   const scopedApi = makeApi({ metadata: { authenticate: async () => ({ scopes: ['metadata:read'] }) } }); const scopedRequest = { ...request('GET', '/api/v1/unknown'), headers: { authorization: 'Bearer scoped-token' } }; const scopedOut = response(); await scopedApi.handler(scopedRequest, scopedOut); expect(scopedOut.status).toBe(404);
 });
+
+test('exposes recovery and routing administration through the authenticated API', async () => {
+  const recovery = {
+    status: jest.fn(() => ({ state: 'pending' })),
+    events: jest.fn(() => []),
+    acknowledge: jest.fn(() => ({ state: 'recovery-authorized' })),
+    abort: jest.fn(() => ({ state: 'cluster-unavailable' })),
+  };
+  const routingBundles = {
+    validate: jest.fn(async ({ application }) => ({ valid: true, application })),
+    rebalance: jest.fn(async ({ application }) => ({ recalculated: true, application })),
+  };
+  const api = createControlApi({
+    environment: { ROOT_TOKEN: 'root' },
+    recovery,
+    routingBundles,
+    routingEvent: () => ({ type: 'routing.update', version: 1 }),
+  });
+  const authorized = (method, url, body = {}) => ({ ...request(method, url, body), headers: { authorization: 'Bearer root' } });
+  for (const [method, url, body] of [
+    ['GET', '/api/v1/recovery/status'],
+    ['GET', '/api/v1/recovery/events'],
+    ['POST', '/api/v1/recovery/acknowledge', { confirm: true }],
+    ['POST', '/api/v1/recovery/abort', { confirm: true }],
+    ['GET', '/api/v1/routing/validate?application=app'],
+    ['GET', '/api/v1/routing/events?application=app'],
+    ['POST', '/api/v1/routing/rebalance', { confirm: true, application: 'app' }],
+  ]) {
+    const out = response();
+    await api.handler(authorized(method, url, body), out);
+    expect(out.status).toBeGreaterThanOrEqual(200);
+  }
+  expect(recovery.acknowledge).toHaveBeenCalled();
+  expect(recovery.abort).toHaveBeenCalled();
+  expect(routingBundles.validate).toHaveBeenCalledWith({ application: 'app', identity: undefined });
+  expect(routingBundles.rebalance).toHaveBeenCalledWith({ confirm: true, application: 'app', identity: undefined });
+});

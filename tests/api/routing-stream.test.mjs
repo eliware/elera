@@ -24,8 +24,22 @@ test('supports asynchronous scoped-token authorization by application', async ()
   expect(authorize).toHaveBeenCalledWith('wrong', 'payments');
   const defaultRejected = { write: jest.fn(), destroy: jest.fn() };
   await stream.upgrade({ headers: { authorization: 'Bearer wrong' }, url: '/api/v1/routing/stream' }, defaultRejected, Buffer.alloc(0));
-  expect(authorize).toHaveBeenCalledWith('wrong', 'default');
+  expect(authorize).toHaveBeenLastCalledWith('wrong', null);
   stream.close();
+});
+
+test('uses the application resolved by the token when no selector is supplied', async () => {
+  const websocketServer = new WebSocketServer({ noServer: true });
+  const subscribe = jest.fn(() => () => {});
+  const getEvent = jest.fn((application) => ({ type: 'routing.update', application }));
+  const stream = createRoutingStream({ getEvent, bus: { subscribe }, websocketServer });
+  const request = { url: '/api/v1/routing/stream', eleraAuthorization: { application: 'billing', database: 'ledger' } };
+  websocketServer.emit('connection', { readyState: 1, send: jest.fn(), on: jest.fn(), ping: jest.fn(), close: jest.fn() }, request);
+  expect(getEvent).toHaveBeenCalledWith('billing');
+  expect(subscribe).toHaveBeenCalledWith(expect.anything(), expect.any(Function));
+  expect(stream.isStopping()).toBe(false);
+  stream.close();
+  websocketServer.close();
 });
 
 test('rejects the default authorizer when no root token is configured', async () => {

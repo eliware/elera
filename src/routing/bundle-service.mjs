@@ -24,6 +24,23 @@ export function createRoutingBundleService({ managed, observationStore, environm
       const selected = routes.balanced.length ? routes : fallback;
       const address = clientSqlAddress(environment);
       return connectionBundleFromConfig({ ...result, routes: { primary: selected.primary, balanced: selected.balanced }, writer: selected.writer, failover: selected.failover, readers: selected.readers, bundleVersion: routes.balanced.length ? routes.bundleVersion : (result.bundleVersion ?? 1), nodeIdentity: { name: address, address }, ports: { sql: Number(environment.ELERA_NODE_SQL_PORT ?? 3306), http: Number(environment.ELERA_HTTP_PORT ?? 8080) } });
-    }
+    },
+    async validate(request = {}) {
+      let bundle;
+      try {
+        bundle = await this.lease(request);
+      } catch (error) {
+        return { valid: false, error: error.message };
+      }
+      const routes = bundle.routes;
+      const valid = Boolean(bundle.application && bundle.database && bundle.bundleVersion && Array.isArray(routes.primary) && Array.isArray(routes.balanced));
+      return { valid, application: bundle.application, database: bundle.database, bundleVersion: bundle.bundleVersion, writer: bundle.writer ?? null, routeCount: routes.balanced.length };
+    },
+    async rebalance(request = {}) {
+      const key = request.application ?? 'default';
+      cache.delete(key);
+      const bundle = await this.lease(request);
+      return { bundle, recalculated: true };
+    },
   };
 }

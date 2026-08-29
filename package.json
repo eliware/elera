@@ -36,12 +36,11 @@
         "test": "eliware-test",
         "lint": "eliware-test --lint",
         "audit": "npm audit --omit=dev --audit-level=moderate",
-        "pack": "npm pack --dry-run",
-        "test:e2e:rolling": "node docker/e2e/rolling-restart.mjs"
+        "pack": "npm pack --dry-run"
     },
     "dependencies": {
         "@eliware/common": "2.0.0",
-        "@eliware/elera-lib": "^0.1.8",
+        "@eliware/elera-lib": "0.1.11",
         "@eliware/snowflake": "^2.0.0",
         "ws": "^8.21.3"
     },
@@ -49,12 +48,6 @@
         "@eliware/test": "2.0.0",
         "ajv": "^8.20.0",
         "ajv-formats": "^3.0.1"
-    },
-    "jest": {
-        "coveragePathIgnorePatterns": [
-            "<rootDir>/docker/e2e/",
-            "<rootDir>/docker/backup-dev-e2e.mjs"
-        ]
     },
     "allowScripts": {
         "unrs-resolver@1.12.2": true

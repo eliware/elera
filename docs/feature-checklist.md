@@ -34,7 +34,7 @@ documented. Every sprint ends with an interoperability smoke test.
 ### Sprint 1 certification evidence
 
 - Production image builds from the Elera repository context with the published
-  `@eliware/elera-lib@0.1.0` resolved from npm.
+  `@eliware/elera-lib@0.1.11` resolved from npm.
 - The standalone supervisor exposes `/healthz` before MariaDB is ready and
   issues an advertised `elera-single:3306` bundle to remote consumers.
 - `elera-cli sql-smoke` passes from the separate `backup-dev` container through
@@ -166,7 +166,8 @@ Sprint 5 runtime evidence: the Docker lab applied `elera_meta` migrations 1–3,
 provisioned the `payments` database and `runtime` identity, issued an encrypted
 credential lease with direct-node routes, authenticated a direct MariaDB query,
 and ran `elera-cli database-list` plus `sql-smoke` successfully from the
-backup-dev container.
+  backup-dev container. The executable lab harness for these scenarios is now
+  maintained in the separate `elera-lab` repository.
 
 ## Sprint 6 — Routing decisions and REST bundles
 
@@ -295,7 +296,7 @@ are intentionally deferred to the Kubernetes deployment phase.
 
 - [ ] Migrate an internal application from `@eliware/mysql` to generic `@eliware/elera-lib`.
 - [ ] Validate writer assignment, reader failover, supervisor failure, event-stream fallback, and graceful drains.
-- [ ] Replace local links with released package versions and verify package/image contents.
+- [x] Replace local links with released package versions and verify package/image contents.
 
 ### Release interoperability
 

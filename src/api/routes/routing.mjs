@@ -35,6 +35,7 @@ export async function handleRoutingRoute({
   observationStore,
   routingBundles,
   routingEvent,
+  auth,
   getStatus,
   environment,
   fetchImpl,
@@ -99,15 +100,20 @@ export async function handleRoutingRoute({
     return true;
   }
   if (path === "/api/v1/routing/bundle" && method === "GET") {
-    const identity = url.searchParams.get("identity");
+    const requestedIdentity = url.searchParams.get("identity");
+    const identity = requestedIdentity ?? auth?.identity;
     if (!identity)
       throw Object.assign(new Error("identity is required"), {
         statusCode: 400,
       });
+    if (requestedIdentity && auth?.identity && requestedIdentity !== auth.identity)
+      throw Object.assign(new Error("identity is not authorized for this token"), {
+        statusCode: 403,
+      });
     response.json(200, {
       ok: true,
       operation: "routing.bundle",
-      data: await routingBundles.lease({ identity }),
+      data: await routingBundles.lease({ identity, application: auth?.application }),
     });
     return true;
   }
