@@ -128,3 +128,14 @@ test('closes a client when the shutdown notification cannot be sent', async () =
   expect(socket.close).toHaveBeenCalledWith(1012, 'SIGTERM');
   websocketServer.close();
 });
+
+test('skips notification for an already-closed client', async () => {
+  const websocketServer = new WebSocketServer({ noServer: true });
+  const stream = createRoutingStream({ token: 'secret', getEvent: () => undefined, bus: bus(), websocketServer });
+  const socket = { readyState: 0, close: jest.fn(), on: jest.fn(), send: jest.fn(), ping: jest.fn() };
+  websocketServer.emit('connection', socket, { url: '/api/v1/routing/stream' });
+  await stream.shutdown();
+  expect(socket.send).not.toHaveBeenCalled();
+  expect(socket.close).not.toHaveBeenCalled();
+  websocketServer.close();
+});
