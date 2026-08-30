@@ -94,6 +94,9 @@ Breaking changes require a new API version.
 
 ```http
 Authorization: Bearer <token>
+
+The bearer token is required in the WebSocket handshake `Authorization` header.
+Query-string token authentication is not supported.
 ```
 
 `ROOT_TOKEN` is a break-glass credential for first boot, cluster bootstrap,

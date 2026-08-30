@@ -19,7 +19,7 @@ export function createRoutingStream({ token, authorize, nodeIdentity, getEvent, 
   });
   async function upgrade(request, socket, head) {
     if (stopping) { socket.write('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n'); socket.destroy(); return false; }
-    const supplied = request.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? new URL(request.url, 'http://localhost').searchParams.get('token');
+    const supplied = request.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
     const url = new URL(request.url, 'http://localhost');
     if (!url.pathname.startsWith('/api/v1/routing/stream')) return false;
     const permitted = authorize ? await authorize(supplied, url.searchParams.get('application')) : Boolean(token && supplied === token);

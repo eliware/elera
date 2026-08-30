@@ -40,7 +40,7 @@
     },
     "dependencies": {
         "@eliware/common": "2.0.0",
-        "@eliware/elera-lib": "^0.3.0",
+        "@eliware/elera-lib": "^0.3.1",
         "@eliware/snowflake": "^2.0.0",
         "mysql2": "^3.24.2",
         "ws": "^8.21.3"

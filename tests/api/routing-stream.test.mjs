@@ -81,14 +81,14 @@ test('broadcasts shutdown before closing an established client', async () => {
   await new Promise((resolve) => server.close(resolve));
 });
 
-test('accepts query-token clients and handles telemetry and closed sockets', async () => {
+test('requires header-authenticated clients and handles telemetry and closed sockets', async () => {
   const telemetry = { accept: jest.fn(() => { throw new Error('bad telemetry'); }) };
   const logger = { warn: jest.fn() };
   const stream = createRoutingStream({ token: 'secret', getEvent: () => undefined, bus: bus(), telemetry, log: logger });
   const server = http.createServer();
   server.on('upgrade', (request, socket, head) => stream.upgrade(request, socket, head));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const client = new WebSocket(`ws://127.0.0.1:${server.address().port}/api/v1/routing/stream?token=secret`);
+  const client = new WebSocket(`ws://127.0.0.1:${server.address().port}/api/v1/routing/stream`, { headers: { authorization: 'Bearer secret' } });
   await new Promise((resolve, reject) => { client.once('open', resolve); client.once('error', reject); });
   client.send('not-json');
   await new Promise((resolve) => setImmediate(resolve));
