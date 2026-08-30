@@ -325,7 +325,7 @@ async function main() {
     await startupServer.listen();
     const recoveryPlan = await coldRecoveryProtocol.plan();
     startupDecision = recoveryPlan.mode === 'join'
-      ? { mode: 'join', reason: recoveryPlan.reason, epoch: null, evidence: recoveryPlan.evidence }
+      ? { mode: 'join', reason: recoveryPlan.reason, epoch: null, bootstrapComplete: true, evidence: recoveryPlan.evidence }
       : recoveryPlan.eligible
         ? { mode: 'bootstrap', winner: recoveryPlan.winner.node, localWinner: recoveryPlan.winner.node === identity.name, reason: recoveryPlan.reason, epoch: recoveryPlan.epoch, recoveryEpoch: recoveryPlan, evidence: recoveryPlan.evidence }
         : { mode: 'blocked', reason: recoveryPlan.reason, epoch: null, evidence: recoveryPlan.evidence };

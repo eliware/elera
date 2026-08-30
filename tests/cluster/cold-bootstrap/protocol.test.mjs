@@ -28,7 +28,7 @@ test('requires the exact epoch and quorum before authorization', async () => {
   const plan = await protocol.plan();
   await expect(protocol.authorize({ epoch: 'stale', acknowledgements: ['a', 'b'] })).rejects.toMatchObject({ statusCode: 409 });
   await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a'] })).rejects.toThrow('quorum');
-  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] })).resolves.toMatchObject({ phase: 'authorized', acknowledgements: 2 });
+  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] })).resolves.toMatchObject({ phase: 'authorized', acknowledgements: new Set(['a', 'b']) });
 });
 
 test('rejects stale or malformed evidence before candidate selection', async () => {

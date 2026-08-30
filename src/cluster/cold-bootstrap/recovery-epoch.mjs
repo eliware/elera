@@ -18,12 +18,12 @@ export function transitionRecoveryEpoch(epoch, phase, details = {}) {
   if (!epoch || !phases.has(phase)) throw new TypeError('valid recovery epoch and phase are required');
   if (phase !== epoch.phase && !transitions.get(epoch.phase)?.has(phase)) throw Object.assign(new Error(`invalid recovery epoch transition: ${epoch.phase} -> ${phase}`), { code: 'INVALID_RECOVERY_EPOCH_TRANSITION' });
   if (phase === 'authorized') {
-    const acknowledgements = Array.isArray(details.acknowledgements) ? details.acknowledgements.length : Number(details.acknowledgements);
-    if (!Number.isInteger(acknowledgements) || acknowledgements < Math.floor(epoch.quorum.length / 2) + 1) throw new Error('recovery epoch lacks quorum authorization');
-    if (Array.isArray(details.acknowledgements)) {
-      const members = new Set(epoch.quorum);
-      if (details.acknowledgements.some((node) => !members.has(node))) throw new Error('recovery epoch contains an unknown quorum member');
-    }
+    if (!Array.isArray(details.acknowledgements)) throw new Error('recovery epoch requires identified quorum acknowledgements');
+    const acknowledgements = new Set(details.acknowledgements);
+    const members = new Set(epoch.quorum);
+    if (acknowledgements.size < Math.floor(epoch.quorum.length / 2) + 1) throw new Error('recovery epoch lacks quorum authorization');
+    if ([...acknowledgements].some((node) => !members.has(node))) throw new Error('recovery epoch contains an unknown quorum member');
+    if (acknowledgements.size !== details.acknowledgements.length) throw new Error('recovery epoch contains duplicate quorum acknowledgements');
     return { ...epoch, ...details, acknowledgements, phase, updatedAt: new Date().toISOString() };
   }
   if (phase === 'complete' && details.clusterId !== epoch.clusterId) throw new Error('recovery completion cluster identity mismatch');

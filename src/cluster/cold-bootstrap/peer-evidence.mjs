@@ -13,10 +13,12 @@ export function createColdBootstrapEvidence({ localNode, dataDir, health, fetchI
     const status = await health.status().catch(() => ({ ready: false, values: {} }));
     return { node: localNode.name, state: recovered ? { ...state, ...recovered, savedSeqno: state.seqno, recoveredSeqno: recovered.seqno } : { ...state, savedSeqno: state.seqno, recoveredSeqno: undefined }, dataDirectory: { valid: directory.action === 'start', reason: directory.reason }, active: status.ready === true || status.values?.wsrep_local_state_comment === 'Synced', galera: { clusterUuid: status.values?.wsrep_cluster_state_uuid, clusterStatus: status.values?.wsrep_cluster_status, localState: status.values?.wsrep_local_state_comment, ready: status.values?.wsrep_ready }, generation, observedAt: new Date().toISOString() };
   };
-  const remote = async (url) => {
+  const remote = async (url, expectedNode) => {
     const response = await fetchImpl(`${url.replace(/\/$/, '')}/api/v1/cluster/cold-bootstrap/evidence`, { headers: { accept: 'application/json', authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) throw new Error(`peer returned ${response.status}`);
-    return (await response.json()).data;
+    const data = (await response.json()).data;
+    if (expectedNode && data?.node !== expectedNode) throw Object.assign(new Error('peer evidence identity mismatch'), { code: 'RECOVERY_EVIDENCE_IDENTITY_MISMATCH' });
+    return data;
   };
   return { local, remote, log };
 }

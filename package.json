@@ -40,13 +40,13 @@
     },
     "dependencies": {
         "@eliware/common": "2.0.0",
-        "@eliware/elera-lib": "^0.3.1",
+    "@eliware/elera-lib": "file:../elera-lib",
         "@eliware/snowflake": "^2.0.0",
         "mysql2": "^3.24.2",
         "ws": "^8.21.3"
     },
     "devDependencies": {
-        "@eliware/elera-client": "0.3.0",
+        "@eliware/elera-client": "^0.3.1",
         "@eliware/test": "^2.1.3",
         "ajv": "^8.20.0",
         "ajv-formats": "^3.0.1"

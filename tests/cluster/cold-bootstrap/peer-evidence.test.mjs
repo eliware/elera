@@ -21,6 +21,11 @@ test('forwards authenticated remote evidence and validates dependencies', async 
   expect(() => createColdBootstrapEvidence()).toThrow('local evidence');
 });
 
+test('rejects authenticated evidence attributed to another node', async () => {
+  const evidence = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: '/tmp', health: {}, token: 'token', fetchImpl: async () => ({ ok: true, async json() { return { data: { node: 'other' } }; } }) });
+  await expect(evidence.remote('http://peer', 'peer')).rejects.toMatchObject({ code: 'RECOVERY_EVIDENCE_IDENTITY_MISMATCH' });
+});
+
 test('handles recovered state, health failures, and rejected peers', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'elera-evidence-'));
   try {

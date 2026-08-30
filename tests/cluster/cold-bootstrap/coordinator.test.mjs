@@ -11,7 +11,7 @@ test('coordinates local and remote evidence and invokes the selected bootstrappe
   const bootstrapRemote = jest.fn(async () => {});
   const coordinator = createColdBootstrapCoordinator({ nodes: [{ name: 'one', local: true }, { name: 'two', url: 'http://two' }], local, remote, bootstrapLocal, bootstrapRemote });
   const plan = await coordinator.plan();
-  expect(plan).toBeDefined(); expect(local).toHaveBeenCalled(); expect(remote).toHaveBeenCalledWith('http://two');
+  expect(plan).toBeDefined(); expect(local).toHaveBeenCalled(); expect(remote).toHaveBeenCalledWith('http://two', 'two');
 });
 
 test('requires coordinator dependencies', () => {

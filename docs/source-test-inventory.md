@@ -1,6 +1,6 @@
 # Supervisor source-module inventory
 
-Generated from the current working tree on 2026-08-29. Total: **124** `src/**/*.mjs` files.
+Generated from the current working tree on 2026-08-29. Total: **125** `src/**/*.mjs` files.
 
 Classification: barrels and entrypoints/orchestrators are excluded from focused implementation coverage; every other module is an implementation module requiring a mirrored focused test under `tests/`. The two CLI wrapper modules are executable entrypoints, not reusable implementation modules.
 
@@ -142,5 +142,11 @@ Classification: barrels and entrypoints/orchestrators are excluded from focused 
 ## Follow-up audit
 
 - Focused test paths mirror the source path without the `src/` segment.
+- The six modules without direct mirrored tests are intentional barrels or
+  entrypoint/orchestrator modules: `connection-bundle.mjs`, `main.mjs`,
+  `lifecycle/pending-init.mjs`, `lifecycle/pending-init/runtime.mjs`,
+  `lifecycle/data-directory-cli.mjs`, and `lifecycle/pending-init-cli.mjs`.
+- No non-barrel implementation module was missing from the focused-test path
+  audit.
 - Cross-cutting, contract, integration, barrel, and entrypoint tests supplement but do not replace focused implementation tests.
 - Re-run this inventory whenever source modules are added, removed, or reclassified.

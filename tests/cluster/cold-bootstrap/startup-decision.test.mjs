@@ -50,5 +50,5 @@ test('blocks when quorum is lost during total shutdown or two-node loss', async 
 
 test('does not bootstrap during a normal restart when a primary peer is active', async () => {
   const decide = createStartupRecoveryDecision({ nodes, localEvidence: async () => state('a', 12), fetchEvidence: async (node) => ({ ...state(node.name, 12), active: node.name === 'b' }) });
-  await expect(decide()).resolves.toMatchObject({ mode: 'join' });
+  await expect(decide()).resolves.toMatchObject({ mode: 'join', bootstrapComplete: true });
 });

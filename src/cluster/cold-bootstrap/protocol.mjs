@@ -8,7 +8,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
   const read = async () => current ??= await store.read();
   const persist = (value, expectedEpoch) => store.write(value, expectedEpoch === undefined ? undefined : { expectedEpoch });
   const collect = async () => {
-    const evidence = await Promise.all(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node.url ?? node)));
+    const evidence = await Promise.all(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node.url ?? node, node.name)));
     const normalized = evidence.map((item) => ({ ...(item.state ?? item), node: item.node, dataDirectory: item.dataDirectory, galera: item.galera, active: item.active, generation: item.generation, observedAt: item.observedAt }));
     return validateRecoveryEvidence(normalized, { now: now(), maxAgeMs: maxEvidenceAgeMs });
   };

@@ -12,7 +12,7 @@ export function createStartupRecoveryDecision({ nodes, expectedNodeCount = nodes
       try {
         const states = await Promise.all(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node)));
         const active = states.some((item) => item.active === true);
-        if (active) return { mode: 'join', reason: 'primary component already exists', epoch: null, evidence: states };
+        if (active) return { mode: 'join', reason: 'primary component already exists', epoch: null, bootstrapComplete: true, evidence: states };
         const decision = selectCandidate(states.map((item) => ({ ...item.state, node: item.node })));
         if (!decision.eligible) return { mode: 'blocked', reason: decision.reason, epoch: null, evidence: states };
         const selected = decision.candidate.node;

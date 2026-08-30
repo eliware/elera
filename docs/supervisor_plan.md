@@ -49,7 +49,8 @@ Supervisor process
 
 - MariaDB owns SQL execution.
 - Supervisor owns authority, lifecycle, cluster state, and routing decisions.
-- `elera-lib` owns shared contracts and helpers.
+- `elera-lib` owns only shared contracts and pure helpers consumed by multiple
+  repositories; supervisor-specific lifecycle and recovery logic stays local.
 - `elera-client` owns application SQL pools and client-side failover.
 - CLI owns administrative workflows and SQL command passthrough.
 - Persisted intent owns startup-critical configuration.
@@ -139,33 +140,41 @@ state.
 
 ## Implementation plan
 
-1. Split `src/main.mjs` into a thin composition root and focused startup,
+Status: `[x]` complete, `[~]` partial/in progress, `[ ]` not complete.
+
+1. [ ] Split `src/main.mjs` into a thin composition root and focused startup,
    runtime, and shutdown coordinators.
-2. Formalize the cold-recovery state machine and make its coordinator the sole
+2. [~] Formalize the cold-recovery state machine and make its coordinator the sole
    bootstrap authority.
-3. Separate persisted intent, durable recovery/audit state, and ephemeral
+3. [ ] Separate persisted intent, durable recovery/audit state, and ephemeral
    runtime state.
-4. Validate and authenticate peer observations, including sequence and data
-   directory evidence.
-5. Require quorum agreement on recovery epoch, winner, cluster identity, and
-   evidence digest.
-6. Enforce winner-only bootstrap, join-only followers, and Primary/membership
-   verification before completion.
-7. Preserve ordinary clean restart as a normal rejoin path.
-8. Centralize routing assignment and versioned bundle/event publication.
-9. Keep the one-second routing cycle separate from ten-second telemetry
+4. [~] Validate and authenticate peer observations, including sequence and data
+   directory evidence. Authenticated peer responses are now bound to the
+   expected node identity; full evidence authentication remains open.
+5. [~] Require quorum agreement on recovery epoch, winner, cluster identity, and
+   evidence digest. Identified distinct quorum acknowledgements are enforced;
+   authenticated epoch/evidence agreement remains open.
+6. [~] Enforce winner-only bootstrap, join-only followers, and Primary/membership
+   verification before completion. Startup arguments and join verification enforce
+   the code-level boundary; real SST/IST and runtime completion remain open.
+7. [~] Preserve ordinary clean restart as a normal rejoin path. The startup
+   decision now marks an existing Primary as join-ready; live rejoin validation
+   remains open. The local lab is currently fresh and uninitialized, so SST/IST
+   validation cannot run until the explicit initialization workflow is executed.
+8. [ ] Centralize routing assignment and versioned bundle/event publication.
+9. [ ] Keep the one-second routing cycle separate from ten-second telemetry
    aggregation.
-10. Make shutdown rejection, event publication, SQL quiescing, MariaDB signal
+10. [ ] Make shutdown rejection, event publication, SQL quiescing, MariaDB signal
     handling, timeout, and listener closure deterministic.
-11. Keep supervisor administration on the local root socket and preserve the
+11. [x] Keep supervisor administration on the local root socket and preserve the
     client dependency boundary.
-12. Distinguish operational safety fallbacks from prohibited legacy
+12. [ ] Distinguish operational safety fallbacks from prohibited legacy
     compatibility behavior.
-13. Align every non-barrel implementation module with a focused test, while
+13. [x] Align every non-barrel implementation module with a focused test, while
     retaining deliberate composition and cross-cutting exceptions.
-14. Update runtime, API, recovery, and release documentation to match the
+14. [~] Update runtime, API, recovery, and release documentation to match the
     authority model.
-15. Record intentional exceptions in `known_drifts.md`.
+15. [ ] Record intentional exceptions in `known_drifts.md`.
 
 ## Validation gates
 

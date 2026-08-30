@@ -31,7 +31,7 @@ documented. Every sprint ends with an interoperability smoke test.
 - [x] Provide `health`, `ready`, `status`, stable exits, and SQL smoke support.
 - [x] Verify library, supervisor, CLI, and real MariaDB interoperability.
 
-### Sprint 1 certification evidence
+### Sprint 1 certification evidence (historical)
 
 - Production image builds from the Elera repository context with the published
   `@eliware/elera-lib@0.2.0` resolved from npm.
@@ -258,7 +258,7 @@ passwords or password hashes.
 - [x] Add optional artifact CRUD, verification, and materialization commands.
 - [x] Verify encrypted artifacts survive backup/restore and cannot be returned as plaintext accidentally.
 
-Sprint 9 evidence: the supervisor stores and returns only age ciphertext and
+Sprint 9 evidence (historical): the supervisor stores and returns only age ciphertext and
 metadata; the CLI materializes artifacts only for a child operation and removes
 the temporary file directory afterward. Focused unit tests cover CRUD,
 checksum verification, age process failures, GitOps-mounted input resolution,
@@ -284,7 +284,9 @@ repositories pass strict 100×4 coverage with zero lint warnings.
 - [ ] Validate the complete fresh-init, bootstrap, join, routing, drain, restart, failure, backup, and restore lifecycle.
 
 Status: `[x]` means verified complete, `[~]` means partially verified, and `[ ]`
-means not started or not yet proven. Sprint 10 is local-only. Its evidence must
+means not started or not yet proven. The Sprint 10 checklist below is the current
+validation baseline; historical claims above do not substitute for current
+evidence. Sprint 10 is local-only. Its evidence must
 cover the complete Docker lab:
 three-node Elera cluster, standalone Elera node, HTTP-only HAProxy simulation,
 example clients, dev/NAS backup and restore, fresh initialization, Galera

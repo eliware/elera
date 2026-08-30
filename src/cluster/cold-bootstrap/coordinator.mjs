@@ -4,7 +4,7 @@ import { createIdempotencyStore } from './idempotency-store.mjs';
 
 export function createColdBootstrapCoordinator({ nodes, local, remote, bootstrapLocal, bootstrapRemote, lockPath, log = {} } = {}) {
   if (!Array.isArray(nodes) || !local || !remote || typeof bootstrapLocal !== 'function') throw new TypeError('cold bootstrap coordinator dependencies are required');
-  const evidence = async (node) => node.local ? local() : remote(node.url);
+  const evidence = async (node) => node.local ? local() : remote(node.url, node.name);
   return createColdBootstrapService({
     nodes,
     readState: async (node) => (await evidence(node)).state,
