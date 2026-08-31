@@ -2,9 +2,15 @@ import { expect, jest, test } from '@jest/globals';
 import { startSupervisorReadiness } from '../../src/runtime/startup-readiness.mjs';
 
 test('starts HTTP and waits for SQL readiness', async () => {
-  const listen = jest.fn((_port, _host, callback) => callback()); const log = { info: jest.fn(), warn: jest.fn() };
+  const order = []; const listen = jest.fn((_port, _host, callback) => { order.push('listen'); callback(); }); const log = { info: jest.fn(), warn: jest.fn() };
   const ready = await startSupervisorReadiness({ probes: { listen }, config: { httpPort: 8080, startupTimeoutMs: 10, elera: false }, health: { status: jest.fn(async () => ({ ready: true })) }, log, join: false });
-  expect(listen).toHaveBeenCalledWith(8080, '0.0.0.0', expect.any(Function)); expect(ready).toBe(true);
+  expect(listen).toHaveBeenCalledWith(8080, '0.0.0.0', expect.any(Function)); expect(order).toEqual(['listen']); expect(ready).toBe(true);
+});
+
+test('does not expose the full API before the MariaDB socket is ready', async () => {
+  const order = []; const listen = jest.fn((_port, _host, callback) => { order.push('listen'); callback(); });
+  await startSupervisorReadiness({ probes: { listen }, config: { httpPort: 8080, startupTimeoutMs: 10, elera: false }, health: { status: jest.fn(async () => { order.push('sql'); return { ready: true }; }) }, log: { info: jest.fn(), warn: jest.fn() }, join: false });
+  expect(order).toEqual(['sql', 'listen']);
 });
 
 test('keeps the supervisor available when SQL does not become ready', async () => {
