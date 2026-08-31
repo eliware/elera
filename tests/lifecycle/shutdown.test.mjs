@@ -10,6 +10,11 @@ test('orders drain, service closure, MariaDB stop, and cleanup', async () => {
   expect(lifecycle.get()).toBe('stopped');
 });
 
+test('writes clean restart intent before MariaDB stop', async () => {
+  const calls = []; const shutdown = createShutdown({ lifecycle: createLifecycleState(), sqlQuiesce: { begin: async () => {} }, drain: { wait: async () => {} }, beforeMariaStop: async () => calls.push('marker'), getMariaProcess: () => ({ stop: async () => { calls.push('maria'); return {}; } }), log: {} });
+  await shutdown('SIGTERM'); expect(calls).toEqual(['marker', 'maria']);
+});
+
 test('broadcasts shutdown handoff before quiescing SQL', async () => {
   const calls = []; const lifecycle = createLifecycleState();
   const shutdown = createShutdown({ lifecycle, sqlQuiesce: { begin: async () => calls.push('quiesce') }, drain: { wait: async () => {} }, routingStream: { shutdown: async (event) => calls.push(['stream', event]) }, getMariaProcess: () => ({ stop: async () => ({ forced: false }) }), log: {} });
