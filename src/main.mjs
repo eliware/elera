@@ -7,6 +7,7 @@ import { supervisorDbEnvironment } from './runtime/db-environment.mjs';
 import { createRuntimeState } from './runtime/runtime-state.mjs';
 import { createSupervisorEntryComposition } from './runtime/entry-composition.mjs';
 import { startSupervisor } from './runtime/startup-coordinator.mjs';
+import { createCleanRestartMarker } from './runtime/clean-restart-marker.mjs';
 
 const config = loadSupervisorConfig();
 const identity = runtimeIdentity();
@@ -15,10 +16,11 @@ const state = { db: undefined, drained: false, shuttingDown: false, restarting: 
 let signals;
 const servers = [];
 const { lifecycle, telemetry, recoveryState, recovery, recoveryAudit } = createRuntimeState({ config, log });
+const restartMarker = createCleanRestartMarker({ path: `${config.dataDir}/elera-state/clean-restart.json`, node: identity.name, epoch: () => recoveryState.snapshot() });
 
 let composition;
 composition = createSupervisorEntryComposition({
-  config, identity, lifecycle, telemetry, recoveryState, recovery, log,
+  config, identity, lifecycle, telemetry, recoveryState, recovery, log, restartMarker,
   getDb: () => state.db, setDrained: (value) => { state.drained = value; }, getDrained: () => state.drained,
   getTimers: () => [state.peerTimer, state.routingTimer], getMariaProcess: () => state.mariaProcess,
   getColdState: () => ({
@@ -37,7 +39,7 @@ let errors;
 state.signals = signals;
 
 async function main() {
-  await startSupervisor({ config, identity, log, loadEnvironmentIntent: loadIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health: composition.health, environment: process.env, dbEnv, probes: composition.probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained: composition.traffic.getDrained, recoverTraffic: composition.traffic.recover, telemetry, state });
+  await startSupervisor({ config, identity, log, loadEnvironmentIntent: loadIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health: composition.health, environment: process.env, dbEnv, probes: composition.probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained: composition.traffic.getDrained, recoverTraffic: composition.traffic.recover, cleanRestartIntent: restartMarker, telemetry, state });
 }
 
 main().catch((error) => {

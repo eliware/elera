@@ -6,12 +6,12 @@ import { startSupervisorMariaDb } from './maria-startup.mjs';
 import { startSupervisorRuntime } from './runtime-start.mjs';
 import { startPendingInitRuntime } from '../lifecycle/pending-init/runtime.mjs';
 
-export async function startSupervisor({ config, identity, log, loadEnvironmentIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health, environment = process.env, dbEnv, probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, recoverTraffic = async () => {}, telemetry, state, startPendingRuntime = startPendingInitRuntime }) {
+export async function startSupervisor({ config, identity, log, loadEnvironmentIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health, environment = process.env, dbEnv, probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, recoverTraffic = async () => {}, cleanRestartIntent, telemetry, state, startPendingRuntime = startPendingInitRuntime }) {
   telemetry.start();
   await observationStore.initialize?.();
   log.info('Elera supervisor starting', { elera: config.elera, httpPort: config.httpPort });
   const startupConfiguration = await loadSupervisorStartupConfiguration({ intentState, loadEnvironmentIntent, node: identity, routingEnvironment, config });
-  const recoveryResult = await prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess: state.mariaProcess, environment });
+  const recoveryResult = await prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess: state.mariaProcess, environment, restartMarker: cleanRestartIntent });
   const { initialIntent, args, localEvidence, members, startupDecision } = recoveryResult;
   state.coldRecoveryProtocol = recoveryResult.coldRecoveryProtocol;
   state.recoveryCompletion = recoveryResult.recoveryCompletion;

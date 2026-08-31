@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 
 export function createCleanRestartMarker({ path, node, epoch, nonce = randomUUID(), now = Date.now, maxAgeMs = 120000 } = {}) {
   if (!path || !node || !nonce) throw new TypeError('clean restart marker requires path, node, and nonce');
-  const payload = () => ({ version: 1, node, epoch: epoch ?? null, nonce, writtenAt: now() });
+  const payload = () => ({ version: 1, node, epoch: typeof epoch === 'function' ? epoch() : (epoch ?? null), nonce, writtenAt: now() });
   return {
     async write() {
       await mkdir(dirname(path), { recursive: true });

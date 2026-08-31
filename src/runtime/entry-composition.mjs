@@ -12,7 +12,7 @@ import { createSupervisorTraffic } from './traffic-wiring.mjs';
 import { createColdBootstrapEvidence } from '../cluster/cold-bootstrap/peer-evidence.mjs';
 import { runWsrepRecover } from './wsrep-recovery.mjs';
 
-export function createSupervisorEntryComposition({ config, identity, lifecycle, telemetry, recoveryState, recovery, log, environment = process.env, getDb, setDrained, getDrained, getTimers, getMariaProcess, getColdState = () => ({}), applyIntent = (intent) => intent, servers = [] }) {
+export function createSupervisorEntryComposition({ config, identity, lifecycle, telemetry, recoveryState, recovery, log, environment = process.env, getDb, setDrained, getDrained, getTimers, getMariaProcess, restartMarker, getColdState = () => ({}), applyIntent = (intent) => intent, servers = [] }) {
   const health = createHealthService({
     db: { query: (...args) => getDb()?.query?.(...args), health: (...args) => getDb()?.health?.(...args) },
     timeoutMs: config.timeoutMs, elera: config.elera, clusterSize: config.clusterSize,
@@ -51,5 +51,5 @@ export function createSupervisorEntryComposition({ config, identity, lifecycle, 
     upgradeHandler: (request, socket, head) => routingStream.upgrade(request, socket, head), log,
   });
   servers.push(probes);
-  return { ...domain, ...routing, health, routingStream, traffic, probes, control, lifecycleWiring: ({ errors }) => createSupervisorLifecycle({ lifecycle, sqlQuiesce: traffic.sqlQuiesce, drain: traffic.drain, clusterDrain: traffic.clusterDrain, config, identity, observationStore: domain.observationStore, getTimers, routingBus: routing.routingBus, routingStream, telemetry, servers, closeServer, getMariaProcess, getDb, errors, log }) };
+  return { ...domain, ...routing, health, routingStream, traffic, probes, control, lifecycleWiring: ({ errors }) => createSupervisorLifecycle({ lifecycle, sqlQuiesce: traffic.sqlQuiesce, drain: traffic.drain, clusterDrain: traffic.clusterDrain, config, identity, observationStore: domain.observationStore, getTimers, routingBus: routing.routingBus, routingStream, telemetry, servers, closeServer, getMariaProcess, getDb, errors, log, restartMarker }) };
 }
