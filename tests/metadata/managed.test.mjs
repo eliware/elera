@@ -12,6 +12,14 @@ test('provisions a deterministic physical database while returning the logical n
   expect(calls.some((sql) => sql.includes(`CREATE DATABASE IF NOT EXISTS \`${result.physicalName}\``))).toBe(true);
 });
 
+test('reuses the existing physical mapping when provisioning an identity again', async () => {
+  const calls = [];
+  const managed = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => { calls.push(sql); if (sql.includes('SELECT database_id')) return [[{ database_id: 'db-1', physical_name: 'elera_db_db-1' }]]; return [[]]; } });
+  const result = await managed.createDatabase({ application: 'payments', databaseName: 'primary' });
+  expect(result).toMatchObject({ databaseId: 'db-1', physicalName: 'elera_db_db-1' });
+  expect(calls.some((sql) => sql.includes('CREATE DATABASE IF NOT EXISTS `elera_db_db-1`'))).toBe(true);
+});
+
 test('manages databases, identities, and scoped tokens without exposing policy SQL', async () => {
   const calls = []; let tokenHash;
   const managed = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => { calls.push(sql); if (sql.includes('INSERT INTO `elera_meta`.scoped_tokens')) tokenHash = sql.match(/VALUES \([^,]+, '([0-9a-f]+)'/)?.[1]; if (sql.includes('FROM `elera_meta`.managed_databases')) return [[{ name: 'billing', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.identities')) return [[{ name: 'runtime', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.scoped_tokens')) return [[{ name: 'app-token', application: 'payments', identity: 'runtime', token_hash: tokenHash, scopes_json: '["database:read"]' }]]; return [[]]; } });
