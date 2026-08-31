@@ -52,4 +52,12 @@ export const META_MIGRATIONS = [
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_scoped_tokens_id ON elera_meta.scoped_tokens(token_id)",
     ],
   },
+  {
+    version: 7,
+    name: "stable-database-identifiers",
+    statements: [
+      "ALTER TABLE elera_meta.managed_databases ADD COLUMN IF NOT EXISTS database_id VARCHAR(32) NULL",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_managed_databases_id ON elera_meta.managed_databases(database_id)",
+    ],
+  },
 ];

@@ -1,6 +1,6 @@
 # Supervisor source-module inventory
 
-Generated from the current working tree on 2026-08-29. Total: **125** `src/**/*.mjs` files.
+Reviewed on 2026-08-30 from the current working tree. Total: **142** `src/**/*.mjs` files.
 
 Classification: barrels and entrypoints/orchestrators are excluded from focused implementation coverage; every other module is an implementation module requiring a mirrored focused test under `tests/`. The two CLI wrapper modules are executable entrypoints, not reusable implementation modules.
 
@@ -17,7 +17,7 @@ Classification: barrels and entrypoints/orchestrators are excluded from focused 
 - `src/lifecycle/data-directory-cli.mjs`
 - `src/lifecycle/pending-init-cli.mjs`
 
-## Implementation modules (119)
+## Implementation modules (135)
 
 - `src/config.mjs`
 - `src/health.mjs`
@@ -136,6 +136,23 @@ Classification: barrels and entrypoints/orchestrators are excluded from focused 
 - `src/routing/metadata-assignments.mjs`
 - `src/routing/quorum-assignment.mjs`
 - `src/runtime/identity.mjs`
+- `src/runtime/composition.mjs`
+- `src/runtime/control-wiring.mjs`
+- `src/runtime/cycles.mjs`
+- `src/runtime/db-environment.mjs`
+- `src/runtime/lifecycle-predicates.mjs`
+- `src/runtime/peer-list.mjs`
+- `src/runtime/probe-wiring.mjs`
+- `src/runtime/peer-publisher.mjs`
+- `src/runtime/cluster-wiring.mjs`
+- `src/runtime/routing-composition.mjs`
+- `src/runtime/routing-publisher.mjs`
+- `src/runtime/runtime-state.mjs`
+- `src/runtime/server-lifecycle.mjs`
+- `src/runtime/shutdown-wiring.mjs`
+- `src/runtime/sql-client-wiring.mjs`
+- `src/runtime/startup-intent.mjs`
+- `src/runtime/wsrep-recovery.mjs`
 - `src/telemetry/collector.mjs`
 - `src/telemetry/normalize.mjs`
 

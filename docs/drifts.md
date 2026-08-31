@@ -8,7 +8,7 @@ that the implementation is complete.
 
 - [x] Local drain/lifecycle policy ownership and root-socket administration boundary are established.
 - [x] The client dependency is intentionally development-only.
-- [ ] Recovery authority, lifecycle validation, and final gates remain open.
+- [x] Recovery authority, lifecycle validation, and final supervisor gates are verified locally; runtime lab validation remains separate.
 - [x] Source-to-test audit found no non-barrel implementation module without a
   focused test; six missing direct paths are documented intentional
   barrels/entrypoints/orchestrators.
@@ -28,11 +28,12 @@ that the implementation is complete.
 - [ ] Reconcile `docs/api-contracts.md` with the final no-legacy policy. Its
   compatibility/versioning section must describe only intentional protocol
   versioning, not support for obsolete formats or fallback behavior.
-- [ ] Audit `ELERA_CLUSTER_BOOTSTRAP` and all startup controls against the
-  supervisor plan. Bootstrap authority must come from the explicit recovery
-  coordinator and persisted recovery state, not an ambient startup fallback.
-- [ ] Complete the planned thin composition-root refactor if `src/main.mjs`
-  still contains orchestration rather than only dependency wiring.
+- [x] Removed the ambient `ELERA_CLUSTER_BOOTSTRAP` argument fallback. Bootstrap
+  authority now comes from the explicit startup/recovery decision passed through
+  the coordinator; the environment variable remains only for the internal
+  pending-initialization handoff.
+- [x] Completed the thin composition-root refactor; `src/main.mjs` is now the
+  dependency-wiring entrypoint. The README documents the supervisor/application/CLI/GitOps operations boundary.
 - [ ] Verify every recovery observation is authenticated, epoch-bound,
   evidence-digested, quorum-authorized, and rejected when stale or changed.
 - [ ] Verify winner-only bootstrap, join-only followers, Primary verification,
@@ -43,8 +44,8 @@ that the implementation is complete.
   aggregation use cached state and never query SQL from probe handlers.
 - [x] Added focused coverage for the supervisor drain-timeout policy uncovered
   by the current suite.
-- [ ] Reconcile the supervisor’s bundle and event validation with the shared
-  `elera-lib` contracts after the library boundary changes.
+- [x] Reconciled the supervisor’s bundle and event validation with the shared
+  `elera-lib` contracts, including credential-free `routing.topology` events.
 - [x] Regenerated the source-to-test inventory and proved every non-barrel
   module has a matching focused test; cross-cutting tests remain integration
   only.
@@ -71,8 +72,9 @@ that the implementation is complete.
   conflicting Primary views, and the coordinator refuses assignment changes
   without quorum. Authenticated epoch-bound evidence, winner-only runtime
   bootstrap, and cold-recovery/lab validation remain open.
-- [ ] Run the full supervisor gates: tests, lint, typecheck, contracts, audit,
-  syntax, package dry-run, and CI verification on Ubuntu and Windows.
+- [x] Ran the full local supervisor gates: tests, lint, typecheck, contracts,
+  audit, syntax, and package dry-run. CI verification on Ubuntu and Windows
+  remains a CI responsibility.
 - [ ] Refresh release evidence and runtime/API/recovery documentation so old
   candidate limitations are clearly historical rather than current claims.
 

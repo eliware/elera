@@ -6,6 +6,10 @@ function invalid(message) {
   return Object.assign(new Error(message), { statusCode: 400 });
 }
 
+function requireIntegerPort(value, name) {
+  if (!Number.isInteger(value) || value < 1 || value > 65535) throw invalid(`${name} must be an integer TCP port`);
+}
+
 export function validateSupervisorBundle(bundle) {
   try { return validateBundle(bundle); }
   catch (error) { throw invalid(error.message); }
@@ -13,6 +17,9 @@ export function validateSupervisorBundle(bundle) {
 
 export function createSupervisorBundle({ application, database, identity, username, password, routes: routeSet, writer, failover, readers, expiresAt, refreshAfter, bundleVersion = 1, nodeIdentity = { name: 'supervisor' }, ports }) {
   if (!routeSet?.primary || !routeSet?.balanced) throw invalid('connection bundle route primary and balanced are required');
+  requireIntegerPort(ports?.sql, 'routing bundle ports.sql');
+  requireIntegerPort(ports?.http, 'routing bundle ports.http');
+  for (const route of ['primary', 'balanced']) for (const node of routeSet[route]) requireIntegerPort(node.port, `routing bundle ${route} port`);
   const primary = routeSet.primary.map((node) => ({ ...node, nodeId: node.nodeId ?? node.host }));
   const balanced = routeSet.balanced.map((node) => ({ ...node, nodeId: node.nodeId ?? node.host }));
   return validateSupervisorBundle({
@@ -29,6 +36,6 @@ export function createSupervisorBundle({ application, database, identity, userna
     refreshAfter,
     bundleVersion,
     nodeIdentity: typeof nodeIdentity === 'string' ? nodeIdentity : nodeIdentity.name,
-    ports: { sql: Number(ports?.sql ?? 3306), http: Number(ports?.http ?? 8080) },
+    ports: { sql: ports.sql, http: ports.http },
   });
 }

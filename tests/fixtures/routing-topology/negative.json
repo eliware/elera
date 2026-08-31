@@ -1,0 +1,9 @@
+{
+  "type": "routing.topology",
+  "version": 0,
+  "generatedAt": "not-a-timestamp",
+  "node": "",
+  "context": { "ports": { "sql": "3306", "http": 8080 } },
+  "topology": { "nodes": [] },
+  "credentials": { "username": "must-not-be-present" }
+}

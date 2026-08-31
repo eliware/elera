@@ -1,0 +1,6 @@
+import { expect, jest, test } from '@jest/globals';
+import { resolveSupervisorRejoin } from '../../src/runtime/rejoin-decision.mjs';
+const base = { decision: { mode: 'bootstrap', localWinner: false, winner: 'node-b', epoch: 4 }, members: [{ name: 'node-b', url: 'http://node-b' }], config: { startupTimeoutMs: 10 }, environment: { ROOT_TOKEN: 'root' }, recoveryState: { set: jest.fn() } };
+test('converts a completed remote bootstrap into a join decision', async () => { await expect(resolveSupervisorRejoin({ ...base, waitForCompletion: jest.fn().mockResolvedValue() })).resolves.toMatchObject({ mode: 'join', bootstrapComplete: true }); });
+test('blocks when remote recovery does not complete', async () => { const value = { ...base, waitForCompletion: jest.fn().mockRejectedValue(new Error('timed out')) }; await expect(resolveSupervisorRejoin(value)).resolves.toMatchObject({ mode: 'blocked', reason: 'timed out' }); expect(value.recoveryState.set).toHaveBeenCalled(); });
+test('leaves other decisions unchanged', async () => { const decision = { mode: 'join', winner: 'node-a' }; await expect(resolveSupervisorRejoin({ ...base, decision, waitForCompletion: jest.fn() })).resolves.toBe(decision); });

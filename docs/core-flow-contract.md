@@ -49,3 +49,21 @@ lifecycle, draining, cluster configuration, secrets, and platform backup or
 restore. App-admin operations are limited to application resources, including
 databases, identities, runtime tokens, routing inspection, and application
 telemetry.
+
+## Supervisor endpoint matrix
+
+Supervisor-generated bundles require `apiVersion: "v1"`, integer TCP ports
+from 1 through 65535, and both `routes.primary` and `routes.balanced`.
+Route `nodeId` is optional metadata; `nodeIdentity` is a required string and
+`refreshAfter` is optional. Runtime token creation requires an explicit scopes
+array; no runtime scopes are implied by identity purpose.
+
+- `POST /api/v1/applications`: root-only application creation by friendly name.
+- `GET /api/v1/applications/:applicationId`: application status by stable ID;
+  root or the application-bound `app:admin` token.
+- `POST /api/v1/app-admin/tokens`: root-only app-admin token creation.
+- `POST /api/v1/databases`: database provisioning.
+- `POST /api/v1/databases/:databaseId/delete`: database deletion by stable ID;
+  accepts `dryRun`, `confirm`, and `idempotencyKey`.
+- Migration is a CLI workflow over initialization/reconcile APIs; there is no
+  standalone migrate endpoint.

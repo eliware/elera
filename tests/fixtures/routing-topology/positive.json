@@ -1,0 +1,8 @@
+{
+  "type": "routing.topology",
+  "version": 1,
+  "generatedAt": "2026-08-30T12:00:00.000Z",
+  "node": "elera-0",
+  "context": { "nodeIdentity": { "name": "elera-0", "address": "10.0.0.60" }, "ports": { "sql": 3306, "http": 8080 }, "clusterCondition": "Primary", "refreshAfter": "2026-08-30T12:00:30.000Z" },
+  "topology": { "nodes": [{ "nodeId": "elera-0", "address": "10.0.0.60", "sqlPort": 3306, "state": "ready", "draining": false }] }
+}

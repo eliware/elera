@@ -18,8 +18,8 @@ test('includes reconnect context in drain and recovery events', async () => {
   const publish = jest.fn();
   const emit = createDrainEventPublisher({ bus: { publish }, node: 'elera-0', getReady: async () => ({ ready: true }), getContext: () => ({ nodeIdentity: { name: 'elera-0' }, reconnectDeadlineMs: 60000, loadBalancerEndpoint: 'http://elera' }), now: () => 1 });
   await emit(true); await emit(false);
-  expect(publish.mock.calls[0][0]).toMatchObject({ type: 'routing.drain', nodeIdentity: { name: 'elera-0' }, reconnectDeadlineMs: 60000 });
-  expect(publish.mock.calls[1][0]).toMatchObject({ type: 'routing.recovery', loadBalancerEndpoint: 'http://elera' });
+  expect(publish.mock.calls[0][0]).toMatchObject({ type: 'routing.drain', context: { nodeIdentity: { name: 'elera-0' }, reconnectDeadlineMs: 60000 } });
+  expect(publish.mock.calls[1][0]).toMatchObject({ type: 'routing.recovery', context: { loadBalancerEndpoint: 'http://elera' } });
 });
 
 test('withholds recovery when readiness check fails', async () => {

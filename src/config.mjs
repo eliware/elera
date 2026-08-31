@@ -20,7 +20,6 @@ export function loadSupervisorConfig(environment = process.env, intent = undefin
 export function mariaDbArguments(config) {
   const args = [...(config.intentConfigPath ? [`--defaults-extra-file=${config.intentConfigPath}`] : []), `--datadir=${config.dataDir}`, '--user=mysql', '--bind-address=0.0.0.0', '--binlog-format=ROW'];
   if (config.elera) {
-    if (config.environment.ELERA_CLUSTER_BOOTSTRAP === 'true') args.push('--wsrep-new-cluster');
     const members = config.intent.cluster.members;
     const local = members.find((item) => item.name === config.runtimeNodeName) ?? members[0];
     // Provider-level primary-component recovery is deliberately disabled. It

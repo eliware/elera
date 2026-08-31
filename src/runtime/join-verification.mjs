@@ -1,0 +1,12 @@
+import { verifyJoinedMember } from '../cluster/cold-bootstrap/join-verification.mjs';
+
+export function verifySupervisorJoin({ elera, mode, sqlReady, health, startupDecision, expectedSize, recoveryState, recoveryAudit, node } = {}) {
+  if (!(elera && mode === 'join' && sqlReady)) return false;
+  return health.status().then((joined) => {
+    const valid = verifyJoinedMember({ values: joined.values, expectedClusterId: startupDecision.recoveryEpoch?.clusterId, expectedSize }).valid;
+    if (valid) recoveryState.set('complete', { reason: 'joined Primary cluster', epoch: startupDecision.epoch });
+    if (valid) recoveryAudit.joinComplete({ node, epoch: startupDecision.epoch });
+    else recoveryAudit.failure({ reason: 'join did not reach expected Synced Primary membership', epoch: startupDecision.epoch });
+    return valid;
+  });
+}

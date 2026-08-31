@@ -426,3 +426,17 @@ tracked in `docs/feature-checklist.md`.
 11. Supervisor synchronization
 12. HTTP-only VyOS HAProxy migration
 ```
+
+## Current async operation contract
+
+Supervisor operations that cannot complete within one request return `202`
+with `{ "apiVersion": "v1", "ok": true, "operationId": "...", "status": "queued" }`.
+Operation states are `queued`, `running`, `succeeded`, `failed`, and `cancelled`.
+Clients poll `GET /api/v1/operations/{operationId}` with bounded exponential
+backoff, an overall caller deadline, and no more than 30 attempts. A completed
+response uses `{ "apiVersion": "v1", "ok": true, "operationId": "...", "status": "succeeded", "data": {} }`;
+failure uses the same envelope with `ok: false` and a stable `error` string.
+The same idempotency key returns the original operation and result; a reused
+key with a different request is rejected. The first migration milestone uses
+existing synchronous application/database/identity/token/status APIs and does
+not require a migration endpoint or asynchronous operation resource.

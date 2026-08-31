@@ -23,3 +23,9 @@ test('uses the default admin token name and configured metadata database', async
   expect(calls[0]).toContain('`custom_meta`');
   expect(calls[1]).toContain("'admin'");
 });
+
+test('returns application status by ID and rejects unknown IDs', async () => {
+  const service = createApplicationService({ query: async (sql) => sql.includes('application_id') ? [[{ application_id: '1', application: 'billing' }]] : [[]] });
+  await expect(service.status({ applicationId: '1' })).resolves.toEqual({ application_id: '1', application: 'billing' });
+  await expect(createApplicationService({ query: async () => [[]] }).status({ applicationId: 'missing' })).rejects.toMatchObject({ statusCode: 404 });
+});

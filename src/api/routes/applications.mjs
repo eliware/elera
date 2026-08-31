@@ -14,5 +14,13 @@ export async function handleApplicationRoute({ method, path, request, response, 
     response.json(201, { ok: true, operation: 'app-admin.create', data: await applications.issueAdminToken({ application: body.application, tokenName: body.name ?? body.tokenName }) });
     return true;
   }
+  const statusMatch = path.match(/^\/api\/v1\/applications\/([^/]+)$/);
+  if (method === 'GET' && statusMatch) {
+    if (!auth?.root && !auth?.scopes?.includes('app:admin')) return false;
+    const data = await applications.status({ applicationId: decodeURIComponent(statusMatch[1]) });
+    if (!auth.root && auth.application && data.application !== auth.application) throw Object.assign(new Error('application is not authorized for this token'), { statusCode: 403 });
+    response.json(200, { ok: true, operation: 'application.status', data });
+    return true;
+  }
   return false;
 }

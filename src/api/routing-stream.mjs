@@ -4,6 +4,7 @@ export function createRoutingStream({ token, authorize, nodeIdentity, getEvent, 
   const server = websocketServer;
   const sockets = new Set();
   let stopping = false;
+  let eventVersion = 0;
   server.on('connection', (socket, request) => {
     if (stopping) { socket.close(1012, 'supervisor restarting'); return; }
     sockets.add(socket);
@@ -29,7 +30,8 @@ export function createRoutingStream({ token, authorize, nodeIdentity, getEvent, 
   }
   async function shutdown(event = {}, { code = 1012, reason = 'supervisor restarting' } = {}) {
     stopping = true;
-    const payload = JSON.stringify({ type: 'routing.shutdown', reconnect: true, ...(nodeIdentity ? { nodeIdentity } : {}), ...(loadBalancerEndpoint ? { loadBalancerEndpoint } : {}), ...event });
+    const timestamp = Date.now();
+    const payload = JSON.stringify({ type: 'routing.shutdown', version: ++eventVersion, generatedAt: new Date(timestamp).toISOString(), reconnect: true, node: nodeIdentity?.name ?? 'supervisor', ...(nodeIdentity ? { nodeIdentity } : {}), ...(loadBalancerEndpoint ? { loadBalancerEndpoint } : {}), reason, ...event });
     await Promise.all([...sockets].map((socket) => new Promise((resolve) => {
       if (socket.readyState !== 1) { resolve(); return; }
       try { socket.send(payload, () => { socket.close(code, reason); resolve(); }); } catch { socket.close(code, reason); resolve(); }

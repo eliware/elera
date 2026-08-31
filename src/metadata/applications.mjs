@@ -18,6 +18,11 @@ export function createApplicationService({ query, database = 'elera_meta' } = {}
       await q(`INSERT INTO elera_meta.applications (application_id, name) VALUES (${literal(applicationId)}, ${literal(applicationName)})`, []);
       return { applicationId, application: applicationName };
     },
+    async status({ applicationId }) {
+      const [rows] = await q(`SELECT application_id, name AS application, created_at FROM elera_meta.applications WHERE application_id=${literal(applicationId)}`);
+      if (!rows[0]) throw Object.assign(new Error('application not found'), { statusCode: 404 });
+      return rows[0];
+    },
     async issueAdminToken({ application, tokenName = 'admin' }) {
       name(application, 'application'); name(tokenName, 'token');
       const [apps] = await q(`SELECT application_id FROM elera_meta.applications WHERE name=${literal(application)}`);

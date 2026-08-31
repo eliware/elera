@@ -7,14 +7,11 @@ describe('supervisor configuration', () => {
     expect(config.httpPort).toBe(8080);
     expect(mariaDbArguments(config)).not.toContain('--wsrep-on=ON');
   });
-  test('adds Elera bootstrap arguments', () => {
+  test('does not derive bootstrap authority from ambient environment', () => {
     const intent = { apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'c', members: [{ name: 'n', address: 'a' }, { name: 'p', address: 'b' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } };
     const config = loadSupervisorConfig({ ELERA_CLUSTER_BOOTSTRAP: 'true' }, intent);
-    expect(mariaDbArguments(config)).toEqual(expect.arrayContaining(['--wsrep-new-cluster', '--wsrep-cluster-address=gcomm://a,b']));
-  });
-  test('adds one-shot cluster bootstrap without changing data initialization mode', () => {
-    const config = loadSupervisorConfig({ ELERA_CLUSTER_BOOTSTRAP: 'true' }, { apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'c', members: [{ name: 'n', address: 'a' }, { name: 'p', address: 'b' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } });
-    expect(mariaDbArguments(config)).toContain('--wsrep-new-cluster');
+    expect(mariaDbArguments(config)).not.toContain('--wsrep-new-cluster');
+    expect(mariaDbArguments(config)).toContain('--wsrep-cluster-address=gcomm://a,b');
   });
   test('rejects invalid ports', () => { expect(() => loadSupervisorConfig({ ELERA_HTTP_PORT: '0' })).toThrow('ELERA_HTTP_PORT'); });
   test('uses the persisted Galera node address', () => { const intent = { apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'c', members: [{ name: 'n', address: '10.244.0.1' }, { name: 'p', address: 'peer' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }; const args = mariaDbArguments(loadSupervisorConfig({}, intent)); expect(args).toEqual(expect.arrayContaining(['--wsrep-on=ON', '--wsrep-node-address=10.244.0.1'])); });

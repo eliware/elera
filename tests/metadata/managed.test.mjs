@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 test('manages databases, identities, and scoped tokens without exposing policy SQL', async () => {
   const calls = []; let tokenHash;
   const managed = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => { calls.push(sql); if (sql.includes('INSERT INTO `elera_meta`.scoped_tokens')) tokenHash = sql.match(/VALUES \([^,]+, '([0-9a-f]+)'/)?.[1]; if (sql.includes('FROM `elera_meta`.managed_databases')) return [[{ name: 'billing', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.identities')) return [[{ name: 'runtime', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.scoped_tokens')) return [[{ name: 'app-token', application: 'payments', identity: 'runtime', token_hash: tokenHash, scopes_json: '["database:read"]' }]]; return [[]]; } });
-  expect(await managed.createDatabase({ application: 'payments', databaseName: 'billing' })).toEqual({ application: 'payments', database: 'billing' });
+  expect(await managed.createDatabase({ application: 'payments', databaseName: 'billing' })).toEqual(expect.objectContaining({ application: 'payments', database: 'billing', databaseId: expect.any(String) }));
   const identity = await managed.createIdentity({ application: 'payments', databaseName: 'billing', identity: 'runtime', purpose: 'runtime', grants: ['SELECT'] });
   expect(identity.username).toBe('payments_runtime'); expect(identity.password).toBeTruthy();
   expect(await managed.listDatabases()).toHaveLength(1); expect(await managed.listIdentities('payments')).toHaveLength(1);
@@ -73,4 +73,14 @@ test('validates managed names, purposes, and grants', async () => {
   const tokenIdentityMissing = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(tokenIdentityMissing.issueToken({ tokenName: 'token', application: 'app', identity: 'id' })).rejects.toThrow('identity not found');
   const sealed = createSecretBox('test-key').seal('password'); const leasing = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[{ application: 'payments', database: 'billing', username: 'payments_runtime', credential_ciphertext: sealed }]] }); expect((await leasing.lease({ identity: 'runtime' })).password).toBe('password');
   const missingLease = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(missingLease.lease({ identity: 'runtime' })).rejects.toThrow('identity not found');
+  const query = async (sql) => sql.includes("'missing'") ? [[]] : sql.includes('SELECT database_id') ? [[{ database_id: 'db-1', name: 'billing', application: 'payments' }]] : [[]];
+  const deletions = createManagedMetadata({ query });
+  await expect(deletions.deleteDatabase()).rejects.toMatchObject({ statusCode: 400 });
+  await expect(deletions.deleteDatabase({})).rejects.toMatchObject({ statusCode: 400 });
+  await expect(deletions.deleteDatabase({ databaseId: 'db-1', dryRun: true, idempotencyKey: 'dry' })).resolves.toMatchObject({ status: 'planned', changed: false });
+  await expect(deletions.deleteDatabase({ databaseId: 'db-1', dryRun: true })).resolves.toMatchObject({ status: 'planned' });
+  await expect(deletions.deleteDatabase({ databaseId: 'db-1' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(deletions.deleteDatabase({ databaseId: 'db-1', confirm: true, idempotencyKey: 'done' })).resolves.toMatchObject({ status: 'completed', changed: true });
+  await expect(deletions.deleteDatabase({ databaseId: 'db-1', confirm: true, idempotencyKey: 'done' })).resolves.toMatchObject({ status: 'completed' });
+  await expect(deletions.deleteDatabase({ databaseId: 'missing', dryRun: true })).rejects.toMatchObject({ statusCode: 404 });
 });

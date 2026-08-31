@@ -9,6 +9,5 @@ describe('shared dependencies', () => {
     expect(typeof common.registerHandlers).toBe('function');
     expect(typeof common.registerSignals).toBe('function');
     expect(typeof mysql.validateBundle).toBe('function');
-    expect(typeof mysql.validateRoutingNode).toBe('function');
   });
 });

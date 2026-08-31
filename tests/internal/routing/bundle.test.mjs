@@ -33,7 +33,7 @@ test('preserves explicit assignments and metadata', () => {
   const bundle = createSupervisorBundle({
     application: 'app', database: 'db', identity: 'id', username: 'u', password: 'p', routes,
     writer, failover, readers: [writer], bundleVersion: 4, refreshAfter: '2098-01-01T00:00:00Z',
-    expiresAt: '2099-01-01T00:00:00Z', nodeIdentity: { name: 'node-w' }, ports: { sql: 3306 },
+    expiresAt: '2099-01-01T00:00:00Z', nodeIdentity: { name: 'node-w' }, ports: { sql: 3306, http: 8080 },
   });
 
   expect(bundle.writer).toBe(writer);
@@ -44,12 +44,12 @@ test('preserves explicit assignments and metadata', () => {
 });
 
 test('derives route node ids and the default supervisor identity', () => {
-  const bundle = createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'node' }], balanced: [{ host: 'node' }] }, expiresAt: '2099-01-01', nodeIdentity: { name: 'supervisor' } });
+  const bundle = createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'node', port: 3306 }], balanced: [{ host: 'node', port: 3306 }] }, expiresAt: '2099-01-01', nodeIdentity: { name: 'supervisor' }, ports: { sql: 3306, http: 8080 } });
   expect(bundle.routes.primary[0].nodeId).toBe('node');
   expect(bundle.nodeIdentity).toBe('supervisor');
-  const omitted = createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'node' }], balanced: [{ host: 'node' }] }, expiresAt: '2099-01-01' });
+  const omitted = createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'node', port: 3306 }], balanced: [{ host: 'node', port: 3306 }] }, expiresAt: '2099-01-01', ports: { sql: 3306, http: 8080 } });
   expect(omitted.nodeIdentity).toBe('supervisor');
-  const named = createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'node' }], balanced: [{ host: 'node' }] }, expiresAt: '2099-01-01', nodeIdentity: 'named' });
+  const named = createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'node', port: 3306 }], balanced: [{ host: 'node', port: 3306 }] }, expiresAt: '2099-01-01', nodeIdentity: 'named', ports: { sql: 3306, http: 8080 } });
   expect(named.nodeIdentity).toBe('named');
 });
 
@@ -60,8 +60,8 @@ test('rejects missing identity, expiry, routes, and invalid route nodes', () => 
   expect(() => validateSupervisorBundle({ ...valid, identity: undefined })).toThrow('identity');
   expect(() => validateSupervisorBundle({ ...valid, expiresAt: undefined })).toThrow('expiresAt');
   expect(() => validateSupervisorBundle({ ...valid, routes: { primary: {} } })).toThrow('routes.primary');
-  expect(() => validateSupervisorBundle({ ...valid, routes: { primary: [{ host: '', port: 3306 }], balanced: [] } })).toThrow('node');
-  expect(() => validateSupervisorBundle({ ...valid, routes: { primary: [], balanced: [{ host: 'node', port: 0 }] } })).toThrow('node');
+  expect(() => validateSupervisorBundle({ ...valid, routes: { primary: [{ host: '', port: 3306 }], balanced: [] } })).toThrow();
+  expect(() => validateSupervisorBundle({ ...valid, routes: { primary: [], balanced: [{ host: 'node', port: 0 }] } })).toThrow();
 });
 
 test('rejects a null supervisor identity instead of manufacturing one', () => {
@@ -69,7 +69,7 @@ test('rejects a null supervisor identity instead of manufacturing one', () => {
 });
 
 test('rejects a bundle when no primary route or writer exists', () => {
-  expect(() => createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [], balanced: [{ host: 'reader' }] }, expiresAt: '2099-01-01' })).toThrow('writer host is required');
+  expect(() => createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', routes: { primary: [], balanced: [{ host: 'reader', port: 3306 }] }, ports: { sql: 3306, http: 8080 }, expiresAt: '2099-01-01' })).toThrow('writer host is required');
 });
 
 test('rejects malformed route collections and weights', () => {

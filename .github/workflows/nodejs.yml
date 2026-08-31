@@ -30,8 +30,8 @@ jobs:
       - run: npm run lint
       - run: npm run check
       - run: npm run contracts
-      - run: npm audit --omit=dev --audit-level=moderate
-      - run: npm pack --dry-run
+      - run: npm run audit
+      - run: npm run pack
 
   container:
     needs: validate

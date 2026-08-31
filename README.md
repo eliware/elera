@@ -18,6 +18,9 @@ npm ci
 npm test
 npm run lint
 npm run check
+npm run contracts
+npm run audit
+npm run pack
 ```
 
 The production image uses this repository as its Docker build context:
@@ -59,4 +62,21 @@ read-only `/etc/elera` ConfigMap mount.
 See [the runtime contract](docs/runtime-contract.md) and the versioned release-evidence documents in `docs/`.
 for the startup safety rules, filesystem requirements, and release-evidence
 status.
+
+## Operations boundary
+
+The supervisor owns MariaDB/Galera lifecycle, cluster recovery authority,
+health/readiness, routing assignments, telemetry collection, metadata
+administration, and the authenticated control API. Applications connect
+through `@eliware/elera-client`; the CLI owns operator workflows and SQL
+passthrough. Kubernetes manifests, secrets delivery, rollout, backup artifact
+storage, and restore execution are maintained by the companion lab/GitOps
+repositories.
+
+Normal startup never initializes or repairs a data directory. Initialization,
+bootstrap, and recovery are authenticated control-plane operations. On
+shutdown, the supervisor drains routing, quiesces SQL, stops MariaDB with a
+bounded timeout, and then closes its listeners. See
+[`docs/runtime-contract.md`](docs/runtime-contract.md) for filesystem, ports,
+probe, secret, recovery, and shutdown requirements.
 
