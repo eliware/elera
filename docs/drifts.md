@@ -49,6 +49,8 @@ that the implementation is complete.
   disposition, donor validation for resync, audit, and idempotency.
 - [x] Pending/recovery startup exposes the same root-only reset endpoint while
   SQL is unavailable, with explicit offline resync and donor requirements.
+- [x] Executing single-member resync restarts without bootstrap and verifies
+  Synced/Primary readiness before reinclusion.
 - [ ] Verify every recovery observation is authenticated, epoch-bound,
   evidence-digested, quorum-authorized, and rejected when stale or changed.
 - [ ] Verify winner-only bootstrap, join-only followers, Primary verification,

@@ -230,6 +230,10 @@ verification. `elera-cli` continues to stream dumps through native
   reset. Requests require `node`, `dataDir`, `confirmation: "RESET <node>"`,
   and an idempotency key for execution. Initialized data additionally requires
   `force: true` and `recoveryDisposition: "reset-initialized-data"`; use
+  `recoveryDisposition: "single-member-resync"` only with fencing, routing
+  exclusion, and exactly one healthy Primary donor. Execution stops MariaDB,
+  removes only the configured data directory, restarts without bootstrap,
+  waits for Synced/Primary readiness (SST or IST), and then reincludes the node.
   `single-member-resync` only with fencing, routing exclusion, and a healthy
   Primary donor.
   The same endpoint remains available on the pending/recovery listener while

@@ -4,7 +4,17 @@ import { join, resolve } from 'node:path';
 const confirmationFor = (node) => `RESET ${node}`;
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
 
-export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState = () => ({}), getDonors = async () => [], offlineRecovery = false, stop = async () => {}, remove = async (path) => { for (const entry of await readdir(path)) await rm(join(path, entry), { recursive: true, force: true }); }, audit = {}, idempotency = new Map() } = {}) {
+const isSyncedPrimary = (status) => status?.values?.wsrep_local_state_comment === 'Synced' && status?.values?.wsrep_ready === 'ON' && status?.values?.wsrep_cluster_status === 'Primary';
+const waitForReady = async ({ getStatus, timeoutMs, intervalMs }) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    try { const status = await getStatus(); if (isSyncedPrimary(status)) return status; } catch { continue; }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, Math.max(1, deadline - Date.now()))));
+  }
+  throw failure('single-member-resync did not rejoin as Synced/Primary before timeout', 504);
+};
+
+export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState = () => ({}), getDonors = async () => [], offlineRecovery = false, stop = async () => {}, restart = async () => {}, remove = async (path) => { for (const entry of await readdir(path)) await rm(join(path, entry), { recursive: true, force: true }); }, waitForRejoin = waitForReady, reinclude = async () => {}, resyncTimeoutMs = 120000, resyncPollMs = 1000, audit = {}, idempotency = new Map() } = {}) {
   if (!node || !dataDir || typeof getStatus !== 'function') throw new TypeError('node, dataDir, and status function are required');
   const expectedPath = resolve(dataDir);
   return {
@@ -31,10 +41,22 @@ export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState
       if (resync) {
         if (request.fenced !== true || request.routingExcluded !== true) throw failure('single-member-resync requires a fenced and routing-excluded node');
         const donors = request.offline === true ? [request.donor] : await getDonors();
-        if (!Array.isArray(donors) || !donors.some((donor) => donor?.healthy === true && donor?.primary === true && donor.node !== node)) throw failure('single-member-resync requires a healthy Primary donor');
+        const eligibleDonors = Array.isArray(donors) ? donors.filter((donor) => donor?.healthy === true && donor?.primary === true && donor.node !== node) : [];
+        if (eligibleDonors.length !== 1) throw failure(eligibleDonors.length === 0 ? 'single-member-resync requires a healthy Primary donor' : 'single-member-resync refuses ambiguous donor authority');
       }
       const result = { node, dataDir: expectedPath, dryRun, initialized, status: dryRun ? 'planned' : 'completed', recoveryDisposition: resync ? 'single-member-resync' : 'reset-initialized-data', next: resync ? 'rejoin-and-receive-sst' : 'explicit-recovery-required' };
-      if (!dryRun) { await stop(); await remove(expectedPath); }
+      if (!dryRun) {
+        await stop();
+        await remove(expectedPath);
+        if (resync) {
+          await restart();
+          const verified = await waitForRejoin({ getStatus, timeoutMs: resyncTimeoutMs, intervalMs: resyncPollMs });
+          if (!isSyncedPrimary(verified)) throw failure('single-member-resync completed without a ready Primary view', 502);
+          await reinclude({ node, status: verified });
+          result.status = 'completed';
+          result.next = 're-included';
+        }
+      }
       audit.reset?.({ ...result, idempotencyKey: key });
       if (typeof key === 'string' && key) idempotency.set(key, result);
       return result;
