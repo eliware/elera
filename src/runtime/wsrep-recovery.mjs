@@ -7,6 +7,9 @@ export function runWsrepRecover(directory, { spawnImpl = spawn } = {}) {
     child.stdout.on('data', (value) => { output += value; });
     child.stderr.on('data', (value) => { output += value; });
     child.once('error', reject);
-    child.once('exit', (code) => code === 0 ? resolve(output) : reject(new Error(`mariadbd wsrep recovery exited with ${code}`)));
+    child.once('exit', (code) => {
+      if (code === 0 || /Recovered position:\s*[0-9a-f-]+:-?\d+/i.test(output)) resolve(output);
+      else reject(new Error(`mariadbd wsrep recovery exited with ${code}`));
+    });
   });
 }

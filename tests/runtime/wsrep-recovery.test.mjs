@@ -30,3 +30,11 @@ test('rejects failed recovery', async () => {
   child.emit('exit', 2);
   await expect(promise).rejects.toThrow('exited with 2');
 });
+
+test('preserves a recovered position when mariadbd exits nonzero after Galera connection failure', async () => {
+  const child = childProcess();
+  const promise = runWsrepRecover('/data', { spawnImpl: () => child });
+  child.emitStderr('WSREP: Recovered position: abcdef-1234:42\nWSREP connection refused');
+  child.emit('exit', 1);
+  await expect(promise).resolves.toContain('Recovered position: abcdef-1234:42');
+});
