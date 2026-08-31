@@ -54,12 +54,12 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       current = undefined;
       return this.plan();
     },
-    async authorize({ epoch, acknowledgements = [] } = {}) {
-      debug('Authorizing recovery epoch', { epoch, acknowledgements });
+    async authorize({ epoch, acknowledgements = [], force = false } = {}) {
+      debug('Authorizing recovery epoch', { epoch, acknowledgements, force });
       const existing = await read();
       if (!existing || existing.epoch !== epoch || !validateRecoveryEpoch(existing, existing.clusterId)) throw Object.assign(new Error('unknown or stale recovery epoch'), { statusCode: 409 });
-      const acknowledgementsBy = [...new Set(Array.isArray(acknowledgements) ? acknowledgements : [])].sort();
-      current = transitionRecoveryEpoch(existing, 'authorized', { acknowledgements: acknowledgementsBy, acknowledgementsBy, authorizedAt: now().toISOString() });
+      const acknowledgementsBy = force ? existing.quorum.slice() : [...new Set(Array.isArray(acknowledgements) ? acknowledgements : [])].sort();
+      current = transitionRecoveryEpoch(existing, 'authorized', { acknowledgements: acknowledgementsBy, acknowledgementsBy, ...(force ? { operatorForced: true } : {}), authorizedAt: now().toISOString() });
       await persist(current, existing.epoch);
       await publishEvent({ type: 'recovery.bootstrap-authorized', epoch: current.epoch, acknowledgements: acknowledgementsBy });
       return current;

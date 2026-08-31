@@ -25,7 +25,10 @@ export async function handleColdRecoveryRoute({ method, path, request, response,
   }
   if (method === 'POST' && path === '/api/v1/cluster/cold-recovery/authorize') {
     if (!internal && !allowed(auth, 'recovery:write')) return false;
-    response.json(202, { ok: true, operation: 'cluster.cold-recovery.authorize', data: await protocol.authorize(await readBody(request)) });
+    const body = await readBody(request);
+    const force = body.force === true;
+    if (force && !auth?.root) throw Object.assign(new Error('forced recovery requires root administrator authorization'), { statusCode: 403 });
+    response.json(202, { ok: true, operation: 'cluster.cold-recovery.authorize', data: await protocol.authorize({ ...body, force: force && auth.root }) });
     return true;
   }
   if (method === 'POST' && path === '/api/v1/cluster/cold-recovery/bootstrap') {

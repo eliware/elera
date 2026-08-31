@@ -41,6 +41,13 @@ test('protects writes and supports internal authorization', async () => {
   const complete = response(); await expect(handleColdRecoveryRoute({ method: 'POST', path: '/api/v1/cluster/cold-recovery/complete', response: complete, protocol, internal: true, request: request({ ok: true }) })).resolves.toBe(true);
   await expect(handleColdRecoveryRoute({ method: 'GET', path: '/other', response: response(), protocol, auth: { root: true } })).resolves.toBe(false);
 });
+test('allows only root administrators to force recovery authorization', async () => {
+  const protocol = { authorize: jest.fn(async (body) => body) };
+  await expect(handleColdRecoveryRoute({ method: 'POST', path: '/api/v1/cluster/cold-recovery/authorize', request: request({ epoch: 'e', force: true }), response: response(), protocol, auth: { scopes: ['recovery:write'] } })).rejects.toMatchObject({ statusCode: 403 });
+  const out = response();
+  await expect(handleColdRecoveryRoute({ method: 'POST', path: '/api/v1/cluster/cold-recovery/authorize', request: request({ epoch: 'e', force: true }), response: out, protocol, auth: { root: true } })).resolves.toBe(true);
+  expect(protocol.authorize).toHaveBeenCalledWith({ epoch: 'e', force: true });
+});
 test('supports scoped mutation routes and internal peer access', async () => {
   const protocol = { retry: jest.fn(async () => 'r'), authorize: jest.fn(async (body) => body), beginBootstrap: jest.fn(async (body) => body), complete: jest.fn(async (body) => body) };
   const auth = { scopes: ['recovery:write'] };

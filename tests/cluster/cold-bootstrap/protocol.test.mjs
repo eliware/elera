@@ -45,6 +45,12 @@ test('requires the exact epoch and quorum before authorization', async () => {
   await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b', 'c'] })).resolves.toMatchObject({ phase: 'authorized', acknowledgements: new Set(['a', 'b', 'c']) });
 });
 
+test('allows an explicit forced authorization to bypass peer acknowledgements', async () => {
+  const { protocol } = makeProtocol();
+  const plan = await protocol.plan();
+  await expect(protocol.authorize({ epoch: plan.epoch, force: true })).resolves.toMatchObject({ phase: 'authorized', operatorForced: true, acknowledgements: new Set(['a', 'b', 'c']) });
+});
+
 test('rejects stale or malformed evidence before candidate selection', async () => {
   const store = { async read() {}, async write() {} };
   const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => ({ node: 'a', state: { uuid: 'cluster', seqno: 1, safeToBootstrap: false }, active: false, generation: 1, observedAt: new Date(Date.now() - 20000).toISOString() }), fetchEvidence: async () => undefined, store, maxEvidenceAgeMs: 1000 });
