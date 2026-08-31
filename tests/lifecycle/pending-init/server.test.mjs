@@ -18,6 +18,26 @@ test("pending initialization is live but not ready and requires the root token",
   expect(initialize).not.toHaveBeenCalled();
 });
 
+test("pending recovery exposes root-only node reset while SQL is unavailable", async () => {
+  const nodeDataReset = { reset: jest.fn().mockResolvedValueOnce({ dryRun: true, status: "planned" }).mockResolvedValueOnce({ dryRun: false, status: "completed" }) };
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, nodeDataReset }));
+  const port = await listen(server);
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/node/data/reset`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ dryRun: true }) });
+  expect(response.status).toBe(200); expect(nodeDataReset.reset).toHaveBeenCalledWith({ dryRun: true });
+  expect((await fetch(`http://127.0.0.1:${port}/api/v1/node/data/reset`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ dryRun: false }) })).status).toBe(202);
+  expect((await fetch(`http://127.0.0.1:${port}/api/v1/node/data/reset`, { method: "POST" })).status).toBe(401);
+});
+
+test("pending recovery reports unavailable reset configuration and reset failures", async () => {
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" } }));
+  const port = await listen(server);
+  expect((await fetch(`http://127.0.0.1:${port}/api/v1/node/data/reset`, { method: "POST", headers: { authorization: "Bearer root" }, body: "{}" })).status).toBe(503);
+  await close(server); server = undefined;
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, nodeDataReset: { reset: jest.fn(async () => { throw new Error("blocked"); }) } }));
+  const secondPort = await listen(server);
+  expect((await fetch(`http://127.0.0.1:${secondPort}/api/v1/node/data/reset`, { method: "POST", headers: { authorization: "Bearer root" }, body: "{}" })).status).toBe(500);
+});
+
 test("pending initialization accepts the explicit authenticated bootstrap request", async () => {
   const initialize = jest.fn().mockResolvedValue(undefined);
   const onInitialized = jest.fn();

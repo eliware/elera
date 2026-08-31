@@ -47,6 +47,8 @@ that the implementation is complete.
 - [x] Root-only node data reset is guarded by exact identity/path binding,
   dry-run and confirmation requirements, readiness/quorum checks, recovery
   disposition, donor validation for resync, audit, and idempotency.
+- [x] Pending/recovery startup exposes the same root-only reset endpoint while
+  SQL is unavailable, with explicit offline resync and donor requirements.
 - [ ] Verify every recovery observation is authenticated, epoch-bound,
   evidence-digested, quorum-authorized, and rejected when stale or changed.
 - [ ] Verify winner-only bootstrap, join-only followers, Primary verification,

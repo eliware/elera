@@ -4,7 +4,7 @@ import { initializePendingData } from "./initialize.mjs";
 import { loadIntent } from "../../intent/model.mjs";
 import { runtimeIdentity } from "../../runtime/identity.mjs";
 const json = (response, status, body) => response.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
-export function createPendingInitServer({ environment = process.env, log = console, initialize = initializePendingData, onInitialized = () => {} } = {}) {
+export function createPendingInitServer({ environment = process.env, log = console, initialize = initializePendingData, onInitialized = () => {}, nodeDataReset } = {}) {
   let operation;
   const standaloneOperation = () => {
     const intent = loadIntent(environment);
@@ -37,6 +37,12 @@ export function createPendingInitServer({ environment = process.env, log = conso
       catch (error) { log.error?.("Pending initialization failed", { error }); json(response, 500, { ok: false, error: error.message }); }
       finally { operation = undefined; }
       return;
+    }
+    if (request.method === "POST" && request.url === "/api/v1/node/data/reset") {
+      if (!authorized(request)) return json(response, 401, { ok: false, error: "authentication required" });
+      if (!nodeDataReset) return json(response, 503, { ok: false, error: "node data reset is unavailable before supervisor recovery is configured" });
+      try { const data = await nodeDataReset.reset(await readBody(request)); return json(response, data.dryRun ? 200 : 202, { ok: true, operation: "node.data.reset", status: data.status, data }); }
+      catch (error) { return json(response, error.statusCode ?? 500, { ok: false, error: error.message }); }
     }
     json(response, 503, { ok: false, error: "pending initialization; explicit initialization required" });
   });

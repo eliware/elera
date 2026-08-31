@@ -232,6 +232,9 @@ verification. `elera-cli` continues to stream dumps through native
   `force: true` and `recoveryDisposition: "reset-initialized-data"`; use
   `single-member-resync` only with fencing, routing exclusion, and a healthy
   Primary donor.
+  The same endpoint remains available on the pending/recovery listener while
+  SQL is unavailable; offline resync additionally requires `offline: true` and
+  an explicit donor attestation.
 - [ ] `POST /api/v1/maintenance/start` — drain and enter maintenance.
 - [ ] `POST /api/v1/maintenance/stop` — exit maintenance safely.
 
