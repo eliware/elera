@@ -2,7 +2,7 @@ import { createBootstrapWatch } from '../cluster/cold-bootstrap/bootstrap-watch.
 import { shouldStartMariaDb } from '../cluster/cold-bootstrap/startup-state.mjs';
 
 export function startSupervisorMariaDb({ processController, config, startupDecision, health, recoveryState, recoveryAudit, recoveryCompletion, coldRecoveryProtocol, startupServer, identity, signals, log, createWatch = createBootstrapWatch, shouldStart = shouldStartMariaDb } = {}) {
-  if (!shouldStart({ elera: config.elera, mode: startupDecision.mode })) {
+  if (!shouldStart({ elera: config.elera, mode: startupDecision.mode, localWinner: startupDecision.localWinner, bootstrapComplete: startupDecision.bootstrapComplete })) {
     log.warn('MariaDB start refused until explicit recovery authority is available', { reason: startupDecision.reason });
     return;
   }
