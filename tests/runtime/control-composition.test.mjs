@@ -39,3 +39,25 @@ test('composes the control API with cluster and runtime dependencies', async () 
   expect(query).toHaveBeenCalled();
   await rm(dataDir, { recursive: true, force: true });
 });
+
+test('executes resync only after supervisor fencing and exclusion are verified', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'supervisor-resync-'));
+  const order = [];
+  let draining = false;
+  const processController = { stop: jest.fn(() => order.push('stop')), start: jest.fn(() => order.push('restart')) };
+  const result = createSupervisorControlComposition({
+    db: { query: jest.fn() }, metadata: {}, managed: {}, applications: {}, reconciler: {}, artifactStore: {}, routingBundles: { lease: jest.fn() }, routingEvent: jest.fn(),
+    recovery: { status: jest.fn(() => ({})) }, observationStore: { all: () => [{ nodeId: 'donor', health: 'ok', primary: 'Primary' }] },
+    health: { status: jest.fn(async () => ({ ready: true, values: { wsrep_local_state_comment: 'Synced', wsrep_ready: 'ON', wsrep_cluster_status: 'Primary' } })), cacheInfo: () => ({}) },
+    clusterDrain: {}, lifecycle: { get: () => 'running' }, telemetry: { summary: () => ({}), details: () => ({}) }, config: { elera: true, runtimeNodeName: 'target', dataDir, shutdownTimeoutMs: 100, resyncPollMs: 1, resyncTimeoutMs: 100 }, intentState: {},
+    coldState: { drain: { isDraining: () => draining, active: () => 0 }, clusterDrain: { set: (value) => { draining = value; order.push(value ? 'fence' : 'undrain'); } } }, processController,
+    applyIntent: jest.fn(), environment: {}, log: { reset: (event) => order.push(`reset:${event}`) },
+  });
+  try {
+    const removeIndex = order.length;
+    await expect(result.options.nodeDataReset.reset({ node: 'target', dataDir, force: true, recoveryDisposition: 'single-member-resync', confirmation: 'RESET target', idempotencyKey: 'composition-resync' })).resolves.toMatchObject({ donor: 'donor', next: 're-included' });
+    expect(order.slice(removeIndex)).toEqual(['fence', 'fence', 'stop', 'restart']);
+    expect(processController.stop).toHaveBeenCalled();
+    expect(processController.start).toHaveBeenCalled();
+  } finally { await rm(dataDir, { recursive: true, force: true }); }
+});
