@@ -16,7 +16,7 @@ const state = { db: undefined, drained: false, shuttingDown: false, restarting: 
 let signals;
 const servers = [];
 const { lifecycle, telemetry, recoveryState, recovery, recoveryAudit } = createRuntimeState({ config, log });
-const restartMarker = createCleanRestartMarker({ path: `${config.dataDir}/elera-state/clean-restart.json`, node: identity.name, epoch: () => recoveryState.snapshot() });
+const restartMarker = createCleanRestartMarker({ path: `${config.dataDir}/elera-state/clean-restart.json`, node: identity.name, epoch: null });
 
 let composition;
 composition = createSupervisorEntryComposition({
