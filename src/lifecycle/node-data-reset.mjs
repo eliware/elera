@@ -22,7 +22,7 @@ export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState
       const key = request.idempotencyKey;
       if (typeof key === 'string' && idempotency.has(key)) return idempotency.get(key);
       if (request.node !== node) throw failure('node identity does not match this supervisor');
-      if (resolve(request.dataDir ?? '') !== expectedPath) throw failure('data directory does not match this node');
+      if (request.dataDir !== undefined && resolve(request.dataDir) !== expectedPath) throw failure('data directory does not match this node');
       if (typeof request.confirmation !== 'string' || request.confirmation !== confirmationFor(node)) throw failure(`confirmation must exactly match ${confirmationFor(node)}`);
       const dryRun = request.dryRun ?? false;
       if (dryRun !== true && dryRun !== false) throw failure('dryRun must be boolean', 400);
