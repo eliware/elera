@@ -226,6 +226,12 @@ verification. `elera-cli` continues to stream dumps through native
 - [x] `GET /api/v1/recovery/events` — inspect recent recovery decisions.
 - [x] `POST /api/v1/recovery/acknowledge` — record an operator acknowledgement without granting bootstrap authority; requires `recovery:acknowledge` and `confirm: true`.
 - [x] `POST /api/v1/recovery/abort` — abort recovery and mark the cluster unavailable; requires `recovery:abort` and `confirm: true`.
+- [x] `POST /api/v1/node/data/reset` — root-only, exact-node guarded dry-run or
+  reset. Requests require `node`, `dataDir`, `confirmation: "RESET <node>"`,
+  and an idempotency key for execution. Initialized data additionally requires
+  `force: true` and `recoveryDisposition: "reset-initialized-data"`; use
+  `single-member-resync` only with fencing, routing exclusion, and a healthy
+  Primary donor.
 - [ ] `POST /api/v1/maintenance/start` — drain and enter maintenance.
 - [ ] `POST /api/v1/maintenance/stop` — exit maintenance safely.
 

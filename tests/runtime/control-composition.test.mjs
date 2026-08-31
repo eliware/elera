@@ -1,15 +1,20 @@
 import { expect, jest, test } from '@jest/globals';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const createControlApi = jest.fn((options) => ({ options }));
 jest.unstable_mockModule('../../src/control-api.mjs', () => ({ createControlApi }));
 const { createSupervisorControlComposition } = await import('../../src/runtime/control-composition.mjs');
 
 test('composes the control API with cluster and runtime dependencies', async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'supervisor-reset-'));
   const query = jest.fn();
-  const result = createSupervisorControlComposition({ db: { query }, metadata: {}, managed: {}, applications: {}, reconciler: {}, artifactStore: {}, routingBundles: { lease: jest.fn() }, routingEvent: jest.fn(), recovery: {}, observationStore: {}, health: { status: jest.fn(async () => ({ ready: false })), cacheInfo: jest.fn(() => ({})) }, clusterDrain: { set: jest.fn() }, lifecycle: { get: jest.fn() }, telemetry: { summary: jest.fn(), details: jest.fn() }, config: { elera: true }, intentState: {}, coldState: { drain: { isDraining: jest.fn(() => false), active: jest.fn(() => 0) }, clusterDrain: { set: jest.fn() } }, processController: {}, applyIntent: jest.fn(), environment: {}, log: {} });
+  const stop = jest.fn();
+  const result = createSupervisorControlComposition({ db: { query }, metadata: {}, managed: {}, applications: {}, reconciler: {}, artifactStore: {}, routingBundles: { lease: jest.fn() }, routingEvent: jest.fn(), recovery: { status: jest.fn(() => ({})) }, observationStore: { all: jest.fn(() => [{ node: 'donor', healthy: true, primary: true }]) }, health: { status: jest.fn(async () => ({ ready: false })), cacheInfo: jest.fn(() => ({})) }, clusterDrain: { set: jest.fn() }, lifecycle: { get: jest.fn() }, telemetry: { summary: jest.fn(), details: jest.fn() }, config: { elera: true, runtimeNodeName: 'supervisor', dataDir }, intentState: {}, coldState: { drain: { isDraining: jest.fn(() => false), active: jest.fn(() => 0) }, clusterDrain: { set: jest.fn() } }, processController: { stop }, applyIntent: jest.fn(), environment: {}, log: {} });
   expect(result).toBeDefined();
   const options = result.options;
-  expect(options.getConfig()).toEqual({ elera: true });
+  expect(options.getConfig()).toEqual(expect.objectContaining({ elera: true, runtimeNodeName: 'supervisor', dataDir }));
   await options.getStatus();
   options.getTraffic();
   options.getTelemetry();
@@ -22,9 +27,14 @@ test('composes the control API with cluster and runtime dependencies', async () 
   options.getColdEvidence();
   options.getColdRecoveryProtocol();
   options.getColdBootstrapLocal();
+  await expect(options.nodeDataReset.reset({ node: 'supervisor', dataDir, confirmation: 'RESET supervisor', dryRun: true })).resolves.toMatchObject({ status: 'planned' });
+  await expect(options.nodeDataReset.reset({ node: 'supervisor', dataDir, confirmation: 'RESET supervisor', dryRun: true, force: true, fenced: true, routingExcluded: true, recoveryDisposition: 'single-member-resync' })).resolves.toMatchObject({ status: 'planned' });
+  await expect(options.nodeDataReset.reset({ node: 'supervisor', dataDir, confirmation: 'RESET supervisor', dryRun: false, idempotencyKey: 'composition-reset' })).resolves.toMatchObject({ status: 'completed' });
+  expect(stop).toHaveBeenCalled();
   options.bootstrap();
   await options.db.query('SELECT 1');
   await options.lifecycle.plan('bootstrap');
   await options.lifecycle.execute('bootstrap', { confirm: true });
   expect(query).toHaveBeenCalled();
+  await rm(dataDir, { recursive: true, force: true });
 });

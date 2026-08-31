@@ -44,6 +44,9 @@ that the implementation is complete.
 - [x] Fresh startup preserves `SUPERVISOR_INTENT_JSON` while injecting runtime
   identity, so declared multi-member intent reaches the explicit bootstrap
   state machine instead of silently falling back to a single-member default.
+- [x] Root-only node data reset is guarded by exact identity/path binding,
+  dry-run and confirmation requirements, readiness/quorum checks, recovery
+  disposition, donor validation for resync, audit, and idempotency.
 - [ ] Verify every recovery observation is authenticated, epoch-bound,
   evidence-digested, quorum-authorized, and rejected when stale or changed.
 - [ ] Verify winner-only bootstrap, join-only followers, Primary verification,
