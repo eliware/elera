@@ -18,4 +18,5 @@ describe('health service', () => {
   });
   test('calculates safe and pressured weights', () => { expect(calculateWeight(values)).toBe(100); expect(calculateWeight({ ...values, wsrep_local_state_comment: 'Joining' })).toBe(0); expect(calculateWeight({ ...values, wsrep_local_recv_queue: '17' })).toBe(0); expect(calculateWeight({ ...values, wsrep_flow_control_paused: '0.05' })).toBe(0); });
   test('reports unavailable database and query timeout', async () => { const service = createHealthService({ db: undefined, timeoutMs: 1, log: { debug: jest.fn() } }); await expect(service.status()).rejects.toThrow('unavailable'); const slow = createHealthService({ db: { query: () => new Promise(() => {}) }, timeoutMs: 1, log: { debug: jest.fn() } }); await expect(slow.status()).rejects.toThrow('timeout'); });
+  test('rejects an invalid SQL status result without destructuring it', async () => { const service = createHealthService({ db: { query: async () => undefined }, timeoutMs: 10, log: { debug: jest.fn() } }); await expect(service.status()).rejects.toThrow('invalid result'); });
 });

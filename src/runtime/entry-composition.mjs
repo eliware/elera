@@ -35,7 +35,7 @@ export function createSupervisorEntryComposition({ config, identity, lifecycle, 
   });
   const traffic = createSupervisorTraffic({ telemetry, identity, config, health, routingBus: routing.routingBus, log, getDb, setDrained });
   const control = createSupervisorControlComposition({
-    db: { query: (...args) => getDb().query(...args) }, ...domain, routingBundles: routing.routingBundles,
+    db: { query: (...args) => getDb()?.query?.(...args) }, ...domain, routingBundles: routing.routingBundles,
     routingEvent: routing.routingEvent, recovery, observationStore: domain.observationStore, health,
     clusterDrain: traffic.clusterDrain, lifecycle, telemetry, config, intentState: domain.intentState,
     coldState: getColdState(), processController: { start: (...args) => getMariaProcess()?.start?.(...args) }, applyIntent, environment, log,

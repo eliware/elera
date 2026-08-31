@@ -7,7 +7,9 @@ export function createHealthService({ db, timeoutMs, log, elera = true, clusterS
     // A startup probe may quarantine the pool before MariaDB begins accepting
     // connections. Health checks must be able to recover that pool.
     await db.health?.();
-    const [rows] = await Promise.race([db.query("SHOW GLOBAL STATUS WHERE Variable_name IN ('wsrep_cluster_state_uuid','wsrep_local_state_comment','wsrep_ready','wsrep_cluster_status','wsrep_cluster_size','wsrep_local_recv_queue','wsrep_local_send_queue','wsrep_flow_control_paused')"), new Promise((_, reject) => setTimeout(() => reject(new Error('status query timeout')), timeoutMs))]);
+    const result = await Promise.race([db.query("SHOW GLOBAL STATUS WHERE Variable_name IN ('wsrep_cluster_state_uuid','wsrep_local_state_comment','wsrep_ready','wsrep_cluster_status','wsrep_cluster_size','wsrep_local_recv_queue','wsrep_local_send_queue','wsrep_flow_control_paused')"), new Promise((_, reject) => setTimeout(() => reject(new Error('status query timeout')), timeoutMs))]);
+    if (!Array.isArray(result) || !Array.isArray(result[0])) throw new Error('status query returned invalid result');
+    const [rows] = result;
     const values = Object.fromEntries(rows.map((row) => [row.Variable_name, row.Value]));
     const recovery = getRecoveryState();
     const recoveryBlocked = recovery && ['cluster-unavailable', 'blocked-ambiguous', 'awaiting-quorum', 'recovery-authorized', 'bootstrapping', 'joining', 'collecting-evidence', 'pending'].includes(recovery.state);

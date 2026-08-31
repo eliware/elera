@@ -34,6 +34,10 @@ that the implementation is complete.
   pending-initialization handoff.
 - [x] Completed the thin composition-root refactor; `src/main.mjs` is now the
   dependency-wiring entrypoint. The README documents the supervisor/application/CLI/GitOps operations boundary.
+- [x] Runtime SQL client composition is published into shared state before
+  readiness and control routes execute; invalid health query results fail
+  closed, and initialization does not report success when metadata migration
+  fails.
 - [ ] Verify every recovery observation is authenticated, epoch-bound,
   evidence-digested, quorum-authorized, and rejected when stale or changed.
 - [ ] Verify winner-only bootstrap, join-only followers, Primary verification,

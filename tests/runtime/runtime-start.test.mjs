@@ -2,8 +2,10 @@ import { expect, test } from '@jest/globals';
 import { startSupervisorRuntime } from '../../src/runtime/runtime-start.mjs';
 
 test('starts supervisor runtime dependencies', async () => {
-  const result = await startSupervisorRuntime({ dbEnv: { ELERA_DB_HOST: '127.0.0.1', ELERA_DB_PORT: '3306' }, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 1, elera: false }, health: { status: async () => ({ ready: true }) }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'standalone' }, initialIntent: { cluster: { name: 'cluster-a', members: [] } }, recoveryState: {}, recoveryAudit: {}, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: {}, getDrained: () => false, environment: {} });
+  let database;
+  const result = await startSupervisorRuntime({ dbEnv: { ELERA_DB_HOST: '127.0.0.1', ELERA_DB_PORT: '3306' }, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 1, elera: false }, health: { status: async () => ({ ready: true }) }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'standalone' }, initialIntent: { cluster: { name: 'cluster-a', members: [] } }, recoveryState: {}, recoveryAudit: {}, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: {}, getDrained: () => false, environment: {}, setDb: (value) => { database = value; } });
   expect(result.db).toBeDefined(); expect(result.sqlReady).toBe(true); expect(result.routingTimer).toBeDefined(); clearInterval(result.routingTimer); clearInterval(result.peerTimer);
+  expect(database).toBe(result.db);
 });
 
 test('passes configured peer credentials and application to routing startup', async () => {

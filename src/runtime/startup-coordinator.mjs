@@ -24,7 +24,7 @@ export async function startSupervisor({ config, identity, log, loadEnvironmentIn
   state.applyIntent = startupServices.applyIntent;
   state.bootstrapMaria = startupServices.bootstrapMaria;
   startSupervisorMariaDb({ processController: state.mariaProcess, config, startupDecision, health, recoveryState, recoveryAudit, recoveryCompletion: state.recoveryCompletion, coldRecoveryProtocol: state.coldRecoveryProtocol, startupServer: recoveryResult.startupServer, identity, signals: state.signals, log });
-  const runtime = await startSupervisorRuntime({ dbEnv, probes, config, health, log, startupDecision, initialIntent, recoveryState, recoveryAudit, identity, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, environment });
+  const runtime = await startSupervisorRuntime({ dbEnv, probes, config, health, log, startupDecision, initialIntent, recoveryState, recoveryAudit, identity, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, environment, setDb: (db) => { state.db = db; } });
   state.db = runtime.db;
   state.routingTimer = runtime.routingTimer;
   state.peerTimer = runtime.peerTimer;

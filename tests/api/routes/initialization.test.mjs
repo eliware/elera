@@ -27,3 +27,7 @@ test('uses the metadata initializer when configured', async () => {
   await expect(handleInitializationRoute({ method: 'POST', path: '/api/v1/initialization/apply', request: request({ confirm: true }), response: response(), metadata: { initialize }, environment: { ELERA_DEBUG: '1' }, dataDir: 'missing' })).resolves.toBe(true);
   expect(initialize).toHaveBeenCalledWith({ ELERA_DEBUG: '1' });
 });
+test('does not report initialization success when metadata commit fails', async () => {
+  const initialize = jest.fn(async () => { throw new Error('migration failed'); });
+  await expect(handleInitializationRoute({ method: 'POST', path: '/api/v1/initialization/apply', request: request({ confirm: true }), response: response(), metadata: { initialize }, environment: {}, dataDir: 'missing' })).rejects.toThrow('migration failed');
+});
