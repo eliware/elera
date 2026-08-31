@@ -5,8 +5,8 @@ test("creates an explicit bootstrap decision for the handoff node", () => {
   expect(explicitStartupDecision({ ELERA_EXPLICIT_START_MODE: "bootstrap" }, "elera-0")).toMatchObject({ mode: "bootstrap", localWinner: true, winner: "elera-0" });
 });
 
-test("creates an explicit join decision without promoting the node", () => {
-  expect(explicitStartupDecision({ ELERA_EXPLICIT_START_MODE: "join" }, "elera-1")).toMatchObject({ mode: "join", localWinner: false });
+test("creates an explicit join decision with bootstrap authority", () => {
+  expect(explicitStartupDecision({ ELERA_EXPLICIT_START_MODE: "join" }, "elera-1")).toMatchObject({ mode: "join", localWinner: false, bootstrapComplete: true });
 });
 
 test("ignores ordinary startup without an explicit handoff", () => {

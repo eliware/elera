@@ -7,6 +7,7 @@ export function explicitStartupDecision(environment = process.env, nodeName) {
   return {
     mode,
     localWinner: mode === "bootstrap",
+    bootstrapComplete: mode === "join",
     winner: mode === "bootstrap" ? nodeName : undefined,
     reason: `explicit ${mode} initialization handoff`,
     epoch: null,
