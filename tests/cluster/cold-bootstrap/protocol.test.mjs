@@ -134,7 +134,7 @@ test('selects the strongest surviving UUID history and records divergent stale n
     fetchEvidence: async (url) => url.endsWith('b') ? winner : follower,
     store: { async read() {}, async write(value) { return value; } },
   });
-  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', code: 'INSUFFICIENT_RECOVERY_EVIDENCE' });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'bootstrap', winner: { node: 'b' }, divergent: expect.arrayContaining([expect.objectContaining({ node: 'a' })]) });
 });
 test('does not treat a Primary from another cluster as a join target', async () => {
   const active = { ...evidence('b', 2), active: true, galera: { clusterUuid: 'other', clusterStatus: 'Primary', localState: 'Synced', ready: true } };

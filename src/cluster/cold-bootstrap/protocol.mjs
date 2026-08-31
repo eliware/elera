@@ -41,7 +41,16 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       await publishEvent({ type: 'recovery.evidence-collected', evidence });
       const active = evidence.find((item) => isActivePrimary(item, evidence));
       if (active) return { eligible: true, mode: 'join', reason: 'primary component already exists', ...(Number.isInteger(active.galera.clusterSize) && active.galera.clusterSize > 0 ? { expectedMembership: active.galera.clusterSize } : {}), evidence };
-      const decision = selectCandidate(evidence, { minimumHistorySize: nodes.length });
+      // Autonomous bootstrap requires confirmation from every configured supervisor,
+      // but a stale/divergent SQL volume must not veto the surviving majority history.
+      if (evidence.length < nodes.length) {
+        const reason = 'all configured supervisors must provide recovery evidence before bootstrap';
+        current = { version: 1, phase: 'blocked', code: 'INSUFFICIENT_RECOVERY_EVIDENCE', reason, evidence, updatedAt: now().toISOString() };
+        await persist(current);
+        await publishEvent({ type: 'recovery.refused', reason, code: current.code, evidence });
+        return { eligible: false, mode: 'blocked', ...current };
+      }
+      const decision = selectCandidate(evidence, { minimumHistorySize: Math.floor(nodes.length / 2) + 1 });
       debug('Recovery candidate decision complete', { eligible: decision.eligible, code: decision.code, reason: decision.reason, candidate: decision.candidate?.node, divergentCount: decision.divergent?.length ?? 0 });
       if (!decision.eligible) { current = { version: 1, phase: 'blocked', ...(decision.code ? { code: decision.code } : {}), reason: decision.reason, evidence, updatedAt: now().toISOString() }; await persist(current); await publishEvent({ type: 'recovery.refused', reason: decision.reason, code: decision.code, evidence }); return { eligible: false, mode: 'blocked', ...current }; }
       const epoch = createRecoveryEpoch({ clusterId: decision.candidate.uuid, evidence, winner: decision.candidate, quorum: nodes.map((node) => node.name), now: now() });
