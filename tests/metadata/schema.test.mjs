@@ -1,8 +1,8 @@
 import { expect, test } from '@jest/globals';
-import { META_DATABASE, META_MIGRATIONS } from '../../src/metadata/schema.mjs';
+import { META_DATABASE, META_SCHEMA } from '../../src/metadata/schema.mjs';
 
-test('defines ordered metadata migrations for the canonical database', () => {
+test('defines one canonical current schema for the metadata database', () => {
   expect(META_DATABASE).toBe('elera_meta');
-  expect(META_MIGRATIONS.map(({ version }) => version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-  expect(META_MIGRATIONS.every(({ name, statements }) => name && statements.length > 0)).toBe(true);
+  expect(META_SCHEMA.length).toBeGreaterThan(0);
+  expect(META_SCHEMA.every((statement) => typeof statement === 'string' && statement.includes('CREATE TABLE'))).toBe(true);
 });
