@@ -42,10 +42,7 @@ export function createStartupEvidenceServer({ port, evidence, lease, completion,
       if (!server.listening) return;
       server.closeIdleConnections?.();
       server.closeAllConnections?.();
-      await new Promise((resolve) => {
-        server.close(resolve);
-        setImmediate(resolve);
-      });
+      await new Promise((resolve) => server.close(resolve));
     },
   };
 }
