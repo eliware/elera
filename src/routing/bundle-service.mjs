@@ -14,6 +14,10 @@ export function createRoutingBundleService({ managed, observationStore, environm
   return {
     async lease(request) {
       const result = await managed.lease(request);
+      const application = result.application ?? request.application;
+      const database = result.database ?? request.database;
+      const identity = result.identity ?? request.identity;
+      if (request.application && result.application && request.application !== result.application) throw Object.assign(new Error('application is not authorized for this token'), { statusCode: 403 });
       const key = result.application ?? request.application ?? 'default'; const current = now(); const cached = cache.get(key); const observations = observationStore.snapshot();
       const quorum = evaluateQuorum(observations, { now: current, expectedSize: Number(environment.ELERA_CLUSTER_SIZE ?? observations.length) });
       const reachable = quorum.quorum ? (validateAddresses ? await filterReachableNodes(observations, { resolve: resolveAddress, log }) : observations) : [];
@@ -24,7 +28,7 @@ export function createRoutingBundleService({ managed, observationStore, environm
       const fallback = result.routes;
       const selected = routes.balanced.length ? routes : fallback;
       const address = clientSqlAddress(environment);
-      return connectionBundleFromConfig({ ...result, routes: { primary: selected.primary, balanced: selected.balanced }, writer: selected.writer, failover: selected.failover, readers: selected.readers, bundleVersion: routes.balanced.length ? routes.bundleVersion : (result.bundleVersion ?? 1), nodeIdentity: { name: address, address }, ports: { sql: Number(environment.ELERA_NODE_SQL_PORT ?? 3306), http: Number(environment.ELERA_HTTP_PORT ?? 8080) } });
+      return connectionBundleFromConfig({ ...result, application, database, identity, routes: { primary: selected.primary, balanced: selected.balanced }, writer: selected.writer, failover: selected.failover, readers: selected.readers, bundleVersion: routes.balanced.length ? routes.bundleVersion : (result.bundleVersion ?? 1), nodeIdentity: { name: address, address }, ports: { sql: Number(environment.ELERA_NODE_SQL_PORT ?? 3306), http: Number(environment.ELERA_HTTP_PORT ?? 8080) } });
     },
     async validate(request = {}) {
       let bundle;

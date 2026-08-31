@@ -78,7 +78,7 @@ test("resolves a scoped token identity without a query selector and rejects mism
   const scoped = context("GET", "/api/v1/routing/bundle");
   scoped.auth = { application: "payments", identity: "runtime" };
   expect(await handleRoutingRoute(scoped)).toBe(true);
-  expect(scoped.routingBundles.lease).toHaveBeenCalledWith({ identity: "runtime", application: "payments" });
+  expect(scoped.routingBundles.lease).toHaveBeenCalledWith({ identity: "runtime", application: "payments", database: undefined });
   const mismatch = context("GET", "/api/v1/routing/bundle");
   mismatch.url = new URL("http://localhost/api/v1/routing/bundle?identity=other");
   mismatch.auth = { application: "payments", identity: "runtime" };

@@ -110,10 +110,11 @@ export async function handleRoutingRoute({
       throw Object.assign(new Error("identity is not authorized for this token"), {
         statusCode: 403,
       });
+    const bundleRequest = { identity, application: auth?.application, database: auth?.database };
     response.json(200, {
       ok: true,
       operation: "routing.bundle",
-      data: await routingBundles.lease({ identity, application: auth?.application }),
+      data: await routingBundles.lease(bundleRequest),
     });
     return true;
   }

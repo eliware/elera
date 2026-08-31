@@ -96,5 +96,8 @@ that the implementation is complete.
   supervisor does not use it for administrative SQL.
 - [x] Application-facing provisioning and SQL pool behavior remain outside
   supervisor, in CLI and client respectively.
+- [x] Authenticated routing bundle retrieval derives application, database, and
+  identity from the runtime token context; cross-application mismatches fail
+  closed.
 - [x] Core Flow remains generic and does not expose supervisor recovery
   internals.
