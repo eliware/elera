@@ -129,10 +129,21 @@ test('blocks equal-authority divergent histories and exposes pending status', as
   await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', code: 'SPLIT_BRAIN' });
   await expect(protocol.status()).resolves.toMatchObject({ phase: 'blocked' });
 });
-test('preserves an ordinary candidate-selection refusal without a code', async () => {
+test('does not let safe markers override recovery ordering', async () => {
   const item = (node) => ({ ...evidence(node, 2), state: { uuid: 'u', seqno: 2, safeToBootstrap: true } });
   const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }], localEvidence: async () => item('a'), fetchEvidence: async () => item('b'), store: { async read() {}, async write(value) { return value; } } });
-  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', reason: 'multiple nodes are marked safe_to_bootstrap' });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'bootstrap', winner: { node: 'a' } });
+});
+
+test('blocks a quorum when no node has a recoverable sequence', async () => {
+  const noPosition = (node) => ({ ...evidence(node, -1), state: { uuid: 'u', seqno: -1, safeToBootstrap: true } });
+  const protocol = createColdRecoveryProtocol({
+    nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }],
+    localEvidence: async () => noPosition('a'),
+    fetchEvidence: async () => noPosition('b'),
+    store: { async read() {}, async write(value) { return value; } },
+  });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', reason: 'no recoverable seqno exists' });
 });
 
 test('rejects invalid completion and preserves the authorized epoch', async () => {

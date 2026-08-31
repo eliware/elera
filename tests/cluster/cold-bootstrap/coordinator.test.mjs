@@ -45,7 +45,7 @@ test('refuses remote execution when no remote bootstrapper is configured', async
 test('recovers a missing sequence number through the local evidence reader', async () => {
   const local = jest.fn(async () => ({ state: { uuid: 'u', seqno: -1, safeToBootstrap: true }, active: false }));
   const coordinator = createColdBootstrapCoordinator({ nodes: [{ name: 'one', local: true, dataDir: '/data' }], local, remote: jest.fn(), bootstrapLocal: jest.fn() });
-  await expect(coordinator.plan()).resolves.toMatchObject({ eligible: true, candidate: { node: 'one', seqno: -1 } });
+  await expect(coordinator.plan()).resolves.toMatchObject({ eligible: false, reason: 'no recoverable seqno exists' });
 });
 
 test('persists an idempotent local bootstrap result when a lock path is configured', async () => {
