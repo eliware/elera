@@ -25,9 +25,9 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
     const explicitStartup = await resolveExplicitSupervisorStartup({ environment, nodeName: identity.name, dataDir: config.dataDir, args, joinAddress: bootstrapMember?.address });
     if (explicitStartup.explicit) { startupDecision = explicitStartup.decision; args = explicitStartup.args; }
     else {
-      startupDecision = await resolveCleanRestart({ restartMarker, recoveryProtocol: coldRecoveryProtocol, identity, startupTimeoutMs: config.startupTimeoutMs ?? 15000 }) ?? startupDecision;
-      log.debug?.('Recovery phase: clean-restart decision evaluated', { node: identity.name, mode: startupDecision.mode, reason: startupDecision.reason });
-      if (startupDecision.mode === 'join') return { initialIntent, args, localEvidence, members, coldRecoveryProtocol, startupDecision, recoveryCompletion, startupServer };
+      // Make this supervisor observable before any peer probes run. Cold-start
+      // discovery must tolerate different MariaDB startup times without turning
+      // a listener race into missing quorum evidence.
       recoveryState.set('collecting-evidence');
       const evidenceService = createRecoveryEvidenceService({ identity, dataDir: config.dataDir, httpPort: config.httpPort, token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, mariaProcess, log });
       const startupEvidence = evidenceService.evidence;
@@ -35,6 +35,9 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
       startupServer = evidenceService.server;
       await startupServer.listen();
       log.debug?.('Recovery phase: evidence listener started', { node: identity.name, port: config.httpPort });
+      startupDecision = await resolveCleanRestart({ restartMarker, recoveryProtocol: coldRecoveryProtocol, identity, startupTimeoutMs: config.startupTimeoutMs ?? 15000 }) ?? startupDecision;
+      log.debug?.('Recovery phase: clean-restart decision evaluated', { node: identity.name, mode: startupDecision.mode, reason: startupDecision.reason });
+      if (startupDecision.mode === 'join') { await startupServer.close(); return { initialIntent, args, localEvidence, members, coldRecoveryProtocol, startupDecision, recoveryCompletion, startupServer }; }
       const recoveryPlan = await resolveRecoveryPlan({ recoveryProtocol: coldRecoveryProtocol, startupTimeoutMs: config.startupTimeoutMs ?? 15000 });
       log.debug?.('Recovery phase: recovery plan resolved', { node: identity.name, mode: recoveryPlan.mode, winner: recoveryPlan.winner?.node });
       startupDecision = recoveryStartupDecision(recoveryPlan, identity.name);
