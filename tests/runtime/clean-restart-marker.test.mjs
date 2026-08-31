@@ -15,7 +15,7 @@ test('creates an atomic node-bound marker and consumes it once', async () => {
 test('rejects wrong node, epoch, nonce, stale, and future markers', async () => {
   for (const options of [{ expectedNode: 'other' }, { expectedEpoch: 'other' }, { markerNonce: 'other' }, { now: () => 200000 }, { now: () => 900 }]) {
     const path = await setup(); const marker = createCleanRestartMarker({ path, node: 'elera-1', epoch: 'e1', nonce: options.markerNonce ?? 'n1', now: () => 1000 }); await marker.write();
-    const reader = createCleanRestartMarker({ path, node: 'elera-1', epoch: 'e1', nonce: options.markerNonce === 'other' ? 'n1' : 'n1', now: options.now ?? (() => 1000) });
-    expect(await reader.consume(options.expectedNode || options.expectedEpoch ? options : {})).toBeUndefined();
+    const reader = createCleanRestartMarker({ path, node: 'elera-1', epoch: 'e1', nonce: 'reader', now: options.now ?? (() => 1000) });
+    expect(await reader.consume(options.markerNonce ? { expectedNonce: 'n1' } : (options.expectedNode || options.expectedEpoch ? options : {}))).toBeUndefined();
   }
 });
