@@ -18,6 +18,16 @@ test("pending initialization is live but not ready and requires the root token",
   expect(initialize).not.toHaveBeenCalled();
 });
 
+test("accepts canonical lifecycle apply join in pending mode", async () => {
+  const initialize = jest.fn().mockResolvedValue(undefined); const onInitialized = jest.fn();
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root", RUNTIME_NODE_NAME: "elera-1", SUPERVISOR_INTENT_JSON: JSON.stringify({ apiVersion: "elera.eliware.dev/v1alpha1", kind: "SupervisorIntent", cluster: { name: "lab", members: [{ name: "elera-0", address: "a" }, { name: "elera-1", address: "b" }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }) }, initialize, onInitialized }));
+  const port = await listen(server);
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/lifecycle/apply`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ action: "join", target: "elera-1", confirm: true }) });
+  expect(response.status).toBe(202);
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(initialize).toHaveBeenCalledTimes(1); expect(onInitialized).toHaveBeenCalledWith("join");
+});
+
 test("pending recovery exposes root-only node reset while SQL is unavailable", async () => {
   const nodeDataReset = { reset: jest.fn().mockResolvedValueOnce({ dryRun: true, status: "planned" }).mockResolvedValueOnce({ dryRun: false, status: "completed" }) };
   ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, nodeDataReset }));

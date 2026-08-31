@@ -22,12 +22,13 @@ export function createPendingInitServer({ environment = process.env, log = conso
       try { return json(response, 200, { ok: true, operation: "cluster.cold-bootstrap.evidence", status: "completed", data: await coldEvidence() }); }
       catch (error) { return json(response, 503, { ok: false, error: error.message }); }
     }
-    if (request.method === "POST" && ["/api/v1/cluster/bootstrap", "/api/v1/cluster/join", "/api/v1/initialization/apply"].includes(request.url)) {
-      const operationName = request.url.endsWith("/join") ? "join" : request.url.endsWith("/initialization/apply") ? standaloneOperation() : "bootstrap";
+    if (request.method === "POST" && ["/api/v1/cluster/bootstrap", "/api/v1/cluster/join", "/api/v1/cluster/lifecycle/apply", "/api/v1/initialization/apply"].includes(request.url)) {
       if (!authorized(request)) return json(response, 401, { ok: false, error: "authentication required" });
       let body;
       try { body = await readBody(request); } catch (error) { return json(response, 400, { ok: false, error: error.message }); }
       if (body.confirm !== true) return json(response, 409, { ok: false, error: "explicit confirmation required" });
+      const operationName = request.url.endsWith("/join") || (request.url.endsWith("/lifecycle/apply") && body.action === "join") ? "join" : request.url.endsWith("/initialization/apply") ? standaloneOperation() : "bootstrap";
+      if (request.url.endsWith("/lifecycle/apply") && !["bootstrap", "join"].includes(body.action)) return json(response, 400, { ok: false, error: "unsupported lifecycle action" });
       if (operation) return json(response, 409, { ok: false, error: `${operationName} already in progress` });
       operation = Promise.resolve().then(() => initialize({ environment, log }));
       try {
