@@ -17,7 +17,7 @@ jest.unstable_mockModule('../../src/runtime/maria-startup.mjs', () => ({ startSu
 jest.unstable_mockModule('../../src/runtime/runtime-start.mjs', () => ({ startSupervisorRuntime: jest.fn(async (options) => { captured.runtimeOptions = options; if (runtimeFailure) throw runtimeFailure; options.setDb?.({ connected: true }); return { db: { connected: true }, routingTimer: 'routing', peerTimer: 'peer' }; }) }));
 jest.unstable_mockModule('../../src/lifecycle/data-directory.mjs', () => ({ inspectDataDirectory: jest.fn(() => ({ action: 'start' })) }));
 jest.unstable_mockModule('../../src/lifecycle/pending-init/runtime.mjs', () => ({
-  startPendingInitRuntime: jest.fn(async (options) => { captured.pending = options; })
+  startPendingInitRuntime: jest.fn(async (options) => { captured.pending = options; captured.pendingRuntime = { shutdown: jest.fn() }; return captured.pendingRuntime; })
 }));
 
 const { startSupervisor } = await import('../../src/runtime/startup-coordinator.mjs');
@@ -45,10 +45,16 @@ test('blocked initialized startup wires recovery readiness and completion handof
 
 test('starts the local recovery winner and runtime after authorized bootstrap', async () => {
   recoveryResult = defaultResult();
+  recoveryResult.startupServer = { close: jest.fn() };
   const state = { mariaProcess: {} };
   const result = await startSupervisor({ ...dependencies(), state });
   await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a' }, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] });
   expect(captured.processController.start).toHaveBeenCalledWith(expect.arrayContaining(['--wsrep-new-cluster']));
+  expect(captured.pendingRuntime.shutdown).toHaveBeenCalledTimes(1);
+  expect(recoveryResult.startupServer.close).toHaveBeenCalledTimes(1);
+  await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a' }, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] });
+  expect(captured.pendingRuntime.shutdown).toHaveBeenCalledTimes(1);
+  expect(recoveryResult.startupServer.close).toHaveBeenCalledTimes(1);
   expect(result).toEqual({ pending: true });
 });
 
