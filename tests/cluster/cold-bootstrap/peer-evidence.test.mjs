@@ -13,6 +13,16 @@ test('collects local state, recovers unknown sequence numbers, and reports healt
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
+test('does not run wsrep recovery for an active peer with an unknown saved sequence', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'elera-evidence-'));
+  try {
+    await writeFile(join(dir, 'grastate.dat'), 'uuid: abc\nseqno: -1\nsafe_to_bootstrap: 0\n');
+    const run = async () => { throw new Error('must not recover an active peer'); };
+    const evidence = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: dir, health: { status: async () => ({ ready: true, values: { wsrep_local_state_comment: 'Synced' } }) }, run });
+    await expect(evidence.local()).resolves.toMatchObject({ node: 'one', active: true, state: { savedSeqno: -1, recoveredSeqno: undefined } });
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
 test('forwards authenticated remote evidence and validates dependencies', async () => {
   const fetchImpl = async (url, options) => { expect(url).toBe('http://peer/api/v1/cluster/cold-bootstrap/evidence'); expect(options.headers.authorization).toBe('Bearer token'); return { ok: true, async json() { return { data: { node: 'peer' } }; } }; };
   const evidence = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: '/tmp', health: {}, fetchImpl, token: 'token' });
