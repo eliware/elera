@@ -1,4 +1,4 @@
-export function selectCandidate(states) {
+export function selectCandidate(states, { minimumHistorySize = 1 } = {}) {
   if (!Array.isArray(states) || states.length === 0) throw new Error('no Galera state evidence was provided');
   if (states.some((state) => !state?.node || !state?.uuid || !Number.isInteger(state.seqno))) return { eligible: false, reason: 'incomplete recovery evidence', candidates: states };
   const histories = Map.groupBy(states, (state) => state.uuid);
@@ -6,6 +6,7 @@ export function selectCandidate(states) {
   const strongest = ranked[0];
   const tied = ranked.filter((history) => history.highest === strongest.highest && history.candidates.length === strongest.candidates.length);
   if (tied.length > 1) return { eligible: false, code: 'SPLIT_BRAIN', reason: 'divergent cluster histories have equal recovery authority', candidates: states, histories: ranked };
+  if (strongest.candidates.length < minimumHistorySize) return { eligible: false, code: 'INSUFFICIENT_RECOVERY_EVIDENCE', reason: 'authoritative recovery history has not reached quorum', candidates: states, histories: ranked };
   const safe = strongest.safe;
   const candidates = strongest.candidates;
   if (safe.length > 1) return { eligible: false, reason: 'multiple nodes are marked safe_to_bootstrap', candidates: states };

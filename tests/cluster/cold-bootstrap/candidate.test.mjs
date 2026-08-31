@@ -10,3 +10,4 @@ test('rejects empty evidence and multiple safe nodes', () => { expect(() => sele
 test('rejects an unrecoverable all-negative state set', () => expect(selectCandidate([node('a', -1), node('b', -1)]).reason).toContain('recoverable'));
 test('rejects non-array and incomplete candidate input', () => { expect(() => selectCandidate(undefined)).toThrow('no Galera state'); expect(selectCandidate([{ node: 'a', uuid: 'cluster', seqno: 1 }, { node: 'b', uuid: 'cluster', seqno: undefined }]).reason).toContain('incomplete'); });
 test('rejects null and nameless evidence', () => { expect(selectCandidate([null]).reason).toContain('incomplete'); expect(selectCandidate([{ uuid: 'cluster', seqno: 1 }]).reason).toContain('incomplete'); });
+test('can require a quorum-sized authoritative history', () => expect(selectCandidate([node('a', 12)], { minimumHistorySize: 2 })).toMatchObject({ eligible: false, code: 'INSUFFICIENT_RECOVERY_EVIDENCE' }));
