@@ -4,7 +4,7 @@ import { initializePendingData } from "./initialize.mjs";
 import { loadIntent } from "../../intent/model.mjs";
 import { runtimeIdentity } from "../../runtime/identity.mjs";
 const json = (response, status, body) => response.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
-export function createPendingInitServer({ environment = process.env, log = console, initialize = initializePendingData, onInitialized = () => {}, nodeDataReset } = {}) {
+export function createPendingInitServer({ environment = process.env, log = console, initialize = initializePendingData, onInitialized = () => {}, nodeDataReset, coldEvidence } = {}) {
   let operation;
   const standaloneOperation = () => {
     const intent = loadIntent(environment);
@@ -16,6 +16,12 @@ export function createPendingInitServer({ environment = process.env, log = conso
   const server = createServer(async (request, response) => {
     if (request.url === "/healthz") return response.writeHead(200, { "content-type": "text/plain" }).end("ok\n");
     if (request.url === "/readyz") return response.writeHead(503, { "content-type": "text/plain" }).end("not ready\n");
+    if (request.method === "GET" && request.url === "/api/v1/cluster/cold-bootstrap/evidence") {
+      if (!authorized(request)) return json(response, 401, { ok: false, error: "authentication required" });
+      if (typeof coldEvidence !== "function") return json(response, 503, { ok: false, error: "cold bootstrap evidence is unavailable" });
+      try { return json(response, 200, { ok: true, operation: "cluster.cold-bootstrap.evidence", status: "completed", data: await coldEvidence() }); }
+      catch (error) { return json(response, 503, { ok: false, error: error.message }); }
+    }
     if (request.method === "POST" && ["/api/v1/cluster/bootstrap", "/api/v1/cluster/join", "/api/v1/initialization/apply"].includes(request.url)) {
       const operationName = request.url.endsWith("/join") ? "join" : request.url.endsWith("/initialization/apply") ? standaloneOperation() : "bootstrap";
       if (!authorized(request)) return json(response, 401, { ok: false, error: "authentication required" });

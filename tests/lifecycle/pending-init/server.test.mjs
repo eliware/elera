@@ -28,6 +28,29 @@ test("pending recovery exposes root-only node reset while SQL is unavailable", a
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/node/data/reset`, { method: "POST" })).status).toBe(401);
 });
 
+test("pending recovery serves authenticated cold-bootstrap evidence", async () => {
+  const coldEvidence = jest.fn().mockResolvedValue({ node: "elera-2", active: false });
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, coldEvidence }));
+  const port = await listen(server);
+  expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`)).status).toBe(401);
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`, { headers: { authorization: "Bearer root" } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ ok: true, data: { node: "elera-2" } });
+  expect(coldEvidence).toHaveBeenCalledTimes(1);
+});
+
+test("pending recovery reports unavailable or failed cold-bootstrap evidence", async () => {
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" } }));
+  let port = await listen(server);
+  expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`, { headers: { authorization: "Bearer root" } })).status).toBe(503);
+  await close(server); server = undefined;
+  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, coldEvidence: jest.fn().mockRejectedValue(new Error("not ready")) }));
+  port = await listen(server);
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`, { headers: { authorization: "Bearer root" } });
+  expect(response.status).toBe(503);
+  expect(await response.json()).toMatchObject({ ok: false, error: "not ready" });
+});
+
 test("pending recovery reports unavailable reset configuration and reset failures", async () => {
   ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" } }));
   const port = await listen(server);
