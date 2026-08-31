@@ -1,18 +1,11 @@
 import { readdir, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { isSyncedPrimary, waitForReady } from './node-reset-readiness.mjs';
+import { selectRecoveryDonor } from './node-reset-donors.mjs';
+import { validateNodeDataReset } from './node-reset-validation.mjs';
 
-const confirmationFor = (node) => `RESET ${node}`;
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
 
-const isSyncedPrimary = (status) => status?.values?.wsrep_local_state_comment === 'Synced' && status?.values?.wsrep_ready === 'ON' && status?.values?.wsrep_cluster_status === 'Primary';
-const waitForReady = async ({ getStatus, timeoutMs, intervalMs }) => {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() <= deadline) {
-    try { const status = await getStatus(); if (isSyncedPrimary(status)) return status; } catch { continue; }
-    await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, Math.max(1, deadline - Date.now()))));
-  }
-  throw failure('single-member-resync did not rejoin as Synced/Primary before timeout', 504);
-};
 
 export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState = () => ({}), getDonors = async () => [], offlineRecovery = false, fence = async () => {}, isFenced = async () => true, excludeRouting = async () => {}, isRoutingExcluded = async () => true, stop = async () => {}, restart = async () => {}, remove = async (directory) => { for (const entry of await readdir(directory)) await rm(join(directory, entry), { recursive: true, force: true }); }, waitForRejoin = waitForReady, reinclude = async () => {}, resyncTimeoutMs = 120000, resyncPollMs = 1000, audit = {}, idempotency = new Map() } = {}) {
   if (!node || !dataDir || typeof getStatus !== 'function') throw new TypeError('node, dataDir, and status function are required');
@@ -21,30 +14,12 @@ export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState
     async reset(request = {}) {
       const key = request.idempotencyKey;
       if (typeof key === 'string' && idempotency.has(key)) return idempotency.get(key);
-      if (request.node !== node) throw failure('node identity does not match this supervisor');
-      if (request.dataDir !== undefined && resolve(request.dataDir) !== expectedPath) throw failure('data directory does not match this node');
-      if (typeof request.confirmation !== 'string' || request.confirmation !== confirmationFor(node)) throw failure(`confirmation must exactly match ${confirmationFor(node)}`);
-      const dryRun = request.dryRun ?? false;
-      if (dryRun !== true && dryRun !== false) throw failure('dryRun must be boolean', 400);
-      if (!dryRun && (typeof key !== 'string' || !key)) throw failure('idempotencyKey is required for an executing reset', 400);
-      let status;
-      try { status = await getStatus(); } catch (error) {
-        if (!offlineRecovery || request.offline !== true) throw error;
-        status = { ready: false, values: {} };
-      }
-      const recovery = getRecoveryState() ?? {};
-      const resync = request.recoveryDisposition === 'single-member-resync';
-      if (!resync && (status.ready || status.values?.wsrep_local_state_comment === 'Synced' || status.values?.wsrep_cluster_status === 'Primary')) throw failure('healthy, ready, or Primary nodes cannot be reset');
-      if (['awaiting-quorum', 'recovery-authorized', 'bootstrapping', 'blocked-ambiguous'].includes(recovery.state) || status.recovery?.state === 'blocked-ambiguous') throw failure('ambiguous or active recovery state refuses reset');
-      const initialized = status.values?.wsrep_local_state_comment === 'Initialized' || status.initialized === true;
-      if (initialized && (request.force !== true || !['reset-initialized-data', 'single-member-resync'].includes(request.recoveryDisposition))) throw failure('initialized data requires force and an explicit recovery disposition');
+      const validation = await validateNodeDataReset({ request, node, expectedPath, getStatus, getRecoveryState, offlineRecovery });
+      const { dryRun, resync, initialized, status, recovery } = validation;
       let selectedDonor;
       if (resync) {
         const donors = request.offline === true ? [request.donor] : await getDonors();
-        const eligibleDonors = Array.isArray(donors) ? donors.filter((donor) => donor?.healthy === true && donor?.primary === true && donor.node !== node) : [];
-        if (eligibleDonors.length === 0) throw failure('single-member-resync requires a healthy Primary donor');
-        eligibleDonors.sort((left, right) => String(left.node).localeCompare(String(right.node)));
-        selectedDonor = eligibleDonors[0].node;
+        selectedDonor = selectRecoveryDonor({ donors, node });
       }
       const result = { node, dataDir: expectedPath, dryRun, initialized, status: dryRun ? 'planned' : 'completed', recoveryDisposition: resync ? 'single-member-resync' : 'reset-initialized-data', next: resync ? 'rejoin-and-receive-sst' : 'explicit-recovery-required', ...(resync ? { donor: selectedDonor } : {}) };
       if (!dryRun) {
