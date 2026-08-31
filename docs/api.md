@@ -68,8 +68,8 @@ Observations must expire. A stale observation cannot keep a node eligible.
 - [x] `POST /api/v1/initialization/apply` — apply basic database/user/grant setup.
 - [x] `POST /api/v1/initialization/verify` — verify current basic initialization.
 - [ ] `POST /api/v1/initialization/rotate-credentials` — rotate bootstrap credentials.
-- [x] `GET /api/v1/metadata/status` — inspect `elera_meta` schema and migration state.
-- [x] `POST /api/v1/metadata/initialize` — create or migrate the metadata schema; requires `confirm: true`.
+- [x] `GET /api/v1/metadata/status` — inspect `elera_meta` schema readiness.
+- [x] `POST /api/v1/metadata/initialize` — create the canonical metadata schema idempotently; requires `confirm: true`.
 - [x] `POST /api/v1/metadata/verify` — verify metadata integrity and replication state.
 - [x] `GET /api/v1/cluster/observations` — inspect fresh peer observations.
 - [x] `POST /api/v1/cluster/observations` — submit an authenticated observation.

@@ -112,10 +112,12 @@ workflow passed on both platforms in run 33036762276.
 
 ### Sprint 3 certification
 
-Sprint 3 is complete: generic migration primitives, idempotent `elera_meta`
-initialization, metadata status/initialize/verify APIs, optional SST/health
-account provisioning, explicit CLI confirmation, and mirrored tests are
-implemented. All three repositories pass 100×4 coverage and zero-warning lint.
+Sprint 3 is complete: generic administrative transaction primitives, idempotent
+canonical `elera_meta` initialization, metadata status/initialize/verify APIs,
+optional SST/health account provisioning, explicit CLI confirmation, and
+mirrored tests are implemented. Historical metadata migration replay is
+intentionally not part of this new service. All three repositories pass 100×4
+coverage and zero-warning lint.
 
 ## Sprint 4 — Elera lifecycle, observations, and quorum
 
@@ -162,7 +164,7 @@ after that node rejoined with `wsrep_cluster_size=3` and `wsrep_ready=ON`.
 - [x] Map scoped bearer tokens to applications/identities.
 - [x] Verify actual MariaDB privileges through API, CLI, and library connections.
 
-Sprint 5 runtime evidence: the Docker lab applied `elera_meta` migrations 1–3,
+Sprint 5 runtime evidence: the Docker lab initialized the canonical `elera_meta`
 provisioned the `payments` database and `runtime` identity, issued an encrypted
 credential lease with direct-node routes, authenticated a direct MariaDB query,
 and ran `elera-cli database-list` plus `sql-smoke` successfully from the
