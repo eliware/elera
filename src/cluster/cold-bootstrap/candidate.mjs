@@ -1,22 +1,23 @@
-function sameCluster(states) {
-  return new Set(states.map((state) => state.uuid)).size === 1;
-}
-
 export function selectCandidate(states) {
   if (!Array.isArray(states) || states.length === 0) throw new Error('no Galera state evidence was provided');
   if (states.some((state) => !state?.node || !state?.uuid || !Number.isInteger(state.seqno))) return { eligible: false, reason: 'incomplete recovery evidence', candidates: states };
-  if (!sameCluster(states)) return { eligible: false, reason: 'state UUIDs do not match', candidates: states };
-  const safe = states.filter((state) => state.safeToBootstrap);
+  const histories = Map.groupBy(states, (state) => state.uuid);
+  const ranked = [...histories.entries()].map(([uuid, candidates]) => ({ uuid, candidates, highest: Math.max(...candidates.map(({ seqno }) => seqno)), safe: candidates.filter((state) => state.safeToBootstrap) })).sort((left, right) => right.highest - left.highest || right.candidates.length - left.candidates.length || left.uuid.localeCompare(right.uuid));
+  const strongest = ranked[0];
+  const tied = ranked.filter((history) => history.highest === strongest.highest && history.candidates.length === strongest.candidates.length);
+  if (tied.length > 1) return { eligible: false, code: 'SPLIT_BRAIN', reason: 'divergent cluster histories have equal recovery authority', candidates: states, histories: ranked };
+  const safe = strongest.safe;
+  const candidates = strongest.candidates;
   if (safe.length > 1) return { eligible: false, reason: 'multiple nodes are marked safe_to_bootstrap', candidates: states };
   if (safe.length === 1) {
-    return { eligible: true, reason: 'sole safe_to_bootstrap node selected', candidate: safe[0], candidates: states };
+    return { eligible: true, reason: ranked.length > 1 ? 'sole safe_to_bootstrap node selected from strongest cluster history' : 'sole safe_to_bootstrap node selected', candidate: safe[0], candidates, divergent: states.filter((state) => state.uuid !== strongest.uuid), histories: ranked };
   }
-  const highest = Math.max(...states.map((state) => state.seqno));
+  const highest = strongest.highest;
   if (highest < 0) return { eligible: false, reason: 'no recoverable seqno exists', candidates: states };
-  const winners = states.filter((state) => state.seqno === highest);
+  const winners = candidates.filter((state) => state.seqno === highest);
   if (winners.length !== 1) {
     const candidate = winners.slice().sort((left, right) => left.node.localeCompare(right.node))[0];
-    return { eligible: true, reason: 'equivalent highest seqno candidates; deterministic winner selected', candidate, candidates: states };
+    return { eligible: true, reason: 'equivalent highest seqno candidates; deterministic winner selected', candidate, candidates, divergent: states.filter((state) => state.uuid !== strongest.uuid), histories: ranked };
   }
-  return { eligible: true, reason: 'unique highest seqno', candidate: winners[0], candidates: states };
+  return { eligible: true, reason: ranked.length > 1 ? 'unique highest seqno from strongest cluster history' : 'unique highest seqno', candidate: winners[0], candidates, divergent: states.filter((state) => state.uuid !== strongest.uuid), histories: ranked };
 }

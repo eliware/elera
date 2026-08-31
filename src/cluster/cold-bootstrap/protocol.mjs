@@ -38,9 +38,9 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       const active = evidence.find((item) => isActivePrimary(item, evidence));
       if (active) return { eligible: true, mode: 'join', reason: 'primary component already exists', ...(Number.isInteger(active.galera.clusterSize) && active.galera.clusterSize > 0 ? { expectedMembership: active.galera.clusterSize } : {}), evidence };
       const decision = selectCandidate(evidence);
-      if (!decision.eligible) { current = { version: 1, phase: 'blocked', reason: decision.reason, evidence, updatedAt: now().toISOString() }; await persist(current); await publishEvent({ type: 'recovery.refused', reason: decision.reason, evidence }); return { eligible: false, mode: 'blocked', ...current }; }
+      if (!decision.eligible) { current = { version: 1, phase: 'blocked', ...(decision.code ? { code: decision.code } : {}), reason: decision.reason, evidence, updatedAt: now().toISOString() }; await persist(current); await publishEvent({ type: 'recovery.refused', reason: decision.reason, code: decision.code, evidence }); return { eligible: false, mode: 'blocked', ...current }; }
       const epoch = createRecoveryEpoch({ clusterId: decision.candidate.uuid, evidence, winner: decision.candidate, quorum: nodes.map((node) => node.name), now: now() });
-      current = { ...epoch, evidence };
+      current = { ...epoch, evidence, ...(decision.divergent.length ? { divergent: decision.divergent } : {}), histories: decision.histories };
       await persist(current);
       await publishEvent({ type: 'recovery.candidate-selected', epoch: epoch.epoch, winner: epoch.winner });
       return { eligible: true, mode: 'bootstrap', ...current };

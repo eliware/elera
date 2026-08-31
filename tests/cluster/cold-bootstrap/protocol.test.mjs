@@ -104,18 +104,35 @@ test('selects a winner from a validated majority when one peer is unavailable', 
   });
   await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'bootstrap', winner: { node: 'a' } });
 });
+test('selects the strongest surviving UUID history and records divergent stale nodes', async () => {
+  const stale = { ...evidence('a', 47), state: { uuid: 'old-history', seqno: 47, safeToBootstrap: true } };
+  const winner = { ...evidence('b', 5112), state: { uuid: 'current-history', seqno: 5112, safeToBootstrap: false } };
+  const follower = { ...evidence('c', 138), state: { uuid: 'current-history', seqno: 138, safeToBootstrap: false } };
+  const protocol = createColdRecoveryProtocol({
+    nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }, { name: 'c', url: 'http://c' }],
+    localEvidence: async () => stale,
+    fetchEvidence: async (url) => url.endsWith('b') ? winner : follower,
+    store: { async read() {}, async write(value) { return value; } },
+  });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'bootstrap', winner: { node: 'b', uuid: 'current-history' }, divergent: [{ node: 'a', uuid: 'old-history' }] });
+});
 test('does not treat a Primary from another cluster as a join target', async () => {
   const active = { ...evidence('b', 2), active: true, galera: { clusterUuid: 'other', clusterStatus: 'Primary', localState: 'Synced', ready: true } };
   const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }], localEvidence: async () => ({ ...evidence('a', 1), galera: { clusterUuid: 'cluster' } }), fetchEvidence: async () => active, store: { async read() {}, async write(value) { return value; } } });
   await expect(protocol.plan()).resolves.toMatchObject({ mode: 'bootstrap' });
 });
 
-test('blocks ambiguous candidate decisions and exposes pending status', async () => {
+test('blocks equal-authority divergent histories and exposes pending status', async () => {
   const store = { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; return value; } };
   const same = (node) => ({ ...evidence(node, 4), state: { uuid: node === 'a' ? 'u1' : 'u2', seqno: 4, safeToBootstrap: false } });
   const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }], localEvidence: async () => same('a'), fetchEvidence: async () => same('b'), store });
-  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked' });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', code: 'SPLIT_BRAIN' });
   await expect(protocol.status()).resolves.toMatchObject({ phase: 'blocked' });
+});
+test('preserves an ordinary candidate-selection refusal without a code', async () => {
+  const item = (node) => ({ ...evidence(node, 2), state: { uuid: 'u', seqno: 2, safeToBootstrap: true } });
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }], localEvidence: async () => item('a'), fetchEvidence: async () => item('b'), store: { async read() {}, async write(value) { return value; } } });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', reason: 'multiple nodes are marked safe_to_bootstrap' });
 });
 
 test('rejects invalid completion and preserves the authorized epoch', async () => {
