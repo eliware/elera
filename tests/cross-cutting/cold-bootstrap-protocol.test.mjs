@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { createColdRecoveryProtocol } from '../../../src/cluster/cold-bootstrap/protocol.mjs';
+import { createColdRecoveryProtocol } from '../../src/cluster/cold-bootstrap/protocol.mjs';
 const evidence = (node, seqno) => ({ node, state: { uuid: 'cluster', seqno, safeToBootstrap: false }, active: false, generation: 1, observedAt: new Date().toISOString() });
 test('requires authorization before bootstrap authority can begin', async () => {
   const store = { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; return value; } };

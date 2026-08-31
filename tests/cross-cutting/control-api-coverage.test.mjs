@@ -1,5 +1,5 @@
 import { expect, jest, test } from '@jest/globals';
-import { createControlApi } from '../src/control-api.mjs';
+import { createControlApi } from '../../src/control-api.mjs';
 
 const request = (method, url, body = {}) => ({ method, url, headers: { authorization: 'Bearer root_token_here' }, async *[Symbol.asyncIterator]() { if (method === 'POST') yield JSON.stringify(body); } });
 const response = () => ({ status: 0, body: '', writeHead(status) { this.status = status; return this; }, end(body = '') { this.body = body; return this; } });

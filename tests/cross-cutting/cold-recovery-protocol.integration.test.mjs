@@ -1,6 +1,6 @@
 import { expect, jest, test } from '@jest/globals';
-import { createColdRecoveryProtocol } from '../../../src/cluster/cold-bootstrap/protocol.mjs';
-import { createRecoveryLease } from '../../../src/cluster/cold-bootstrap/lease.mjs';
+import { createColdRecoveryProtocol } from '../../src/cluster/cold-bootstrap/protocol.mjs';
+import { createRecoveryLease } from '../../src/cluster/cold-bootstrap/lease.mjs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';

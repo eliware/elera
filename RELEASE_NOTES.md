@@ -1,5 +1,16 @@
 # Release notes
 
+## Unreleased — supervisor cold-recovery redevelopment
+
+- Distinguish recovery-required initialized nodes from pending initialization.
+- Keep authenticated recovery evidence, authorization, bootstrap, completion,
+  and retry APIs available while startup is blocked.
+- Select and guard a cold-recovery winner, then recover remaining members
+  sequentially with readiness gates and post-recovery routing publication.
+- Add MariaDB recovery diagnostics and recovery-specific failure states.
+- Verified locally with 100×4 coverage, zero lint warnings, contract checks,
+  syntax checks, and type checks.
+
 ## 0.1.6 — scoped authentication and pending-init socket consistency
 
 Patch release candidate containing focused fixes identified during local and

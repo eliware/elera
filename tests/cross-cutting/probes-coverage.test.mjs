@@ -1,6 +1,6 @@
 import { expect, jest, test } from '@jest/globals';
 import http from 'node:http';
-import { createProbeServer } from '../src/probes.mjs';
+import { createProbeServer } from '../../src/probes.mjs';
 
 const request = (port, path) => new Promise((resolve, reject) => { const req = http.get({ port, path }, (response) => { let body = ''; response.on('data', (chunk) => { body += chunk; }); response.on('end', () => resolve({ status: response.statusCode, body })); }); req.on('error', reject); });
 const running = async (options) => { const server = createProbeServer(options); await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve)); return { server, port: server.address().port }; };

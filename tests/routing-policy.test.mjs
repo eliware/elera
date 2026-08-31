@@ -9,5 +9,5 @@ test('validates route policies and applies default routes', () => {
 });
 test('rejects invalid policies and lease requests', () => {
   expect(() => validateRoutePolicy('unknown')).toThrow('route policy');
-  for (const request of [null, {}, { database: 'billing' }, { database: 'billing', identity: 'web', routes: ['unknown'] }]) expect(() => validateCredentialLeaseRequest(request)).toThrow();
+  for (const request of [null, {}, { database: 'billing' }, { database: '' }, { database: 'billing', identity: 'web', routes: ['unknown'] }]) expect(() => validateCredentialLeaseRequest(request)).toThrow();
 });

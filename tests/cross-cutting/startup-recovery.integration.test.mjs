@@ -1,8 +1,8 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { createStartupRecoveryDecision } from '../../../src/cluster/cold-bootstrap/startup-decision.mjs';
-import { createRecoveryLease } from '../../../src/cluster/cold-bootstrap/lease.mjs';
+import { createStartupRecoveryDecision } from '../../src/cluster/cold-bootstrap/startup-decision.mjs';
+import { createRecoveryLease } from '../../src/cluster/cold-bootstrap/lease.mjs';
 
 test('three supervisors converge on one winner and one lease', async () => {
   const nodes = [{ name: 'elera-0', local: true }, { name: 'elera-1' }, { name: 'elera-2' }];
