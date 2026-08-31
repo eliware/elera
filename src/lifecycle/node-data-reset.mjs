@@ -38,13 +38,15 @@ export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState
       if (['awaiting-quorum', 'recovery-authorized', 'bootstrapping', 'blocked-ambiguous'].includes(recovery.state) || status.recovery?.state === 'blocked-ambiguous') throw failure('ambiguous or active recovery state refuses reset');
       const initialized = status.values?.wsrep_local_state_comment === 'Initialized' || status.initialized === true;
       if (initialized && (request.force !== true || !['reset-initialized-data', 'single-member-resync'].includes(request.recoveryDisposition))) throw failure('initialized data requires force and an explicit recovery disposition');
+      let selectedDonor;
       if (resync) {
         const donors = request.offline === true ? [request.donor] : await getDonors();
         const eligibleDonors = Array.isArray(donors) ? donors.filter((donor) => donor?.healthy === true && donor?.primary === true && donor.node !== node) : [];
         if (eligibleDonors.length === 0) throw failure('single-member-resync requires a healthy Primary donor');
         eligibleDonors.sort((left, right) => String(left.node).localeCompare(String(right.node)));
+        selectedDonor = eligibleDonors[0].node;
       }
-      const result = { node, dataDir: expectedPath, dryRun, initialized, status: dryRun ? 'planned' : 'completed', recoveryDisposition: resync ? 'single-member-resync' : 'reset-initialized-data', next: resync ? 'rejoin-and-receive-sst' : 'explicit-recovery-required', ...(resync ? { donor: eligibleDonors[0].node } : {}) };
+      const result = { node, dataDir: expectedPath, dryRun, initialized, status: dryRun ? 'planned' : 'completed', recoveryDisposition: resync ? 'single-member-resync' : 'reset-initialized-data', next: resync ? 'rejoin-and-receive-sst' : 'explicit-recovery-required', ...(resync ? { donor: selectedDonor } : {}) };
       if (!dryRun) {
         if (resync) {
           await fence();
