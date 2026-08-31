@@ -37,7 +37,7 @@ let errors;
 state.signals = signals;
 
 async function main() {
-  await startSupervisor({ config, identity, log, loadEnvironmentIntent: loadIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health: composition.health, environment: process.env, dbEnv, probes: composition.probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained: composition.traffic.getDrained, telemetry, state });
+  await startSupervisor({ config, identity, log, loadEnvironmentIntent: loadIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health: composition.health, environment: process.env, dbEnv, probes: composition.probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained: composition.traffic.getDrained, recoverTraffic: composition.traffic.recover, telemetry, state });
 }
 
 main().catch((error) => {

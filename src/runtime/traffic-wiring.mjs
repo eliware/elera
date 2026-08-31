@@ -11,5 +11,11 @@ export function createSupervisorTraffic({ telemetry, identity, config, health, r
   const drain = createDrainManager({ onChange: (value) => { telemetry.recordEvent(value ? 'traffic.drain' : 'traffic.undrain'); drained = value; setDrained(value); updateLocalSqlRoute(value); log.info(value ? 'Traffic drained' : 'Traffic undrained'); void publishDrainEvent(value); } });
   const sqlQuiesce = createSqlQuiesce({ drain, timeoutMs: config.drainTimeoutMs });
   const clusterDrain = createDrainPropagation({ drain, peers: (environment.ELERA_PEERS ?? '').split(','), token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, log });
-  return { drain, sqlQuiesce, clusterDrain, publishDrainEvent, getDrained: () => drained };
+  const recover = async () => {
+    drained = false;
+    setDrained(false);
+    updateLocalSqlRoute(false);
+    await publishDrainEvent(false);
+  };
+  return { drain, sqlQuiesce, clusterDrain, publishDrainEvent, recover, getDrained: () => drained };
 }
