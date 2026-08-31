@@ -28,7 +28,7 @@ test('composes collaborators and forwards live runtime dependencies', async () =
     identity: { name: 'node' }, lifecycle, telemetry, recoveryState, recovery: {}, log: {},
     environment: { ELERA_CLUSTER_SIZE: '1', ROOT_TOKEN: 'root' }, getDb: () => database,
     setDrained: (value) => { drained = value; }, getDrained: () => drained,
-    getTimers: () => ['peer', 'routing'], getMariaProcess: () => ({ start: jest.fn() }),
+    getTimers: () => ['peer', 'routing'], getMariaProcess: () => ({ start: jest.fn(), stop: jest.fn() }),
     getColdState: () => ({ drain: {}, clusterDrain: {} }), applyIntent: jest.fn(), servers,
   });
   expect(result.health).toBeDefined();
