@@ -95,6 +95,15 @@ test('joins an active Primary when another configured peer is unavailable', asyn
   });
   await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'join', reason: 'primary component already exists' });
 });
+test('selects a winner from a validated majority when one peer is unavailable', async () => {
+  const protocol = createColdRecoveryProtocol({
+    nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }, { name: 'c', url: 'http://c' }],
+    localEvidence: async () => evidence('a', 5),
+    fetchEvidence: async (url) => { if (url.endsWith('c')) throw Object.assign(new Error('peer unavailable'), { code: 'PEER_UNAVAILABLE' }); return evidence('b', 4); },
+    store: { async read() {}, async write(value) { return value; } },
+  });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'bootstrap', winner: { node: 'a' } });
+});
 test('does not treat a Primary from another cluster as a join target', async () => {
   const active = { ...evidence('b', 2), active: true, galera: { clusterUuid: 'other', clusterStatus: 'Primary', localState: 'Synced', ready: true } };
   const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }], localEvidence: async () => ({ ...evidence('a', 1), galera: { clusterUuid: 'cluster' } }), fetchEvidence: async () => active, store: { async read() {}, async write(value) { return value; } } });

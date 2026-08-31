@@ -18,8 +18,10 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
     const activePrimary = evidence.some((item) => isActivePrimary(item, evidence));
     if (activePrimary) return { evidence, activePrimary: true };
     const failed = results.find((result) => result.status === 'rejected');
-    if (failed) throw failed.reason;
-    return { evidence: validateRecoveryEvidence(evidence, { now: now(), maxAgeMs: maxEvidenceAgeMs }), activePrimary: false };
+    if (failed && evidence.length === 0) throw failed.reason;
+    const validated = validateRecoveryEvidence(evidence, { now: now(), maxAgeMs: maxEvidenceAgeMs });
+    if (failed && validated.length < Math.floor(nodes.length / 2) + 1) throw failed.reason;
+    return { evidence: validated, activePrimary: false, partial: Boolean(failed) };
   };
   return {
     async evidence() { return (await collect()).evidence; },

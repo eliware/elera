@@ -1,5 +1,12 @@
-import { expect, test } from '@jest/globals';
+import { expect, jest, test } from '@jest/globals';
 import { createPeerPublisher } from '../../src/runtime/peer-publisher.mjs';
+
+test('does not publish observations while the supervisor is not ready', async () => {
+  const publish = jest.fn();
+  const result = await createPeerPublisher({ health: { status: async () => ({ ready: false }) }, observationStore: { upsert: jest.fn() }, peerClient: { publish, refresh: jest.fn() }, node: { name: 'a', address: () => 'a' }, clusterId: 'c' })();
+  expect(result).toEqual({ published: false, reason: 'not-ready' });
+  expect(publish).not.toHaveBeenCalled();
+});
 
 test('publishes a normalized local observation to peers', async () => {
   const observations = [];
@@ -19,7 +26,7 @@ test('uses safe fallback when health is unavailable', async () => {
   let received;
   const publish = createPeerPublisher({ health: { status: async () => { throw new Error('down'); } }, observationStore: { upsert: (value) => { received = value; } }, peerClient: { publish: async () => {}, refresh: async () => {} }, node: { name: 'node', address: () => 'addr' }, clusterId: 'c' });
   await publish();
-  expect(received).toMatchObject({ state: 'Down', health: 'not-ready', synced: false, primary: 'Unknown' });
+  expect(received).toBeUndefined();
 });
 
 test('uses ready fallback and default load when status has no values', async () => {
