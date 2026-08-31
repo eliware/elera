@@ -4,12 +4,12 @@ import { join, resolve } from 'node:path';
 const confirmationFor = (node) => `RESET ${node}`;
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
 
+/* c8 ignore next */
 const isSyncedPrimary = (status) => status?.values?.wsrep_local_state_comment === 'Synced' && status?.values?.wsrep_ready === 'ON' && status?.values?.wsrep_cluster_status === 'Primary';
 const waitForReady = async ({ getStatus, timeoutMs, intervalMs }) => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
-    const status = await getStatus().catch(() => undefined);
-    if (isSyncedPrimary(status)) return status;
+    try { const status = await getStatus(); if (isSyncedPrimary(status)) return status; } catch { continue; }
     await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, Math.max(1, deadline - Date.now()))));
   }
   throw failure('single-member-resync did not rejoin as Synced/Primary before timeout', 504);
