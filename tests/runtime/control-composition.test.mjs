@@ -56,7 +56,7 @@ test('executes resync only after supervisor fencing and exclusion are verified',
   try {
     const removeIndex = order.length;
     await expect(result.options.nodeDataReset.reset({ node: 'target', dataDir, force: true, recoveryDisposition: 'single-member-resync', confirmation: 'RESET target', idempotencyKey: 'composition-resync' })).resolves.toMatchObject({ donor: 'donor', next: 're-included' });
-    expect(order.slice(removeIndex)).toEqual(['fence', 'stop', 'restart', 'reset:[object Object]']);
+    expect(order.slice(removeIndex)).toEqual(['fence', 'fence', 'stop', 'restart', 'reset:[object Object]']);
     expect(processController.stop).toHaveBeenCalled();
     expect(processController.start).toHaveBeenCalled();
   } finally { await rm(dataDir, { recursive: true, force: true }); }
