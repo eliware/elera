@@ -7,8 +7,8 @@ export function createSupervisorControlComposition({ db, metadata, managed, appl
   const cluster = createSupervisorCluster({ query: (...args) => db.query(...args), health, processController, clusterDrain, environment, config });
   let fenced = false;
   let routingExcluded = false;
-  const fence = async (...args) => { coldState.clusterDrain.set(...args); fenced = true; };
-  const excludeRouting = async (...args) => { coldState.clusterDrain.set(...args); routingExcluded = true; };
+  const fence = async () => { coldState.clusterDrain.set(true); fenced = true; };
+  const excludeRouting = async () => { coldState.clusterDrain.set(true); routingExcluded = true; };
   const isFenced = async () => fenced && coldState.drain.isDraining();
   const isRoutingExcluded = async () => routingExcluded && coldState.drain.isDraining();
   const nodeDataReset = createNodeDataReset({ node: config.runtimeNodeName, dataDir: config.dataDir, getStatus: () => health.status(), getRecoveryState: () => recovery.status(), getDonors: async () => observationStore.all().map((observation) => ({ ...observation, node: observation.node ?? observation.nodeId, healthy: observation.healthy ?? (observation.health === 'ok' || observation.health === 'ready'), primary: observation.primary === true || observation.primary === 'Primary' })), fence, isFenced, excludeRouting, isRoutingExcluded, stop: () => processController.stop(config.shutdownTimeoutMs), restart: processController.start, audit: log });
