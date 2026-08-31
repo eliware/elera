@@ -10,7 +10,7 @@ export function createPendingInitServer({ environment = process.env, log = conso
     const intent = loadIntent(environment);
     if (intent.cluster.members.length < 2) return "standalone-init";
     const nodeName = environment.RUNTIME_NODE_NAME ?? runtimeIdentity(environment).name;
-    return intent.cluster.members[0].name === nodeName ? "bootstrap" : "join";
+    return intent.cluster.members[0].name === nodeName ? "bootstrap" : "join-pending";
   };
   const authorized = (request) => Boolean(environment.ROOT_TOKEN) && request.headers.authorization === `Bearer ${environment.ROOT_TOKEN}`;
   const server = createServer(async (request, response) => {
@@ -37,7 +37,7 @@ export function createPendingInitServer({ environment = process.env, log = conso
         // response before allowing that replacement, otherwise clients can see
         // a truncated JSON body even though initialization succeeded.
         response.once("finish", () => {
-          Promise.resolve().then(() => onInitialized(operationName)).catch((error) => log.error?.("Pending initialization handoff failed", { error }));
+          if (operationName !== "join-pending") Promise.resolve().then(() => onInitialized(operationName)).catch((error) => log.error?.("Pending initialization handoff failed", { error }));
         });
       }
       catch (error) { log.error?.("Pending initialization failed", { error }); json(response, 500, { ok: false, error: error.message }); }

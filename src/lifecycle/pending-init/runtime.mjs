@@ -24,7 +24,7 @@ export const startPendingInitRuntime = ({
   const nodeDataReset = createNodeDataReset({ node: environment.RUNTIME_NODE_NAME ?? identity.name, dataDir: environment.MARIADB_DATA_DIR ?? "/var/lib/mysql", getStatus: async () => { throw new Error("SQL unavailable during pending recovery"); }, offlineRecovery: true, getRecoveryState: () => ({ state: "pending" }), audit: logger });
   const pending = createPendingInitServer({ environment, log: logger, nodeDataReset, coldEvidence, onInitialized: (operation) => {
     close(pending.server);
-    void handoff(operation === "bootstrap")().catch((error) => logger.error?.("Pending initialization handoff failed", { error }));
+    if (operation !== "join-pending") void handoff(operation === "bootstrap")().catch((error) => logger.error?.("Pending initialization handoff failed", { error }));
   } });
   const shutdown = () => {
     if (shuttingDown) return;

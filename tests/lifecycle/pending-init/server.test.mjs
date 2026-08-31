@@ -111,13 +111,17 @@ test("pending clustered initialization selects only the first declared member fo
   expect(onInitialized).toHaveBeenCalledWith("bootstrap");
 });
 
-test("pending clustered initialization assigns non-authority members to join", async () => {
+test("pending clustered initialization leaves non-authority members pending until explicit join", async () => {
   const initialize = jest.fn().mockResolvedValue(undefined);
   const onInitialized = jest.fn();
   const environment = { ROOT_TOKEN: "root", RUNTIME_NODE_NAME: "elera-1", SUPERVISOR_INTENT_JSON: JSON.stringify({ apiVersion: "elera.eliware.dev/v1alpha1", kind: "SupervisorIntent", cluster: { name: "lab", members: [{ name: "elera-0", address: "a" }, { name: "elera-1", address: "b" }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }) };
   ({ server } = createPendingInitServer({ environment, initialize, onInitialized }));
   const port = await listen(server);
   await fetch(`http://127.0.0.1:${port}/api/v1/initialization/apply`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ confirm: true }) });
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(onInitialized).not.toHaveBeenCalled();
+  const join = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/join`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ confirm: true }) });
+  expect(join.status).toBe(202);
   await new Promise((resolve) => setImmediate(resolve));
   expect(onInitialized).toHaveBeenCalledWith("join");
 });
