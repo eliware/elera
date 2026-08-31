@@ -52,3 +52,12 @@ test('does not bootstrap during a normal restart when a primary peer is active',
   const decide = createStartupRecoveryDecision({ nodes, localEvidence: async () => state('a', 12), fetchEvidence: async (node) => ({ ...state(node.name, 12), active: node.name === 'b' }) });
   await expect(decide()).resolves.toMatchObject({ mode: 'join', bootstrapComplete: true });
 });
+test('joins an active peer even when another configured peer is offline', async () => {
+  const decide = createStartupRecoveryDecision({ nodes, localEvidence: async () => state('a', 12), fetchEvidence: async (node) => { if (node.name === 'c') throw new Error('offline'); return { ...state(node.name, 12), active: node.name === 'b' }; }, attempts: 1 });
+  await expect(decide()).resolves.toMatchObject({ mode: 'join', bootstrapComplete: true });
+});
+test('requires a Galera peer to be Primary, Synced, and ready when status is present', async () => {
+  const make = (galera) => createStartupRecoveryDecision({ nodes, localEvidence: async () => state('a', 12), fetchEvidence: async (node) => ({ ...state(node.name, 12), active: node.name === 'b', ...(node.name === 'b' ? { galera } : {}) }), attempts: 1 });
+  await expect(make({ clusterStatus: 'Primary', localState: 'Synced', ready: true })()).resolves.toMatchObject({ mode: 'join' });
+  await expect(make({ clusterStatus: 'Non-Primary', localState: 'Synced', ready: true })()).resolves.toMatchObject({ mode: 'bootstrap' });
+});

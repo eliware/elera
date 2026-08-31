@@ -10,9 +10,12 @@ export function createStartupRecoveryDecision({ nodes, expectedNodeCount = nodes
     let lastError;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       try {
-        const states = await Promise.all(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node)));
-        const active = states.some((item) => item.active === true);
+        const results = await Promise.allSettled(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node)));
+        const states = results.filter((result) => result.status === 'fulfilled').map(({ value }) => value);
+        const active = states.some((item) => item.active === true && (!item.galera || (item.galera.clusterStatus === 'Primary' && item.galera.localState === 'Synced' && item.galera.ready !== false)));
         if (active) return { mode: 'join', reason: 'primary component already exists', epoch: null, bootstrapComplete: true, evidence: states };
+        const failed = results.find((result) => result.status === 'rejected');
+        if (failed) throw failed.reason;
         const decision = selectCandidate(states.map((item) => ({ ...item.state, node: item.node })));
         if (!decision.eligible) return { mode: 'blocked', reason: decision.reason, epoch: null, evidence: states };
         const selected = decision.candidate.node;
