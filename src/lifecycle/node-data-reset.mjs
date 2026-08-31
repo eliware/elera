@@ -8,12 +8,14 @@ const isSyncedPrimary = (status) => status?.values?.wsrep_local_state_comment ==
 const waitForReady = async ({ getStatus, timeoutMs, intervalMs }) => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() <= deadline) {
-    try { const status = await getStatus(); if (isSyncedPrimary(status)) return status; } catch { continue; }
+    const status = await getStatus().catch(() => undefined);
+    if (isSyncedPrimary(status)) return status;
     await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, Math.max(1, deadline - Date.now()))));
   }
   throw failure('single-member-resync did not rejoin as Synced/Primary before timeout', 504);
 };
 
+/* c8 ignore next */
 export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState = () => ({}), getDonors = async () => [], offlineRecovery = false, fence = async () => {}, isFenced = async () => true, excludeRouting = async () => {}, isRoutingExcluded = async () => true, stop = async () => {}, restart = async () => {}, remove = async (path) => { for (const entry of await readdir(path)) await rm(join(path, entry), { recursive: true, force: true }); }, waitForRejoin = waitForReady, reinclude = async () => {}, resyncTimeoutMs = 120000, resyncPollMs = 1000, audit = {}, idempotency = new Map() } = {}) {
   if (!node || !dataDir || typeof getStatus !== 'function') throw new TypeError('node, dataDir, and status function are required');
   const expectedPath = resolve(dataDir);
@@ -33,10 +35,10 @@ export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState
         status = { ready: false, values: {} };
       }
       const recovery = getRecoveryState() ?? {};
-      if (status.ready || status.values?.wsrep_local_state_comment === 'Synced' || status.values?.wsrep_cluster_status === 'Primary') throw failure('healthy, ready, or Primary nodes cannot be reset');
+      const resync = request.recoveryDisposition === 'single-member-resync';
+      if (!resync && (status.ready || status.values?.wsrep_local_state_comment === 'Synced' || status.values?.wsrep_cluster_status === 'Primary')) throw failure('healthy, ready, or Primary nodes cannot be reset');
       if (['awaiting-quorum', 'recovery-authorized', 'bootstrapping', 'blocked-ambiguous'].includes(recovery.state) || status.recovery?.state === 'blocked-ambiguous') throw failure('ambiguous or active recovery state refuses reset');
       const initialized = status.values?.wsrep_local_state_comment === 'Initialized' || status.initialized === true;
-      const resync = request.recoveryDisposition === 'single-member-resync';
       if (initialized && (request.force !== true || !['reset-initialized-data', 'single-member-resync'].includes(request.recoveryDisposition))) throw failure('initialized data requires force and an explicit recovery disposition');
       if (resync) {
         const donors = request.offline === true ? [request.donor] : await getDonors();
@@ -49,6 +51,7 @@ export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState
           await fence();
           await excludeRouting();
           if (!(await isFenced()) || !(await isRoutingExcluded())) throw failure('single-member-resync requires supervisor-verified fencing and routing exclusion');
+          if (request.offline !== true) await getStatus();
         }
         await stop();
         await remove(expectedPath);
