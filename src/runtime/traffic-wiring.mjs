@@ -12,6 +12,7 @@ export function createSupervisorTraffic({ telemetry, identity, config, health, r
   const sqlQuiesce = createSqlQuiesce({ drain, timeoutMs: config.drainTimeoutMs });
   const clusterDrain = createDrainPropagation({ drain, peers: (environment.ELERA_PEERS ?? '').split(','), token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, log });
   const recover = async () => {
+    drain.end();
     drained = false;
     setDrained(false);
     updateLocalSqlRoute(false);
