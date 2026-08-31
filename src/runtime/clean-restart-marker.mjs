@@ -12,11 +12,16 @@ export function createCleanRestartMarker({ path, node, epoch, nonce = randomUUID
       await writeFile(temporary, JSON.stringify(payload()), { encoding: 'utf8', mode: 0o600 });
       await rename(temporary, path);
     },
-    async consume({ expectedNode = node, expectedEpoch = epoch, expectedNonce } = {}) {
+    async read({ expectedNode = node, expectedEpoch = epoch, expectedNonce } = {}) {
       let value;
       try { value = JSON.parse(await readFile(path, 'utf8')); } catch { return undefined; }
-      try { await unlink(path); } catch {}
       if (value?.version !== 1 || value.node !== expectedNode || (expectedNonce !== undefined && value.nonce !== expectedNonce) || typeof value.nonce !== 'string' || value.epoch !== (expectedEpoch ?? null) || !Number.isFinite(value.writtenAt) || now() - value.writtenAt < 0 || now() - value.writtenAt > maxAgeMs) return undefined;
+      return value;
+    },
+    async consume(options = {}) {
+      const value = await this.read(options);
+      if (!value) return undefined;
+      try { await unlink(path); } catch {}
       return value;
     },
   };

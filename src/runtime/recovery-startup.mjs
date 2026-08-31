@@ -27,11 +27,17 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
     const explicitStartup = await resolveExplicitSupervisorStartup({ environment, nodeName: identity.name, dataDir: config.dataDir, args, joinAddress: bootstrapMember?.address });
     if (explicitStartup.explicit) { startupDecision = explicitStartup.decision; args = explicitStartup.args; }
     else {
-      const marker = await restartMarker?.consume();
+      const marker = restartMarker?.read ? await restartMarker.read() : await restartMarker?.consume?.();
       if (marker) {
-        const evidence = await coldRecovery.evidence().catch(() => []);
-        const peer = evidence.find((item) => item.node !== identity.name && item.active === true && item.galera?.clusterStatus === 'Primary');
-        if (peer) startupDecision = { mode: 'join', reason: 'validated clean restart with active Primary peer', epoch: null, bootstrapComplete: true, evidence };
+        const attempts = Math.max(1, Math.min(15, Math.ceil((config.startupTimeoutMs ?? 15000) / 1000)));
+        for (let attempt = 0; attempt < attempts && startupDecision.mode !== 'join'; attempt += 1) {
+          const evidence = await coldRecovery.evidence().catch(() => []);
+          const peer = evidence.find((item) => item.node !== identity.name && item.active === true && item.galera?.clusterStatus === 'Primary');
+          if (peer) {
+            if (restartMarker?.read) await restartMarker.consume({ expectedNonce: marker.nonce });
+            startupDecision = { mode: 'join', reason: 'validated clean restart with active Primary peer', epoch: null, bootstrapComplete: true, evidence };
+          } else if (attempt + 1 < attempts) await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
       }
       if (startupDecision.mode === 'join') return { initialIntent, args, localEvidence, members, coldRecoveryProtocol, startupDecision, recoveryCompletion, startupServer };
       recoveryState.set('collecting-evidence');
