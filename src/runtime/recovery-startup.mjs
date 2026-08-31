@@ -23,7 +23,8 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
   let recoveryCompletion;
   let startupServer;
   if (config.elera) {
-    const explicitStartup = await resolveExplicitSupervisorStartup({ environment, nodeName: identity.name, dataDir: config.dataDir, args });
+    const bootstrapMember = initialIntent.cluster.members[0];
+    const explicitStartup = await resolveExplicitSupervisorStartup({ environment, nodeName: identity.name, dataDir: config.dataDir, args, joinAddress: bootstrapMember?.address });
     if (explicitStartup.explicit) { startupDecision = explicitStartup.decision; args = explicitStartup.args; }
     else {
       recoveryState.set('collecting-evidence');
