@@ -21,7 +21,7 @@ export function transitionRecoveryEpoch(epoch, phase, details = {}) {
     if (!Array.isArray(details.acknowledgements)) throw new Error('recovery epoch requires identified quorum acknowledgements');
     const acknowledgements = new Set(details.acknowledgements);
     const members = new Set(epoch.quorum);
-    if (acknowledgements.size < Math.floor(epoch.quorum.length / 2) + 1) throw new Error('recovery epoch lacks quorum authorization');
+    if (acknowledgements.size !== members.size) throw new Error('recovery epoch lacks full-cluster authorization');
     if ([...acknowledgements].some((node) => !members.has(node))) throw new Error('recovery epoch contains an unknown quorum member');
     if (acknowledgements.size !== details.acknowledgements.length) throw new Error('recovery epoch contains duplicate quorum acknowledgements');
     return { ...epoch, ...details, acknowledgements, phase, updatedAt: new Date().toISOString() };

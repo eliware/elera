@@ -13,11 +13,25 @@ test('plans a deterministic epoch from complete peer evidence', async () => {
   await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, phase: 'evidence', winner: { node: 'a' }, quorum: ['a', 'b', 'c'] });
 });
 
+test('logs the full candidate decision after full evidence', async () => {
+  const debug = jest.fn();
+  const current = (node, seqno) => ({ ...evidence(node, seqno), state: { uuid: 'current', seqno, safeToBootstrap: false } });
+  const protocol = createColdRecoveryProtocol({
+    nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }, { name: 'c', url: 'c' }],
+    localEvidence: async () => current('a', 10),
+    fetchEvidence: async (url) => ({ b: current('b', 9), c: current('c', 8) })[url],
+    store: { async read() {}, async write(value) { return value; } },
+    log: { debug },
+  });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, divergent: [] });
+  expect(debug).toHaveBeenCalledWith('Recovery candidate decision complete', expect.objectContaining({ candidate: 'a', divergentCount: 0 }));
+});
+
 test('publishes lifecycle events for evidence, candidate, authorization, bootstrap, and completion', async () => {
   const events = [];
   const eventProtocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'b' }, { name: 'c', url: 'c' }], localEvidence: async () => evidence('a', 3), fetchEvidence: async (url) => evidence(url, 2), store: { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; } }, publishEvent: async (event) => events.push(event) });
   const plan = await eventProtocol.plan();
-  await eventProtocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] });
+  await eventProtocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b', 'c'] });
   await eventProtocol.beginBootstrap({ epoch: plan.epoch, winner: 'a' });
   await eventProtocol.complete({ epoch: plan.epoch, winner: 'a', clusterId: 'cluster', membership: ['a', 'b', 'c'] });
   expect(events.map((event) => event.type)).toEqual(['recovery.evidence-collected', 'recovery.candidate-selected', 'recovery.bootstrap-authorized', 'recovery.bootstrap-started', 'recovery.bootstrap-complete']);
@@ -27,8 +41,8 @@ test('requires the exact epoch and quorum before authorization', async () => {
   const { protocol } = makeProtocol();
   const plan = await protocol.plan();
   await expect(protocol.authorize({ epoch: 'stale', acknowledgements: ['a', 'b'] })).rejects.toMatchObject({ statusCode: 409 });
-  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a'] })).rejects.toThrow('quorum');
-  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] })).resolves.toMatchObject({ phase: 'authorized', acknowledgements: new Set(['a', 'b']) });
+  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] })).rejects.toThrow('full-cluster');
+  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b', 'c'] })).resolves.toMatchObject({ phase: 'authorized', acknowledgements: new Set(['a', 'b', 'c']) });
 });
 
 test('rejects stale or malformed evidence before candidate selection', async () => {
@@ -52,7 +66,7 @@ test('normalizes top-level evidence and rejects unknown completion epochs', asyn
   await expect(protocol.authorize({ epoch: 'wrong', acknowledgements: 'a' })).rejects.toMatchObject({ statusCode: 409 });
   await expect(protocol.complete({ epoch: 'wrong', membership: ['a'] })).rejects.toMatchObject({ statusCode: 409 });
   const plan = await protocol.plan();
-  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: 'not-an-array' })).rejects.toThrow('quorum');
+  await expect(protocol.authorize({ epoch: plan.epoch, acknowledgements: 'not-an-array' })).rejects.toThrow('full-cluster');
   await expect(protocol.beginBootstrap()).rejects.toMatchObject({ statusCode: 409 });
 });
 
@@ -102,7 +116,7 @@ test('selects a winner from a validated majority when one peer is unavailable', 
     fetchEvidence: async (url) => { if (url.endsWith('c')) throw Object.assign(new Error('peer unavailable'), { code: 'PEER_UNAVAILABLE' }); return evidence('b', 4); },
     store: { async read() {}, async write(value) { return value; } },
   });
-  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'bootstrap', winner: { node: 'a' } });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', code: 'INSUFFICIENT_RECOVERY_EVIDENCE' });
 });
 test('selects the strongest surviving UUID history and records divergent stale nodes', async () => {
   const stale = { ...evidence('a', 47), state: { uuid: 'old-history', seqno: 47, safeToBootstrap: true } };
@@ -114,7 +128,7 @@ test('selects the strongest surviving UUID history and records divergent stale n
     fetchEvidence: async (url) => url.endsWith('b') ? winner : follower,
     store: { async read() {}, async write(value) { return value; } },
   });
-  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'bootstrap', winner: { node: 'b', uuid: 'current-history' }, divergent: [{ node: 'a', uuid: 'old-history' }] });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: false, mode: 'blocked', code: 'INSUFFICIENT_RECOVERY_EVIDENCE' });
 });
 test('does not treat a Primary from another cluster as a join target', async () => {
   const active = { ...evidence('b', 2), active: true, galera: { clusterUuid: 'other', clusterStatus: 'Primary', localState: 'Synced', ready: true } };
@@ -149,7 +163,7 @@ test('blocks a quorum when no node has a recoverable sequence', async () => {
 test('rejects invalid completion and preserves the authorized epoch', async () => {
   const { protocol } = makeProtocol();
   const plan = await protocol.plan();
-  await protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b'] });
+  await protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a', 'b', 'c'] });
   await expect(protocol.complete({ epoch: plan.epoch, winner: 'a', clusterId: 'cluster', membership: ['a'] })).rejects.toMatchObject({ statusCode: 409 });
   await expect(protocol.beginBootstrap({ epoch: plan.epoch, winner: 'wrong' })).rejects.toMatchObject({ statusCode: 409 });
   await expect(protocol.authorize({ epoch: 'old', acknowledgements: ['a', 'b'] })).rejects.toMatchObject({ statusCode: 409 });

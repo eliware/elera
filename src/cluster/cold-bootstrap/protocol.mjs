@@ -5,7 +5,7 @@ import { validateRecoveryEvidence } from './evidence-validation.mjs';
 export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence, store, publishEvent = async () => {}, now = () => new Date(), maxEvidenceAgeMs = 10000, log = {} } = {}) {
   if (!Array.isArray(nodes) || nodes.length === 0 || typeof localEvidence !== 'function' || typeof fetchEvidence !== 'function' || !store) throw new TypeError('cold recovery protocol dependencies are required');
   let current;
-  const debug = (message, details = {}) => log.debug?.(message, details);
+  const debug = typeof log.debug === 'function' ? log.debug : () => {};
   const read = async () => current ??= await store.read();
   const persist = (value, expectedEpoch) => store.write(value, expectedEpoch === undefined ? undefined : { expectedEpoch });
   const isActivePrimary = (item, evidence) => {
@@ -41,11 +41,11 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       await publishEvent({ type: 'recovery.evidence-collected', evidence });
       const active = evidence.find((item) => isActivePrimary(item, evidence));
       if (active) return { eligible: true, mode: 'join', reason: 'primary component already exists', ...(Number.isInteger(active.galera.clusterSize) && active.galera.clusterSize > 0 ? { expectedMembership: active.galera.clusterSize } : {}), evidence };
-      const decision = selectCandidate(evidence, { minimumHistorySize: Math.floor(nodes.length / 2) + 1 });
-      debug('Recovery candidate decision complete', { eligible: decision.eligible, code: decision.code, reason: decision.reason, candidate: decision.candidate?.node, divergent: decision.divergent?.map((item) => item.node) });
+      const decision = selectCandidate(evidence, { minimumHistorySize: nodes.length });
+      debug('Recovery candidate decision complete', { eligible: decision.eligible, code: decision.code, reason: decision.reason, candidate: decision.candidate?.node, divergentCount: decision.divergent?.length ?? 0 });
       if (!decision.eligible) { current = { version: 1, phase: 'blocked', ...(decision.code ? { code: decision.code } : {}), reason: decision.reason, evidence, updatedAt: now().toISOString() }; await persist(current); await publishEvent({ type: 'recovery.refused', reason: decision.reason, code: decision.code, evidence }); return { eligible: false, mode: 'blocked', ...current }; }
       const epoch = createRecoveryEpoch({ clusterId: decision.candidate.uuid, evidence, winner: decision.candidate, quorum: nodes.map((node) => node.name), now: now() });
-      current = { ...epoch, evidence, ...(decision.divergent.length ? { divergent: decision.divergent } : {}), histories: decision.histories };
+      current = { ...epoch, evidence, divergent: decision.divergent, histories: decision.histories };
       await persist(current);
       await publishEvent({ type: 'recovery.candidate-selected', epoch: epoch.epoch, winner: epoch.winner });
       return { eligible: true, mode: 'bootstrap', ...current };
