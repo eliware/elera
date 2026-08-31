@@ -27,11 +27,12 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
     const explicitStartup = await resolveExplicitSupervisorStartup({ environment, nodeName: identity.name, dataDir: config.dataDir, args, joinAddress: bootstrapMember?.address });
     if (explicitStartup.explicit) { startupDecision = explicitStartup.decision; args = explicitStartup.args; }
     else {
-      const marker = restartMarker?.read ? await restartMarker.read() : await restartMarker?.consume?.();
+      const markerReader = restartMarker?.read;
+      const marker = markerReader ? await markerReader() : await restartMarker?.consume?.();
       if (marker) {
-        const attempts = Math.max(1, Math.min(15, Math.ceil((config.startupTimeoutMs ?? 15000) / 1000)));
+        const attempts = markerReader ? Math.max(1, Math.min(15, Math.ceil((config.startupTimeoutMs ?? 15000) / 1000))) : 1;
         for (let attempt = 0; attempt < attempts && startupDecision.mode !== 'join'; attempt += 1) {
-          const evidence = await coldRecovery.evidence().catch(() => []);
+          const evidence = await coldRecoveryProtocol.evidence().catch(() => []);
           const peer = evidence.find((item) => item.node !== identity.name && item.active === true && item.galera?.clusterStatus === 'Primary');
           if (peer) {
             if (restartMarker?.read) await restartMarker.consume({ expectedNonce: marker.nonce });

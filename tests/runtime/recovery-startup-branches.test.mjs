@@ -4,6 +4,7 @@ const listen = jest.fn(async () => {});
 const close = jest.fn(async () => {});
 const set = jest.fn();
 const plan = jest.fn(async () => ({ mode: 'bootstrap', localWinner: false }));
+const evidence = jest.fn(async () => [{ node: 'node-b', active: true, galera: { clusterStatus: 'Primary' } }]);
 const record = jest.fn(async () => {});
 const authorize = jest.fn(async ({ decision }) => ({ decision, args: ['--recovered'] }));
 const rejoin = jest.fn(async ({ decision }) => decision);
@@ -11,7 +12,7 @@ const resolveExplicit = jest.fn(async () => ({ explicit: false }));
 let evidenceOptions;
 
 jest.unstable_mockModule('../../src/runtime/cold-recovery-wiring.mjs', () => ({
-  createSupervisorColdRecovery: () => ({ evidence: jest.fn(async () => [{ node: 'node-b', active: true, galera: { clusterStatus: 'Primary' } }]), members: [{ name: 'node-a' }, { name: 'node-b' }], protocol: { plan } }),
+  createSupervisorColdRecovery: () => ({ evidence: {}, members: [{ name: 'node-a' }, { name: 'node-b' }], protocol: { plan, evidence } }),
 }));
 jest.unstable_mockModule('../../src/cluster/cold-bootstrap/startup-evidence-server.mjs', () => ({ createStartupEvidenceServer: () => ({ listen, close }) }));
 jest.unstable_mockModule('../../src/runtime/startup-decision-wiring.mjs', () => ({ resolveExplicitSupervisorStartup: resolveExplicit }));
