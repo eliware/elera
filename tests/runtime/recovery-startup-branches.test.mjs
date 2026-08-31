@@ -11,7 +11,7 @@ const resolveExplicit = jest.fn(async () => ({ explicit: false }));
 let evidenceOptions;
 
 jest.unstable_mockModule('../../src/runtime/cold-recovery-wiring.mjs', () => ({
-  createSupervisorColdRecovery: () => ({ evidence: {}, members: [{ name: 'node-a' }], protocol: { plan } }),
+  createSupervisorColdRecovery: () => ({ evidence: jest.fn(async () => [{ node: 'node-b', active: true, galera: { clusterStatus: 'Primary' } }]), members: [{ name: 'node-a' }, { name: 'node-b' }], protocol: { plan } }),
 }));
 jest.unstable_mockModule('../../src/cluster/cold-bootstrap/startup-evidence-server.mjs', () => ({ createStartupEvidenceServer: () => ({ listen, close }) }));
 jest.unstable_mockModule('../../src/runtime/startup-decision-wiring.mjs', () => ({ resolveExplicitSupervisorStartup: resolveExplicit }));
@@ -59,4 +59,10 @@ test('continues when authorization does not replace process arguments', async ()
   authorize.mockResolvedValueOnce({ decision: { mode: 'join' } });
   const result = await prepareSupervisorRecovery({ startupConfiguration: { initialIntent: { cluster: { members: [{}] } }, args: ['--original'] }, intentState: {}, config: { elera: true, dataDir: 'data', httpPort: 8080 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: {}, mariaProcess: {} });
   expect(result.args).toEqual(['--original']);
+});
+
+test('uses a valid clean marker and active Primary peer for ordinary join', async () => {
+  const consume = jest.fn(async () => ({ node: 'node-a', epoch: null, nonce: 'n' }));
+  const result = await prepareSupervisorRecovery({ startupConfiguration: { initialIntent: { cluster: { members: [{ name: 'node-a' }, { name: 'node-b' }] } }, args: [] }, intentState: {}, config: { elera: true, dataDir: 'data', httpPort: 8080 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: {}, mariaProcess: {}, restartMarker: { consume } });
+  expect(result.startupDecision).toMatchObject({ mode: 'join', bootstrapComplete: true }); expect(consume).toHaveBeenCalled();
 });
