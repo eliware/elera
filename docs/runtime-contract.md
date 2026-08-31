@@ -8,6 +8,10 @@ by that identity:
 - `/var/lib/mysql` — persistent MariaDB data;
 - `/run/mysqld` — MariaDB runtime sockets and state;
 - `/tmp` — MariaDB/InnoDB temporary files when the root filesystem is read-only;
+
+Managed databases expose a logical name to CLI and application callers. The
+supervisor stores a generated Snowflake-backed `physical_name` internally and
+uses that name for MariaDB schemas, identities, grants, and credential leases.
 - `/var/lib/mysql/elera-state` — writable supervisor intent state and generated
   MariaDB configuration by default; `ELERA_CONFIG_STATE_DIR` may override it.
 - `/etc/elera` — optional static configuration input; ConfigMap mounts may be

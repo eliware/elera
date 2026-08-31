@@ -2,6 +2,16 @@ import { createManagedMetadata } from '../../src/metadata/managed.mjs';
 import { createSecretBox } from '../../src/metadata/secret-box.mjs';
 import { createHash } from 'node:crypto';
 
+test('provisions a deterministic physical database while returning the logical name', async () => {
+  const calls = [];
+  const managed = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => { calls.push(sql); return [[]]; } });
+  const result = await managed.createDatabase({ application: 'payments', databaseName: 'primary' });
+  expect(result.database).toBe('primary');
+  expect(result.physicalName).toMatch(/^elera_db_[0-9]+$/);
+  expect(calls.some((sql) => sql.includes('physical_name'))).toBe(true);
+  expect(calls.some((sql) => sql.includes(`CREATE DATABASE IF NOT EXISTS \`${result.physicalName}\``))).toBe(true);
+});
+
 test('manages databases, identities, and scoped tokens without exposing policy SQL', async () => {
   const calls = []; let tokenHash;
   const managed = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => { calls.push(sql); if (sql.includes('INSERT INTO `elera_meta`.scoped_tokens')) tokenHash = sql.match(/VALUES \([^,]+, '([0-9a-f]+)'/)?.[1]; if (sql.includes('FROM `elera_meta`.managed_databases')) return [[{ name: 'billing', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.identities')) return [[{ name: 'runtime', application: 'payments' }]]; if (sql.includes('FROM `elera_meta`.scoped_tokens')) return [[{ name: 'app-token', application: 'payments', identity: 'runtime', token_hash: tokenHash, scopes_json: '["database:read"]' }]]; return [[]]; } });
