@@ -12,7 +12,7 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
       recoveryAudit.joinStart({ node: identity.name, epoch: startupDecision.epoch });
     }
     if (config.elera && startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true) {
-      const expectedMembership = startupDecision.recoveryEpoch?.quorum?.length;
+      const expectedMembership = startupDecision.recoveryEpoch?.quorum?.length ?? config.clusterSize;
       void createWatch({
         health,
         timeoutMs: config.startupTimeoutMs,
