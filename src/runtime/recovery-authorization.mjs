@@ -1,8 +1,9 @@
 import { mariaDbArguments, } from '../config.mjs';
 import { promoteSafeToBootstrap } from '../cluster/cold-bootstrap/promote-state.mjs';
 import { startupArguments } from '../cluster/cold-bootstrap/startup-arguments.mjs';
+import { access } from 'node:fs/promises';
 
-export async function authorizeSupervisorRecovery({ decision, members, config, intentState, recoveryProtocol, recoveryState, recoveryAudit, log, environment = process.env, fetchImpl = fetch, promote = promoteSafeToBootstrap, argumentsFor = mariaDbArguments, applyArguments = startupArguments } = {}) {
+export async function authorizeSupervisorRecovery({ decision, members, config, intentState, recoveryProtocol, recoveryState, recoveryAudit, log, environment = process.env, fetchImpl = fetch, promote = promoteSafeToBootstrap, pathExists = access, argumentsFor = mariaDbArguments, applyArguments = startupArguments } = {}) {
   if (!(decision.localWinner === true && decision.mode === 'bootstrap')) return { decision, args: undefined };
   const claims = await Promise.all(members.map(async (node) => {
     const url = node.local ? `http://127.0.0.1:${config.httpPort}` : node.url;
@@ -28,7 +29,9 @@ export async function authorizeSupervisorRecovery({ decision, members, config, i
   recoveryState.set('recovery-authorized', { reason: decision.reason, epoch: decision.epoch });
   recoveryAudit.authorization({ winner: decision.winner, epoch: decision.epoch });
   recoveryAudit.bootstrapStart({ winner: decision.winner, epoch: decision.epoch });
-  await promote(`${config.dataDir}/grastate.dat`);
+  const statePath = `${config.dataDir}/grastate.dat`;
+  try { await pathExists(statePath); await promote(statePath); }
+  catch (error) { if (error?.code !== 'ENOENT') throw error; log.info?.('No Galera state file exists; explicit fresh bootstrap will create cluster state', { path: statePath }); }
   const args = applyArguments(argumentsFor({ ...config, intentConfigPath: intentState.paths.renderedPath, environment: { ...config.environment, ELERA_CLUSTER_BOOTSTRAP: 'true' } }), decision);
   return { decision, args };
 }
