@@ -4,7 +4,6 @@ import { join, resolve } from 'node:path';
 const confirmationFor = (node) => `RESET ${node}`;
 const failure = (message, statusCode = 409) => Object.assign(new Error(message), { statusCode });
 
-/* c8 ignore next */
 const isSyncedPrimary = (status) => status?.values?.wsrep_local_state_comment === 'Synced' && status?.values?.wsrep_ready === 'ON' && status?.values?.wsrep_cluster_status === 'Primary';
 const waitForReady = async ({ getStatus, timeoutMs, intervalMs }) => {
   const deadline = Date.now() + timeoutMs;
@@ -42,9 +41,10 @@ export function createNodeDataReset({ node, dataDir, getStatus, getRecoveryState
       if (resync) {
         const donors = request.offline === true ? [request.donor] : await getDonors();
         const eligibleDonors = Array.isArray(donors) ? donors.filter((donor) => donor?.healthy === true && donor?.primary === true && donor.node !== node) : [];
-        if (eligibleDonors.length !== 1) throw failure(eligibleDonors.length === 0 ? 'single-member-resync requires a healthy Primary donor' : 'single-member-resync refuses ambiguous donor authority');
+        if (eligibleDonors.length === 0) throw failure('single-member-resync requires a healthy Primary donor');
+        eligibleDonors.sort((left, right) => String(left.node).localeCompare(String(right.node)));
       }
-      const result = { node, dataDir: expectedPath, dryRun, initialized, status: dryRun ? 'planned' : 'completed', recoveryDisposition: resync ? 'single-member-resync' : 'reset-initialized-data', next: resync ? 'rejoin-and-receive-sst' : 'explicit-recovery-required' };
+      const result = { node, dataDir: expectedPath, dryRun, initialized, status: dryRun ? 'planned' : 'completed', recoveryDisposition: resync ? 'single-member-resync' : 'reset-initialized-data', next: resync ? 'rejoin-and-receive-sst' : 'explicit-recovery-required', ...(resync ? { donor: eligibleDonors[0].node } : {}) };
       if (!dryRun) {
         if (resync) {
           await fence();
