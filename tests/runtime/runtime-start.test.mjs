@@ -15,7 +15,7 @@ test('passes configured peer credentials and application to routing startup', as
 });
 
 test('derives peer cycle targets from cluster membership when peers are not explicitly configured', async () => {
-  const result = await startSupervisorRuntime({ dbEnv: {}, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 1, elera: true }, health: { status: async () => ({ ready: true }) }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'join' }, initialIntent: { cluster: { name: 'cluster-a', members: [{ name: 'node-a', address: 'node-a' }, { name: 'node-b', address: 'node-b' }] } }, recoveryState: {}, recoveryAudit: {}, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: { upsert: () => {} }, getDrained: () => false, environment: {} });
+  const result = await startSupervisorRuntime({ dbEnv: {}, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 1, elera: true }, health: { status: async () => ({ ready: true }) }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'join' }, initialIntent: { cluster: { name: 'cluster-a', members: [{ name: 'node-a', address: 'node-a' }, { name: 'node-b', address: 'node-b' }] } }, recoveryState: {}, recoveryAudit: { failure: () => {} }, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: { upsert: () => {} }, getDrained: () => false, environment: {} });
   expect(result.peerTimer).toBeDefined(); clearInterval(result.routingTimer); clearInterval(result.peerTimer);
 });
 
