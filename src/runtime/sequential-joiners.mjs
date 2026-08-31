@@ -10,8 +10,10 @@ export async function recoverJoinersSequentially({ joiners = [], startJoiner, jo
   recoveryState?.set?.('joining', { total: joiners.length });
   for (const joiner of joiners) {
     try {
+      log.debug?.('Recovery phase: starting joiner', { node: joiner.name, completed: completed.slice() });
       await start(joiner);
       const verification = await verifyJoiner(joiner);
+      log.debug?.('Recovery phase: joiner verification complete', { node: joiner.name, valid: verification?.valid, state: verification });
       if (!verification?.valid) throw Object.assign(new Error(verification?.reason ?? 'joiner did not reach a ready Primary state'), { code: 'JOINER_NOT_READY', node: joiner.name });
       completed.push(joiner.name);
       recoveryAudit?.joinComplete?.({ node: joiner.name, completed: completed.slice() });

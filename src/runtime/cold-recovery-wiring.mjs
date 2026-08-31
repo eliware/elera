@@ -10,6 +10,7 @@ export function createSupervisorColdRecovery({ identity, config, health, runReco
     localEvidence: evidence.local,
     fetchEvidence: evidence.remote,
     store: createStore(environment.ELERA_RECOVERY_DECISION_PATH ?? '/run/elera/cold-recovery.json'),
+    log,
     publishEvent: async (event) => recoveryAudit.event(event),
   });
   return { evidence, members, protocol };

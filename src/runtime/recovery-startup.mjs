@@ -10,6 +10,7 @@ import { resolveRecoveryPlan } from './recovery-plan-retry.mjs';
 import { createRecoveryEvidenceService } from './recovery-evidence-service.mjs';
 
 export async function prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess, environment = process.env, restartMarker } = {}) {
+  log.debug?.('Recovery phase: preparing startup decision', { node: identity.name, clusterMode: config.elera, dataDir: config.dataDir });
   const initialIntent = startupConfiguration.initialIntent;
   let args = startupConfiguration.args;
   const coldRecovery = createSupervisorColdRecovery({ identity, config: { ...config, members: initialIntent.cluster.members }, health, runRecover: runWsrepRecover, recoveryAudit, log, environment });
@@ -25,6 +26,7 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
     if (explicitStartup.explicit) { startupDecision = explicitStartup.decision; args = explicitStartup.args; }
     else {
       startupDecision = await resolveCleanRestart({ restartMarker, recoveryProtocol: coldRecoveryProtocol, identity, startupTimeoutMs: config.startupTimeoutMs ?? 15000 }) ?? startupDecision;
+      log.debug?.('Recovery phase: clean-restart decision evaluated', { node: identity.name, mode: startupDecision.mode, reason: startupDecision.reason });
       if (startupDecision.mode === 'join') return { initialIntent, args, localEvidence, members, coldRecoveryProtocol, startupDecision, recoveryCompletion, startupServer };
       recoveryState.set('collecting-evidence');
       const evidenceService = createRecoveryEvidenceService({ identity, dataDir: config.dataDir, httpPort: config.httpPort, token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, mariaProcess, log });
@@ -32,13 +34,16 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
       recoveryCompletion = evidenceService.completion;
       startupServer = evidenceService.server;
       await startupServer.listen();
+      log.debug?.('Recovery phase: evidence listener started', { node: identity.name, port: config.httpPort });
       const recoveryPlan = await resolveRecoveryPlan({ recoveryProtocol: coldRecoveryProtocol, startupTimeoutMs: config.startupTimeoutMs ?? 15000 });
+      log.debug?.('Recovery phase: recovery plan resolved', { node: identity.name, mode: recoveryPlan.mode, winner: recoveryPlan.winner?.node });
       startupDecision = recoveryStartupDecision(recoveryPlan, identity.name);
       await recordSupervisorRecoveryDecision({ decision: startupDecision, recoveryState, recoveryAudit, environment });
       const authorized = await authorizeSupervisorRecovery({ decision: startupDecision, members, config, intentState, recoveryProtocol: coldRecoveryProtocol, recoveryState, recoveryAudit, log });
       startupDecision = authorized.decision;
       if (authorized.args) args = authorized.args;
       startupDecision = await resolveSupervisorRejoin({ decision: startupDecision, members, config, environment, recoveryState });
+      log.debug?.('Recovery phase: rejoin decision resolved', { node: identity.name, mode: startupDecision.mode, localWinner: startupDecision.localWinner });
       if (!(startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true)) await startupServer.close();
     }
   }

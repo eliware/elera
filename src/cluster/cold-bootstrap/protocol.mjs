@@ -2,9 +2,10 @@ import { selectCandidate } from './candidate.mjs';
 import { createRecoveryEpoch, transitionRecoveryEpoch, validateRecoveryEpoch } from './recovery-epoch.mjs';
 import { validateRecoveryEvidence } from './evidence-validation.mjs';
 
-export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence, store, publishEvent = async () => {}, now = () => new Date(), maxEvidenceAgeMs = 10000 } = {}) {
+export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence, store, publishEvent = async () => {}, now = () => new Date(), maxEvidenceAgeMs = 10000, log = {} } = {}) {
   if (!Array.isArray(nodes) || nodes.length === 0 || typeof localEvidence !== 'function' || typeof fetchEvidence !== 'function' || !store) throw new TypeError('cold recovery protocol dependencies are required');
   let current;
+  const debug = (message, details = {}) => log.debug?.(message, details);
   const read = async () => current ??= await store.read();
   const persist = (value, expectedEpoch) => store.write(value, expectedEpoch === undefined ? undefined : { expectedEpoch });
   const isActivePrimary = (item, evidence) => {
@@ -13,19 +14,22 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
     return item.active === true && item.galera?.clusterStatus === 'Primary' && item.galera?.localState === 'Synced' && item.galera?.ready !== false && typeof clusterUuid === 'string' && (!localUuid || localUuid === clusterUuid);
   };
   const collect = async () => {
+    debug('Collecting recovery evidence', { nodes: nodes.map((node) => node.name) });
     const results = await Promise.allSettled(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node.url ?? node, node.name)));
     const evidence = results.filter((result) => result.status === 'fulfilled').map(({ value: item }) => ({ ...(item.state ?? item), node: item.node, dataDirectory: item.dataDirectory, galera: item.galera, active: item.active, generation: item.generation, observedAt: item.observedAt }));
     const activePrimary = evidence.some((item) => isActivePrimary(item, evidence));
-    if (activePrimary) return { evidence, activePrimary: true };
+    if (activePrimary) { debug('Active Primary detected; recovery will join it', { evidence }); return { evidence, activePrimary: true }; }
     const failed = results.find((result) => result.status === 'rejected');
     if (failed && evidence.length === 0) throw failed.reason;
     const validated = validateRecoveryEvidence(evidence, { now: now(), maxAgeMs: maxEvidenceAgeMs });
     if (failed && validated.length < Math.floor(nodes.length / 2) + 1) throw failed.reason;
+    debug('Recovery evidence validated', { evidence: validated, partial: Boolean(failed) });
     return { evidence: validated, activePrimary: false, partial: Boolean(failed) };
   };
   return {
     async evidence() { return (await collect()).evidence; },
     async plan() {
+      debug('Evaluating recovery plan');
       let evidence;
       try { ({ evidence } = await collect()); }
       catch (error) {
@@ -38,6 +42,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       const active = evidence.find((item) => isActivePrimary(item, evidence));
       if (active) return { eligible: true, mode: 'join', reason: 'primary component already exists', ...(Number.isInteger(active.galera.clusterSize) && active.galera.clusterSize > 0 ? { expectedMembership: active.galera.clusterSize } : {}), evidence };
       const decision = selectCandidate(evidence);
+      debug('Recovery candidate decision complete', { eligible: decision.eligible, code: decision.code, reason: decision.reason, candidate: decision.candidate?.node, divergent: decision.divergent?.map((item) => item.node) });
       if (!decision.eligible) { current = { version: 1, phase: 'blocked', ...(decision.code ? { code: decision.code } : {}), reason: decision.reason, evidence, updatedAt: now().toISOString() }; await persist(current); await publishEvent({ type: 'recovery.refused', reason: decision.reason, code: decision.code, evidence }); return { eligible: false, mode: 'blocked', ...current }; }
       const epoch = createRecoveryEpoch({ clusterId: decision.candidate.uuid, evidence, winner: decision.candidate, quorum: nodes.map((node) => node.name), now: now() });
       current = { ...epoch, evidence, ...(decision.divergent.length ? { divergent: decision.divergent } : {}), histories: decision.histories };
@@ -50,6 +55,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       return this.plan();
     },
     async authorize({ epoch, acknowledgements = [] } = {}) {
+      debug('Authorizing recovery epoch', { epoch, acknowledgements });
       const existing = await read();
       if (!existing || existing.epoch !== epoch || !validateRecoveryEpoch(existing, existing.clusterId)) throw Object.assign(new Error('unknown or stale recovery epoch'), { statusCode: 409 });
       const acknowledgementsBy = [...new Set(Array.isArray(acknowledgements) ? acknowledgements : [])].sort();
@@ -59,6 +65,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       return current;
     },
     async beginBootstrap({ epoch, winner } = {}) {
+      debug('Beginning authorized bootstrap', { epoch, winner });
       const existing = await read();
       if (!existing || existing.epoch !== epoch || !validateRecoveryEpoch(existing, existing.clusterId)) throw Object.assign(new Error('unknown or stale recovery epoch'), { statusCode: 409 });
       if (existing.phase !== 'authorized' || winner !== existing.winner.node) throw Object.assign(new Error('bootstrap authority does not match the recovery epoch'), { statusCode: 409 });
@@ -82,6 +89,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       return current;
     },
     async complete({ epoch, winner, clusterId, membership } = {}) {
+      debug('Completing recovery epoch', { epoch, winner, clusterId, membership });
       const existing = await read();
       if (!existing || existing.epoch !== epoch) throw Object.assign(new Error('unknown or stale recovery epoch'), { statusCode: 409 });
       if (winner !== existing.winner?.node || clusterId !== existing.clusterId) throw Object.assign(new Error('recovery completion authority does not match the authorized epoch'), { statusCode: 409 });
