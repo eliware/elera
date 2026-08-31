@@ -4,8 +4,9 @@ import { createSupervisorStartupServices } from './startup-services.mjs';
 import { createSupervisorColdBootstrap } from './cold-bootstrap-wiring.mjs';
 import { startSupervisorMariaDb } from './maria-startup.mjs';
 import { startSupervisorRuntime } from './runtime-start.mjs';
+import { startPendingInitRuntime } from '../lifecycle/pending-init/runtime.mjs';
 
-export async function startSupervisor({ config, identity, log, loadEnvironmentIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health, environment = process.env, dbEnv, probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, telemetry, state }) {
+export async function startSupervisor({ config, identity, log, loadEnvironmentIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health, environment = process.env, dbEnv, probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, telemetry, state, startPendingRuntime = startPendingInitRuntime }) {
   telemetry.start();
   await observationStore.initialize?.();
   log.info('Elera supervisor starting', { elera: config.elera, httpPort: config.httpPort });
@@ -23,6 +24,11 @@ export async function startSupervisor({ config, identity, log, loadEnvironmentIn
   state.coldBootstrapLocal = startupServices.bootstrapLocal;
   state.applyIntent = startupServices.applyIntent;
   state.bootstrapMaria = startupServices.bootstrapMaria;
+  if (startupDecision.mode === 'blocked') {
+    await startPendingRuntime({ environment, logger: log });
+    log.warn('Supervisor startup is blocked; pending recovery listener is active', { httpPort: config.httpPort, reason: startupDecision.reason });
+    return { pending: true };
+  }
   startSupervisorMariaDb({ processController: state.mariaProcess, config, startupDecision, health, recoveryState, recoveryAudit, recoveryCompletion: state.recoveryCompletion, coldRecoveryProtocol: state.coldRecoveryProtocol, startupServer: recoveryResult.startupServer, identity, signals: state.signals, log });
   const runtime = await startSupervisorRuntime({ dbEnv, probes, config, health, log, startupDecision, initialIntent, recoveryState, recoveryAudit, identity, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, environment, setDb: (db) => { state.db = db; } });
   state.db = runtime.db;
