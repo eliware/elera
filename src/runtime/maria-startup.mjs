@@ -12,10 +12,11 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
       recoveryAudit.joinStart({ node: identity.name, epoch: startupDecision.epoch });
     }
     if (config.elera && startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true) {
+      const expectedMembership = startupDecision.recoveryEpoch?.quorum?.length;
       void createWatch({
         health,
         timeoutMs: config.startupTimeoutMs,
-        isReady: (result) => result.values?.wsrep_local_state_comment === 'Synced' && result.values?.wsrep_ready === 'ON' && result.values?.wsrep_cluster_status === 'Primary',
+        isReady: (result) => result.values?.wsrep_local_state_comment === 'Synced' && result.values?.wsrep_ready === 'ON' && result.values?.wsrep_cluster_status === 'Primary' && Number(result.values?.wsrep_cluster_size) === expectedMembership,
         onTimeout: async () => {
           recoveryState.set('cluster-unavailable', { reason: 'bootstrap did not form a ready Primary view before timeout', epoch: startupDecision.epoch });
           recoveryAudit.failure({ reason: 'bootstrap readiness timeout', epoch: startupDecision.epoch });
