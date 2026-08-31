@@ -24,8 +24,16 @@ export async function authorizeSupervisorRecovery({ decision, members, config, i
     return { decision: blocked, args: undefined };
   }
   const acknowledgements = members.filter((_, index) => claims[index]).map((node) => node.name);
-  await recoveryProtocol.authorize({ epoch: decision.epoch, acknowledgements });
-  await recoveryProtocol.beginBootstrap({ epoch: decision.epoch, winner: decision.winner });
+  try {
+    await recoveryProtocol.authorize({ epoch: decision.epoch, acknowledgements });
+    await recoveryProtocol.beginBootstrap({ epoch: decision.epoch, winner: decision.winner });
+  } catch (error) {
+    const blocked = { ...decision, mode: 'blocked', reason: error.message, code: error.code ?? 'RECOVERY_AUTHORIZATION_FAILED' };
+    recoveryState.set('blocked-ambiguous', { reason: blocked.reason, epoch: blocked.epoch });
+    recoveryAudit.failure?.({ reason: blocked.reason, epoch: blocked.epoch });
+    log.error?.('Cold recovery authorization failed', { error, epoch: decision.epoch });
+    return { decision: blocked, args: undefined };
+  }
   recoveryState.set('recovery-authorized', { reason: decision.reason, epoch: decision.epoch });
   recoveryAudit.authorization({ winner: decision.winner, epoch: decision.epoch });
   recoveryAudit.bootstrapStart({ winner: decision.winner, epoch: decision.epoch });
