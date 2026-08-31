@@ -15,7 +15,12 @@ export function createSupervisorTraffic({ telemetry, identity, config, health, r
     drained = false;
     setDrained(false);
     updateLocalSqlRoute(false);
-    await publishDrainEvent(false);
+    const deadline = Date.now() + Math.min(config.startupTimeoutMs ?? 5000, 5000);
+    do {
+      if (await publishDrainEvent(false)) return;
+      if (Date.now() >= deadline) return;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } while (true);
   };
   return { drain, sqlQuiesce, clusterDrain, publishDrainEvent, recover, getDrained: () => drained };
 }

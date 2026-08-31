@@ -8,6 +8,14 @@ test('wires drain, SQL quiesce, propagation, and event publication', async () =>
   traffic.drain.end(); await Promise.resolve(); expect(traffic.getDrained()).toBe(false); expect(routingBus.publish).toHaveBeenCalledWith(expect.objectContaining({ type: 'routing.recovery', node: 'node-a' }));
 });
 
+test('retries startup recovery until readiness is observable', async () => {
+  let ready = false; const publish = jest.fn();
+  const traffic = createSupervisorTraffic({ telemetry: { recordEvent: jest.fn() }, identity: { name: 'node-a' }, config: { startupTimeoutMs: 500, shutdownTimeoutMs: 10, drainTimeoutMs: 10 }, health: { status: async () => ({ ready }) }, routingBus: { publish }, log: { info: jest.fn() }, environment: {}, getDb: () => undefined });
+  setTimeout(() => { ready = true; }, 120);
+  await traffic.recover();
+  expect(publish).toHaveBeenCalledWith(expect.objectContaining({ type: 'routing.recovery' }));
+});
+
 test('includes the load-balancer endpoint in propagated drain context', async () => { const bus = { publish: jest.fn() }; const traffic = createSupervisorTraffic({ telemetry: { recordEvent: jest.fn() }, identity: { name: 'node-a' }, config: { shutdownTimeoutMs: 10, drainTimeoutMs: 10 }, health: { status: async () => ({ ready: true }) }, routingBus: bus, log: { info: jest.fn() }, environment: { ELERA_PEERS: '', ROOT_TOKEN: 'root', ELERA_LOAD_BALANCER_ENDPOINT: 'http://lb' }, getDb: () => undefined }); traffic.drain.begin(); await Promise.resolve(); expect(bus.publish).toHaveBeenCalledWith(expect.objectContaining({ context: expect.objectContaining({ loadBalancerEndpoint: 'http://lb' }) })); });
 
 test('bridges drain state to the supervisor entrypoint', () => { const setDrained = jest.fn(); const traffic = createSupervisorTraffic({ telemetry: { recordEvent: jest.fn() }, identity: { name: 'node-a' }, config: { shutdownTimeoutMs: 10, drainTimeoutMs: 10 }, health: { status: async () => ({ ready: true }) }, routingBus: { publish: jest.fn() }, log: { info: jest.fn() }, environment: { ELERA_PEER_TOKEN: 'peer' }, getDb: () => undefined, setDrained }); traffic.drain.begin(); expect(setDrained).toHaveBeenCalledWith(true); });

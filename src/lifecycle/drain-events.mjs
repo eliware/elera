@@ -6,12 +6,13 @@ export function createDrainEventPublisher({ bus, node, getReady, getContext = ()
     if (draining) {
       const timestamp = now();
       bus.publish({ type: 'routing.drain', version: nextVersion(), node, context: getContext(), generatedAt: new Date(timestamp).toISOString() });
-      return;
+      return true;
     }
     try {
-      if ((await getReady())?.ready) { const timestamp = now(); bus.publish({ type: 'routing.recovery', version: nextVersion(), node, context: getContext(), generatedAt: new Date(timestamp).toISOString() }); }
+      if ((await getReady())?.ready) { const timestamp = now(); bus.publish({ type: 'routing.recovery', version: nextVersion(), node, context: getContext(), generatedAt: new Date(timestamp).toISOString() }); return true; }
     } catch (error) {
       log.warn?.('Recovery event withheld until node is ready', { error });
     }
+    return false;
   };
 }
