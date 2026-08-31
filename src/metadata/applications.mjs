@@ -29,7 +29,7 @@ export function createApplicationService({ query, database = 'elera_meta' } = {}
       if (!apps[0]) throw Object.assign(new Error('application not found'), { statusCode: 404 });
       const tokenId = String(generateSnowflake());
       const token = `elera_${randomBytes(32).toString('base64url')}`;
-      await q(`INSERT INTO elera_meta.scoped_tokens (token_id, name, token_hash, application_name, identity_name, scopes_json) VALUES (${literal(tokenId)}, ${literal(tokenName)}, ${literal(hash(token))}, ${literal(application)}, NULL, ${literal(JSON.stringify(['app:admin']))})`, []);
+      await q(`INSERT INTO elera_meta.scoped_tokens (token_id, name, token_hash, application_name, identity_name, scopes_json) VALUES (${literal(tokenId)}, ${literal(tokenName)}, ${literal(hash(token))}, ${literal(application)}, NULL, ${literal(JSON.stringify(['app:admin']))}) ON DUPLICATE KEY UPDATE token_hash=VALUES(token_hash), active=TRUE, rotated_at=CURRENT_TIMESTAMP`, []);
       return { tokenId, token, application, applicationId: apps[0].application_id, scopes: ['app:admin'] };
     },
   };

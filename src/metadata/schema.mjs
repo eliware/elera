@@ -60,4 +60,13 @@ export const META_MIGRATIONS = [
       "CREATE UNIQUE INDEX IF NOT EXISTS idx_managed_databases_id ON elera_meta.managed_databases(database_id)",
     ],
   },
+  {
+    version: 8,
+    name: "application-scoped-token-identities",
+    statements: [
+      "UPDATE elera_meta.scoped_tokens SET token_id=LEFT(REPLACE(UUID(), '-', ''), 32) WHERE token_id IS NULL",
+      "ALTER TABLE elera_meta.scoped_tokens DROP PRIMARY KEY, MODIFY token_id VARCHAR(32) NOT NULL, ADD PRIMARY KEY (token_id)",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_scoped_tokens_application_name ON elera_meta.scoped_tokens(application_name, name)",
+    ],
+  },
 ];
