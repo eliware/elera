@@ -11,7 +11,7 @@ test('composes the control API with cluster and runtime dependencies', async () 
   const dataDir = await mkdtemp(join(tmpdir(), 'supervisor-reset-'));
   const query = jest.fn();
   const stop = jest.fn();
-  const observationStore = { all: jest.fn(() => [{ nodeId: 'donor', synced: true, primary: 'Primary', health: 'ok' }]) };
+  const observationStore = { all: jest.fn().mockImplementationOnce(() => [{ nodeId: 'donor', synced: true, primary: 'Primary', health: 'ok' }]).mockImplementation(() => [{ node: 'donor', healthy: true, primary: true }]) };
   const result = createSupervisorControlComposition({ db: { query }, metadata: {}, managed: {}, applications: {}, reconciler: {}, artifactStore: {}, routingBundles: { lease: jest.fn() }, routingEvent: jest.fn(), recovery: { status: jest.fn(() => ({})) }, observationStore, health: { status: jest.fn(async () => ({ ready: false })), cacheInfo: jest.fn(() => ({})) }, clusterDrain: { set: jest.fn() }, lifecycle: { get: jest.fn() }, telemetry: { summary: jest.fn(), details: jest.fn() }, config: { elera: true, runtimeNodeName: 'supervisor', dataDir }, intentState: {}, coldState: { drain: { isDraining: jest.fn(() => false), active: jest.fn(() => 0) }, clusterDrain: { set: jest.fn() } }, processController: { stop, start: jest.fn() }, applyIntent: jest.fn(), environment: {}, log: {} });
   expect(result).toBeDefined();
   const options = result.options;
