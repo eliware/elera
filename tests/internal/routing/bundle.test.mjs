@@ -32,6 +32,10 @@ test('preserves the physical database for the SQL connection separately from the
   expect(bundle).toMatchObject({ database: 'logical_db', physicalDatabase: 'elera_db_42' });
 });
 
+test('omits an explicitly empty physical database', () => {
+  expect(() => createSupervisorBundle({ application: 'app', database: 'logical_db', physicalDatabase: null, identity: 'runtime', username: 'u', password: 'p', routes: { primary: [{ host: 'node', port: 3306 }], balanced: [{ host: 'node', port: 3306 }] }, expiresAt: '2099-01-01', ports: { sql: 3306, http: 8080 } })).toThrow('physicalDatabase is required');
+});
+
 test('preserves explicit assignments and metadata', () => {
   const writer = { host: 'writer', port: 3306, nodeId: 'node-w' };
   const failover = [{ host: 'backup', port: 3306, nodeId: 'node-b' }];

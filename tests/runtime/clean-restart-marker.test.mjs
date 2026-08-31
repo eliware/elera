@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@jest/globals';
@@ -18,4 +18,24 @@ test('rejects wrong node, epoch, nonce, stale, and future markers', async () => 
     const reader = createCleanRestartMarker({ path, node: 'elera-1', epoch: 'e1', nonce: 'reader', now: options.now ?? (() => 1000) });
     expect(await reader.consume(options.markerNonce ? { expectedNonce: 'n1' } : (options.expectedNode || options.expectedEpoch ? options : {}))).toBeUndefined();
   }
+});
+
+test('supports function-backed epochs and ignores malformed marker files', async () => {
+  const path = await setup(); let epoch = 3;
+  const marker = createCleanRestartMarker({ path, node: 'elera-1', epoch: () => epoch, nonce: 'n1', now: () => 1000 });
+  await marker.write();
+  expect(await marker.read({ expectedEpoch: () => 3 })).toMatchObject({ epoch: 3 });
+  epoch = 4;
+  expect(await marker.read({ expectedEpoch: () => epoch })).toBeUndefined();
+  await writeFile(path, '{');
+  expect(await marker.read()).toBeUndefined();
+});
+
+test('requires marker identity and supports generated nonce with a null epoch', async () => {
+  expect(() => createCleanRestartMarker()).toThrow(TypeError);
+  expect(() => createCleanRestartMarker({ path: 'marker', node: 'node', nonce: '' })).toThrow(TypeError);
+  const path = await setup();
+  const marker = createCleanRestartMarker({ path, node: 'node', now: () => 1000 });
+  await marker.write();
+  expect(await marker.read()).toMatchObject({ node: 'node', epoch: null });
 });

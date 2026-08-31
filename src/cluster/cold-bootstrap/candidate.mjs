@@ -15,11 +15,8 @@ export function selectCandidate(states) {
   if (highest < 0) return { eligible: false, reason: 'no recoverable seqno exists', candidates: states };
   const winners = states.filter((state) => state.seqno === highest);
   if (winners.length !== 1) {
-    if (winners.every((state) => state.uuid === states[0].uuid && state.seqno === highest)) {
-      const candidate = winners.slice().sort((left, right) => left.node.localeCompare(right.node))[0];
-      return { eligible: true, reason: 'equivalent highest seqno candidates; deterministic winner selected', candidate, candidates: states };
-    }
-    return { eligible: false, reason: 'equivalent highest seqno candidates; recovery authority is ambiguous', candidates: states };
+    const candidate = winners.slice().sort((left, right) => left.node.localeCompare(right.node))[0];
+    return { eligible: true, reason: 'equivalent highest seqno candidates; deterministic winner selected', candidate, candidates: states };
   }
   return { eligible: true, reason: 'unique highest seqno', candidate: winners[0], candidates: states };
 }

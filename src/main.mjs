@@ -8,6 +8,7 @@ import { createRuntimeState } from './runtime/runtime-state.mjs';
 import { createSupervisorEntryComposition } from './runtime/entry-composition.mjs';
 import { startSupervisor } from './runtime/startup-coordinator.mjs';
 import { createCleanRestartMarker } from './runtime/clean-restart-marker.mjs';
+import { createSupervisorRecoveryJoiner } from './runtime/recovery-join-wiring.mjs';
 
 const config = loadSupervisorConfig();
 const identity = runtimeIdentity();
@@ -39,7 +40,8 @@ let errors;
 state.signals = signals;
 
 async function main() {
-  await startSupervisor({ config, identity, log, loadEnvironmentIntent: loadIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health: composition.health, environment: process.env, dbEnv, probes: composition.probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained: composition.traffic.getDrained, recoverTraffic: composition.traffic.recover, cleanRestartIntent: restartMarker, telemetry, state });
+  const recoverJoiners = createSupervisorRecoveryJoiner({ identity, token: process.env.ELERA_PEER_TOKEN ?? process.env.ROOT_TOKEN, timeoutMs: config.startupTimeoutMs, httpPort: config.httpPort, recoveryState, recoveryAudit, publishRecovery: composition.traffic.recover, log });
+  await startSupervisor({ config, identity, log, loadEnvironmentIntent: loadIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health: composition.health, environment: process.env, dbEnv, probes: composition.probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained: composition.traffic.getDrained, recoverTraffic: composition.traffic.recover, cleanRestartIntent: restartMarker, telemetry, state, recoverJoiners });
 }
 
 main().catch((error) => {

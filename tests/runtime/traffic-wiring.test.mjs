@@ -28,3 +28,13 @@ test('recovers ordinary restart state and publishes recovery after readiness', a
   expect(setDrained).toHaveBeenCalledWith(false);
   expect(publish).toHaveBeenCalledWith(expect.objectContaining({ type: 'routing.recovery', node: 'node-a' }));
 });
+
+test('stops recovery polling when the deadline expires', async () => {
+  jest.useFakeTimers();
+  const traffic = createSupervisorTraffic({ telemetry: { recordEvent: jest.fn() }, identity: { name: 'node-a' }, config: { startupTimeoutMs: 0, shutdownTimeoutMs: 10, drainTimeoutMs: 10 }, health: { status: async () => ({ ready: false }) }, routingBus: { publish: jest.fn() }, log: { info: jest.fn() }, environment: {}, getDb: () => undefined });
+  const pending = traffic.recover();
+  await jest.advanceTimersByTimeAsync(30000);
+  await pending;
+  expect(traffic.getDrained()).toBe(false);
+  jest.useRealTimers();
+});

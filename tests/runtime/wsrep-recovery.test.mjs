@@ -28,7 +28,23 @@ test('rejects failed recovery', async () => {
   const child = childProcess();
   const promise = runWsrepRecover('/data', { spawnImpl: () => child });
   child.emit('exit', 2);
-  await expect(promise).rejects.toThrow('exited with 2');
+  await expect(promise).rejects.toMatchObject({ message: expect.stringContaining('exited with 2'), code: 'WSREP_RECOVERY_POSITION_UNAVAILABLE', exitCode: 2, diagnostic: '' });
+});
+
+test('reports bounded diagnostics when recovery emits no position', async () => {
+  const child = childProcess();
+  const promise = runWsrepRecover('/data', { spawnImpl: () => child });
+  child.emitStderr('startup warning\n' + 'x'.repeat(3000));
+  child.emit('exit', 1);
+  await expect(promise).rejects.toMatchObject({ code: 'WSREP_RECOVERY_POSITION_UNAVAILABLE', diagnostic: expect.stringContaining('x') });
+  await expect(promise).rejects.toHaveProperty('diagnostic.length', 2048);
+});
+
+test('surfaces spawn failures separately from missing recovery positions', async () => {
+  const child = childProcess();
+  const promise = runWsrepRecover('/data', { spawnImpl: () => child });
+  child.emit('error', Object.assign(new Error('mariadbd unavailable'), { code: 'ENOENT' }));
+  await expect(promise).rejects.toMatchObject({ message: 'mariadbd unavailable', code: 'ENOENT' });
 });
 
 test('preserves a recovered position when mariadbd exits nonzero after Galera connection failure', async () => {

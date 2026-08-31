@@ -9,7 +9,14 @@ export function runWsrepRecover(directory, { spawnImpl = spawn } = {}) {
     child.once('error', reject);
     child.once('exit', (code) => {
       if (code === 0 || /Recovered position:\s*[0-9a-f-]+:-?\d+/i.test(output)) resolve(output);
-      else reject(new Error(`mariadbd wsrep recovery exited with ${code}`));
+      else {
+        const error = Object.assign(new Error(`mariadbd wsrep recovery exited with ${code}; no recovered position was emitted`), {
+          code: 'WSREP_RECOVERY_POSITION_UNAVAILABLE',
+          exitCode: code,
+          diagnostic: output.trim().slice(-2048)
+        });
+        reject(error);
+      }
     });
   });
 }

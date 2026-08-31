@@ -45,7 +45,7 @@ test('composes collaborators and forwards live runtime dependencies', async () =
   captured.health.getTelemetry(); captured.health.getRecoveryState();
   captured.health.db.query('select'); captured.health.db.health();
   captured.domain.query('select'); captured.routing.query('select'); await captured.routing.resolveAddress('localhost');
-  captured.control.processController.start('arg'); captured.probes.controlHandler({}, {}); captured.probes.upgradeHandler({}, {}, {});
+  captured.control.processController.start('arg'); captured.control.processController.stop(10); captured.probes.controlHandler({}, {}); captured.probes.upgradeHandler({}, {}, {});
   expect(await captured.control.applyIntent({})).toBeUndefined();
   database = { query: jest.fn(), health: jest.fn() };
   expect(captured.control.db.query('select')).toBeUndefined();

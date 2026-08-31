@@ -5,8 +5,11 @@ import { createSupervisorColdBootstrap } from './cold-bootstrap-wiring.mjs';
 import { startSupervisorMariaDb } from './maria-startup.mjs';
 import { startSupervisorRuntime } from './runtime-start.mjs';
 import { startPendingInitRuntime } from '../lifecycle/pending-init/runtime.mjs';
+import { inspectDataDirectory } from '../lifecycle/data-directory.mjs';
+import { startAuthorizedRecoveryProcess } from './recovery-process-start.mjs';
+import { startAuthorizedRecoveryJoin } from './recovery-join-start.mjs';
 
-export async function startSupervisor({ config, identity, log, loadEnvironmentIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health, environment = process.env, dbEnv, probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, recoverTraffic = async () => {}, cleanRestartIntent, telemetry, state, startPendingRuntime = startPendingInitRuntime }) {
+export async function startSupervisor({ config, identity, log, loadEnvironmentIntent, intentState, routingEnvironment, recoveryState, recoveryAudit, health, environment = process.env, dbEnv, probes, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, recoverTraffic = async () => {}, cleanRestartIntent, telemetry, state, startPendingRuntime = startPendingInitRuntime, onRecoveryBootstrap = async () => {}, onRecoveryComplete = async () => {}, recoverJoiners = async () => {} }) {
   telemetry.start();
   await observationStore.initialize?.();
   log.info('Elera supervisor starting', { elera: config.elera, httpPort: config.httpPort });
@@ -25,7 +28,22 @@ export async function startSupervisor({ config, identity, log, loadEnvironmentIn
   state.applyIntent = startupServices.applyIntent;
   state.bootstrapMaria = startupServices.bootstrapMaria;
   if (startupDecision.mode === 'blocked') {
-    await startPendingRuntime({ environment, logger: log });
+    const initializedData = inspectDataDirectory(config.dataDir).action === 'start';
+    const startRecoveryRuntime = async (startupDecision) => {
+      const runtime = await startSupervisorRuntime({ dbEnv, probes, config, health, log, startupDecision, initialIntent, recoveryState, recoveryAudit, identity, routingEvent, routingBus, sharedRoutingAssignments, observationStore, getDrained, environment, setDb: (db) => { state.db = db; } });
+      state.routingTimer = runtime.routingTimer;
+      state.peerTimer = runtime.peerTimer;
+      return runtime;
+    };
+    const startAuthorizedRecovery = async (bootstrap) => {
+      const localWinner = await startAuthorizedRecoveryProcess({ bootstrap, identity, args, mariaProcess: state.mariaProcess, recoveryState, onRecoveryBootstrap });
+      if (!localWinner) return false;
+      const runtime = await startRecoveryRuntime({ mode: 'bootstrap', localWinner: true, epoch: bootstrap?.epoch, recoveryEpoch: { clusterId: bootstrap?.clusterId, quorum: bootstrap?.quorum ?? members.map((member) => member.name) } });
+      await recoverJoiners({ bootstrap, members, runtime });
+      return onRecoveryBootstrap(bootstrap);
+    };
+    const onRecoveryJoin = (request) => startAuthorizedRecoveryJoin({ request, identity, args, mariaProcess: state.mariaProcess, recoveryState, recoveryAudit, startRuntime: (options) => startRecoveryRuntime(options.startupDecision), runtimeOptions: {} });
+    await startPendingRuntime({ environment, logger: log, recoveryRequired: initializedData, recoveryReason: startupDecision.reason, recoveryProtocol: state.coldRecoveryProtocol, onRecoveryBootstrap: startAuthorizedRecovery, onRecoveryComplete, onRecoveryJoin });
     log.warn('Supervisor startup is blocked; pending recovery listener is active', { httpPort: config.httpPort, reason: startupDecision.reason });
     return { pending: true };
   }
