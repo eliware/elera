@@ -31,7 +31,7 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
       });
     }
     if (config.elera && startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true) {
-      const expectedMembership = startupDecision.recoveryEpoch?.quorum?.length ?? (startupDecision.epoch ? config.clusterSize : 1);
+      const expectedMembership = 1;
       void createWatch({
         health,
         timeoutMs: config.startupTimeoutMs,
