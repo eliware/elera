@@ -26,6 +26,18 @@ test('does not invoke cold bootstrap while composing an unrelated request', asyn
   expect(coldBootstrap).not.toHaveBeenCalled();
 });
 
+test('dispatches app-admin provisioning endpoints through the composed API', async () => {
+  const managed = { createDatabase: jest.fn(async () => ({ database: 'billing' })), createIdentity: jest.fn(async () => ({ identity: 'runtime' })), issueToken: jest.fn(async () => ({ token: 'secret' })), authenticate: jest.fn(async () => ({ application: 'billing', scopes: ['app:admin'] })) };
+  const applications = { create: jest.fn(), issueAdminToken: jest.fn() };
+  const api = createControlApi({ managed, applications, environment: { ROOT_TOKEN: 'root' }, log: { error: jest.fn() } });
+  for (const [url, body] of [['/api/v1/databases', { application: 'billing', database: 'billing' }], ['/api/v1/identities', { application: 'billing', database: 'billing', identity: 'runtime' }], ['/api/v1/tokens', { application: 'billing', identity: 'runtime', name: 'runtime', scopes: ['database:read'] }]]) {
+    const out = response();
+    await api.handler({ ...request('POST', url, body), headers: { authorization: 'Bearer app-admin' } }, out);
+    expect(out.status).toBe(200);
+    expect(out.body).not.toContain('endpoint not found');
+  }
+});
+
 test('handles authentication, unavailable services, and request errors', async () => {
   const out = response(); const api = createControlApi({ environment: { ROOT_TOKEN: 'root' }, log: { error: jest.fn() } });
   await api.handler({ method: 'GET', url: '/api/v1/status', headers: {} }, out); expect(out.status).toBe(401);

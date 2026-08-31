@@ -38,6 +38,9 @@ that the implementation is complete.
   readiness and control routes execute; invalid health query results fail
   closed, and initialization does not report success when metadata migration
   fails.
+- [x] App-admin provisioning uses the canonical database, identity, and token
+  endpoints with application-scoped authorization; unauthorized applications
+  remain fail-closed.
 - [ ] Verify every recovery observation is authenticated, epoch-bound,
   evidence-digested, quorum-authorized, and rejected when stale or changed.
 - [ ] Verify winner-only bootstrap, join-only followers, Primary verification,
