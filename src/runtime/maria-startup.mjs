@@ -26,9 +26,9 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
         },
       })().then(async (result) => {
         if (!result.ready) return;
-        await coldRecoveryProtocol?.complete({ epoch: startupDecision.epoch, clusterId: startupDecision.recoveryEpoch?.clusterId, winner: identity.name, membership: startupDecision.recoveryEpoch?.quorum });
-        recoveryState.set('complete', { reason: 'bootstrap completed with expected Primary membership', epoch: startupDecision.epoch });
-        recoveryCompletion?.publish({ epoch: startupDecision.epoch, status: 'complete', clusterId: startupDecision.recoveryEpoch?.clusterId, winner: identity.name });
+        if (startupDecision.recoveryEpoch) await coldRecoveryProtocol?.complete({ epoch: startupDecision.epoch, clusterId: startupDecision.recoveryEpoch.clusterId, winner: identity.name, membership: startupDecision.recoveryEpoch.quorum });
+        recoveryState.set('complete', { reason: startupDecision.recoveryEpoch ? 'bootstrap completed with expected Primary membership' : 'explicit bootstrap completed with expected Primary membership', epoch: startupDecision.epoch });
+        if (typeof recoveryCompletion?.publish === 'function' && startupDecision.epoch) recoveryCompletion.publish({ epoch: startupDecision.epoch, status: 'complete', clusterId: startupDecision.recoveryEpoch?.clusterId, winner: identity.name });
         recoveryAudit.completion?.({ epoch: startupDecision.epoch, winner: identity.name });
         await startupServer?.close();
       });
