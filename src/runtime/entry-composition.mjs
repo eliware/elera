@@ -9,6 +9,8 @@ import { createRoutingStream } from '../api/routing-stream.mjs';
 import { createSupervisorLifecycle } from './lifecycle-composition.mjs';
 import { closeServer } from './server-lifecycle.mjs';
 import { createSupervisorTraffic } from './traffic-wiring.mjs';
+import { createColdBootstrapEvidence } from '../cluster/cold-bootstrap/peer-evidence.mjs';
+import { runWsrepRecover } from './wsrep-recovery.mjs';
 
 export function createSupervisorEntryComposition({ config, identity, lifecycle, telemetry, recoveryState, recovery, log, environment = process.env, getDb, setDrained, getDrained, getTimers, getMariaProcess, getColdState = () => ({}), applyIntent = (intent) => intent, servers = [] }) {
   const health = createHealthService({
@@ -17,6 +19,7 @@ export function createSupervisorEntryComposition({ config, identity, lifecycle, 
     getTelemetry: () => telemetry.summary(), getRecoveryState: () => recoveryState.snapshot(), log,
   });
   const domain = createSupervisorComposition({ query: (...args) => getDb()?.query?.(...args), log });
+  const coldEvidence = identity?.name && config.dataDir ? createColdBootstrapEvidence({ localNode: identity, dataDir: config.dataDir, health, token: environment.ROOT_TOKEN, run: runWsrepRecover, log }).local : undefined;
   const routing = createRoutingComposition({
     environment: { ...environment, ELERA_EVENT_VERSION_PATH: environment.ELERA_EVENT_VERSION_PATH ?? `${config.dataDir}/elera-state/routing-event-versions.json` },
     config, identity, observationStore: domain.observationStore, managed: domain.managed,
@@ -34,11 +37,12 @@ export function createSupervisorEntryComposition({ config, identity, lifecycle, 
     loadBalancerEndpoint: environment.ELERA_LOAD_BALANCER_ENDPOINT,
   });
   const traffic = createSupervisorTraffic({ telemetry, identity, config, health, routingBus: routing.routingBus, log, getDb, setDrained });
+  const coldState = getColdState();
   const control = createSupervisorControlComposition({
     db: { query: (...args) => getDb()?.query?.(...args) }, ...domain, routingBundles: routing.routingBundles,
     routingEvent: routing.routingEvent, recovery, observationStore: domain.observationStore, health,
     clusterDrain: traffic.clusterDrain, lifecycle, telemetry, config, intentState: domain.intentState,
-    coldState: getColdState(), processController: { start: (...args) => getMariaProcess()?.start?.(...args) }, applyIntent, environment, log,
+    coldState: { ...coldState, coldEvidence: coldState.coldEvidence ?? coldEvidence }, processController: { start: (...args) => getMariaProcess()?.start?.(...args) }, applyIntent, environment, log,
   });
   const probes = createSupervisorProbes({
     getStatus: () => health.status(), isDraining: () => traffic.drain.isDraining(),

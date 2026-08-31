@@ -36,7 +36,7 @@ test('composes collaborators and forwards live runtime dependencies', async () =
   streamOptions = captured.stream;
   firstManagedAuth = managedAuth;
   expect(servers).toHaveLength(1);
-  expect(captured.control.coldState).toEqual({ drain: {}, clusterDrain: {} });
+  expect(captured.control.coldState).toEqual(expect.objectContaining({ drain: {}, clusterDrain: {}, coldEvidence: expect.any(Function) }));
   result.lifecycleWiring({ errors: [] });
   expect(captured.lifecycle.getTimers()).toEqual(['peer', 'routing']);
   expect(captured.probes.getStatus()).toEqual({});
