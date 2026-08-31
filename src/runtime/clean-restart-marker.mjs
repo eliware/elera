@@ -15,7 +15,8 @@ export function createCleanRestartMarker({ path, node, epoch, nonce = randomUUID
     async read({ expectedNode = node, expectedEpoch = epoch, expectedNonce } = {}) {
       let value;
       try { value = JSON.parse(await readFile(path, 'utf8')); } catch { return undefined; }
-      if (value?.version !== 1 || value.node !== expectedNode || (expectedNonce !== undefined && value.nonce !== expectedNonce) || typeof value.nonce !== 'string' || value.epoch !== (expectedEpoch ?? null) || !Number.isFinite(value.writtenAt) || now() - value.writtenAt < 0 || now() - value.writtenAt > maxAgeMs) return undefined;
+      const currentEpoch = typeof expectedEpoch === 'function' ? expectedEpoch() : (expectedEpoch ?? null);
+      if (value?.version !== 1 || value.node !== expectedNode || (expectedNonce !== undefined && value.nonce !== expectedNonce) || typeof value.nonce !== 'string' || JSON.stringify(value.epoch) !== JSON.stringify(currentEpoch) || !Number.isFinite(value.writtenAt) || now() - value.writtenAt < 0 || now() - value.writtenAt > maxAgeMs) return undefined;
       return value;
     },
     async consume(options = {}) {
