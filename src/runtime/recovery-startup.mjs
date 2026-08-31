@@ -12,7 +12,7 @@ import { recordSupervisorRecoveryDecision } from './recovery-decision.mjs';
 import { authorizeSupervisorRecovery } from './recovery-authorization.mjs';
 import { resolveSupervisorRejoin } from './rejoin-decision.mjs';
 
-export async function prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess, environment = process.env } = {}) {
+export async function prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess, environment = process.env, restartMarker } = {}) {
   const initialIntent = startupConfiguration.initialIntent;
   let args = startupConfiguration.args;
   const coldRecovery = createSupervisorColdRecovery({ identity, config: { ...config, members: initialIntent.cluster.members }, health, runRecover: runWsrepRecover, recoveryAudit, log, environment });
@@ -27,6 +27,13 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
     const explicitStartup = await resolveExplicitSupervisorStartup({ environment, nodeName: identity.name, dataDir: config.dataDir, args, joinAddress: bootstrapMember?.address });
     if (explicitStartup.explicit) { startupDecision = explicitStartup.decision; args = explicitStartup.args; }
     else {
+      const marker = await restartMarker?.consume();
+      if (marker) {
+        const evidence = await coldRecovery.evidence().catch(() => []);
+        const peer = evidence.find((item) => item.node !== identity.name && item.active === true && item.galera?.clusterStatus === 'Primary');
+        if (peer) startupDecision = { mode: 'join', reason: 'validated clean restart with active Primary peer', epoch: null, bootstrapComplete: true, evidence };
+      }
+      if (startupDecision.mode === 'join') return { initialIntent, args, localEvidence, members, coldRecoveryProtocol, startupDecision, recoveryCompletion, startupServer };
       recoveryState.set('collecting-evidence');
       const startupEvidence = createStartupLocalEvidence({ node: identity, dataDir: config.dataDir, readState: (directory) => readStateFile(directory), runRecover: runWsrepRecover, inspect: inspectDataDirectory, isActive: () => Boolean(mariaProcess?.child && mariaProcess.child.exitCode === null) });
       recoveryCompletion = createRecoveryCompletion();
