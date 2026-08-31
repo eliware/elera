@@ -27,6 +27,11 @@ test('builds a normalized supervisor bundle', () => {
   expect(bundle.readers).toEqual(bundle.routes.balanced);
 });
 
+test('preserves the physical database for the SQL connection separately from the logical name', () => {
+  const bundle = createSupervisorBundle({ application: 'app', database: 'logical_db', physicalDatabase: 'elera_db_42', identity: 'runtime', username: 'u', password: 'p', routes: { primary: [{ host: 'node', port: 3306 }], balanced: [{ host: 'node', port: 3306 }] }, expiresAt: '2099-01-01', ports: { sql: 3306, http: 8080 } });
+  expect(bundle).toMatchObject({ database: 'logical_db', physicalDatabase: 'elera_db_42' });
+});
+
 test('preserves explicit assignments and metadata', () => {
   const writer = { host: 'writer', port: 3306, nodeId: 'node-w' };
   const failover = [{ host: 'backup', port: 3306, nodeId: 'node-b' }];
@@ -56,7 +61,7 @@ test('derives route node ids and the default supervisor identity', () => {
 test('rejects missing identity, expiry, routes, and invalid route nodes', () => {
   expect(() => createSupervisorBundle({ database: 'db', identity: 'id', username: 'u', password: 'p', expiresAt: '2099-01-01' })).toThrow('route primary and balanced');
   expect(() => validateSupervisorBundle(null)).toThrow('required');
-  const valid = { apiVersion: 'v1', application: 'app', database: 'db', identity: 'id', credentials: { username: 'u', password: 'p' }, writer: { host: 'node', port: 3306, nodeId: 'node' }, readers: [{ host: 'node', port: 3306, nodeId: 'node' }], failover: [], bundleVersion: 1, expiresAt: '2099-01-01', nodeIdentity: 'node', ports: { sql: 3306, http: 8080 }, routes };
+  const valid = { apiVersion: 'v1', application: 'app', database: 'db', physicalDatabase: 'elera_db_1', identity: 'id', credentials: { username: 'u', password: 'p' }, writer: { host: 'node', port: 3306, nodeId: 'node' }, readers: [{ host: 'node', port: 3306, nodeId: 'node' }], failover: [], bundleVersion: 1, expiresAt: '2099-01-01', nodeIdentity: 'node', ports: { sql: 3306, http: 8080 }, routes };
   expect(() => validateSupervisorBundle({ ...valid, identity: undefined })).toThrow('identity');
   expect(() => validateSupervisorBundle({ ...valid, expiresAt: undefined })).toThrow('expiresAt');
   expect(() => validateSupervisorBundle({ ...valid, routes: { primary: {} } })).toThrow('routes.primary');
@@ -73,7 +78,7 @@ test('rejects a bundle when no primary route or writer exists', () => {
 });
 
 test('rejects malformed route collections and weights', () => {
-  const valid = { apiVersion: 'v1', application: 'app', database: 'db', identity: 'id', credentials: { username: 'u', password: 'p' }, writer: { host: 'node', port: 3306, nodeId: 'node' }, readers: [{ host: 'node', port: 3306, nodeId: 'node' }], failover: [], bundleVersion: 1, expiresAt: '2099-01-01', nodeIdentity: 'node', ports: { sql: 3306, http: 8080 }, routes };
+  const valid = { apiVersion: 'v1', application: 'app', database: 'db', physicalDatabase: 'elera_db_1', identity: 'id', credentials: { username: 'u', password: 'p' }, writer: { host: 'node', port: 3306, nodeId: 'node' }, readers: [{ host: 'node', port: 3306, nodeId: 'node' }], failover: [], bundleVersion: 1, expiresAt: '2099-01-01', nodeIdentity: 'node', ports: { sql: 3306, http: 8080 }, routes };
   expect(() => validateSupervisorBundle({ ...valid, routes: { primary: {}, balanced: [] } })).toThrow('routes.primary');
   expect(() => validateSupervisorBundle({ ...valid, routes: { primary: [], balanced: [{ host: 'node', port: 3306, weight: -1 }] } })).toThrow('weight');
 });

@@ -15,7 +15,7 @@ export function validateSupervisorBundle(bundle) {
   catch (error) { throw invalid(error.message); }
 }
 
-export function createSupervisorBundle({ application, database, identity, username, password, routes: routeSet, writer, failover, readers, expiresAt, refreshAfter, bundleVersion = 1, nodeIdentity = { name: 'supervisor' }, ports }) {
+export function createSupervisorBundle({ application, database, physicalDatabase = database, identity, username, password, routes: routeSet, writer, failover, readers, expiresAt, refreshAfter, bundleVersion = 1, nodeIdentity = { name: 'supervisor' }, ports }) {
   if (!routeSet?.primary || !routeSet?.balanced) throw invalid('connection bundle route primary and balanced are required');
   requireIntegerPort(ports?.sql, 'routing bundle ports.sql');
   requireIntegerPort(ports?.http, 'routing bundle ports.http');
@@ -26,6 +26,7 @@ export function createSupervisorBundle({ application, database, identity, userna
     apiVersion: 'v1',
     application: application ?? 'default',
     database,
+    ...(physicalDatabase ? { physicalDatabase } : {}),
     identity,
     credentials: { username, password },
     routes: { primary, balanced },

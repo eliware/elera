@@ -50,14 +50,15 @@ test('resolves scoped tokens to their application, database, identity, and scope
   let authenticationSql;
   const managed = createManagedMetadata({ query: async (sql) => {
     authenticationSql = sql;
-    return [[{ name: 'runtime-token', application: 'payments', database: 'billing', identity: 'web', token_hash: hash, scopes_json: '["database:read"]' }]];
+    return [[{ name: 'runtime-token', application: 'payments', database: 'billing', physical_database: 'elera_db_42', identity: 'web', token_hash: hash, scopes_json: '["database:read"]' }]];
   } });
 
   await expect(managed.authenticate(token)).resolves.toEqual({
-    name: 'runtime-token', application: 'payments', database: 'billing', identity: 'web', scopes: ['database:read']
+    name: 'runtime-token', application: 'payments', database: 'billing', physicalDatabase: 'elera_db_42', identity: 'web', scopes: ['database:read']
   });
   expect(authenticationSql).toContain('LEFT JOIN');
-  expect(authenticationSql).toContain('database_name AS database');
+  expect(authenticationSql).toContain('d.name AS database');
+  expect(authenticationSql).toContain('d.physical_name AS physical_database');
 });
 
 test('keeps app-admin tokens application-scoped without assigning a database identity', async () => {
@@ -89,7 +90,7 @@ test('validates managed names, purposes, and grants', async () => {
   const rotating = createManagedMetadata({ credentialKey: 'test-key', query: async (sql) => sql.includes('SELECT username') ? [[{ username: 'payments_runtime' }]] : [[]] }); expect((await rotating.rotateIdentity('runtime')).rotated).toBe(true);
   const missingIdentity = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(missingIdentity.rotateIdentity('runtime')).rejects.toThrow('identity not found');
   const tokenIdentityMissing = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(tokenIdentityMissing.issueToken({ tokenName: 'token', application: 'app', identity: 'id' })).rejects.toThrow('identity not found');
-  const sealed = createSecretBox('test-key').seal('password'); const leasing = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[{ application: 'payments', database: 'billing', username: 'payments_runtime', credential_ciphertext: sealed }]] }); expect((await leasing.lease({ identity: 'runtime' })).password).toBe('password');
+  const sealed = createSecretBox('test-key').seal('password'); const leasing = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[{ application: 'payments', database: 'billing', physical_database: 'elera_db_42', username: 'payments_runtime', credential_ciphertext: sealed }]] }); await expect(leasing.lease({ identity: 'runtime' })).resolves.toMatchObject({ database: 'billing', physicalDatabase: 'elera_db_42', password: 'password' });
   const missingLease = createManagedMetadata({ credentialKey: 'test-key', query: async () => [[]] }); await expect(missingLease.lease({ identity: 'runtime' })).rejects.toThrow('identity not found');
   const query = async (sql) => sql.includes("'missing'") ? [[]] : sql.includes('SELECT database_id') ? [[{ database_id: 'db-1', name: 'billing', application: 'payments' }]] : [[]];
   const deletions = createManagedMetadata({ query });
