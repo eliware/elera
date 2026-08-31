@@ -46,7 +46,15 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
       recoveryCompletion = createRecoveryCompletion();
       startupServer = createStartupEvidenceServer({ port: config.httpPort, token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, evidence: startupEvidence, lease: createRecoveryLease('/run/elera/cold-recovery.lease'), completion: recoveryCompletion, log });
       await startupServer.listen();
-      startupDecision = recoveryStartupDecision(await coldRecoveryProtocol.plan(), identity.name);
+      let recoveryPlan;
+      const attempts = Math.max(1, Math.min(15, Math.ceil((config.startupTimeoutMs ?? 15000) / 1000)));
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        recoveryPlan = await coldRecoveryProtocol.plan();
+        if (recoveryPlan.mode !== 'blocked' || attempt + 1 >= attempts) break;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await coldRecoveryProtocol.retry();
+      }
+      startupDecision = recoveryStartupDecision(recoveryPlan, identity.name);
       await recordSupervisorRecoveryDecision({ decision: startupDecision, recoveryState, recoveryAudit, environment });
       const authorized = await authorizeSupervisorRecovery({ decision: startupDecision, members, config, intentState, recoveryProtocol: coldRecoveryProtocol, recoveryState, recoveryAudit, log });
       startupDecision = authorized.decision;
