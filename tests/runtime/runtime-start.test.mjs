@@ -14,6 +14,11 @@ test('passes configured peer credentials and application to routing startup', as
   expect(result.sqlReady).toBe(true);
 });
 
+test('derives peer cycle targets from cluster membership when peers are not explicitly configured', async () => {
+  const result = await startSupervisorRuntime({ dbEnv: {}, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 1, elera: true }, health: { status: async () => ({ ready: true }) }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'join' }, initialIntent: { cluster: { name: 'cluster-a', members: [{ name: 'node-a', address: 'node-a' }, { name: 'node-b', address: 'node-b' }] } }, recoveryState: {}, recoveryAudit: {}, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: { upsert: () => {} }, getDrained: () => false, environment: {} });
+  expect(result.peerTimer).toBeDefined(); clearInterval(result.routingTimer); clearInterval(result.peerTimer);
+});
+
 test('starts runtime in Elera join mode', async () => {
   const status = async () => ({ ready: true, values: { wsrep_cluster_state_uuid: 'cluster-a', wsrep_local_state_comment: 'Synced', wsrep_ready: 'ON', wsrep_cluster_status: 'Primary', wsrep_cluster_size: 0 } });
   const result = await startSupervisorRuntime({ dbEnv: {}, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 1, elera: true }, health: { status }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'join', epoch: 1, recoveryEpoch: { clusterId: 'cluster-a' } }, initialIntent: { cluster: { name: 'cluster-a', members: [] } }, recoveryState: { set: () => {} }, recoveryAudit: { joinComplete: () => {}, failure: () => {} }, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: { upsert: () => {} }, getDrained: () => false, environment: {} });

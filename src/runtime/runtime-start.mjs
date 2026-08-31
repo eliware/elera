@@ -6,6 +6,7 @@ export async function startSupervisorRuntime({ dbEnv, probes, config, health, lo
   const db = createSupervisorDb({ environment: dbEnv });
   setDb(db);
   const sqlReady = await startSupervisorReadiness({ probes, config, health, log, join: config.elera && startupDecision.mode === 'join', startupDecision, initialIntent, recoveryState, recoveryAudit, identity });
-  const cycles = startSupervisorRouting({ routingEvent, routingBus, assignments: sharedRoutingAssignments, application: environment.ELERA_APPLICATION ?? 'default', peers: environment.ELERA_PEERS, token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, store: observationStore, health, node: identity.name, clusterId: initialIntent.cluster.name, getDrained, log });
+  const configuredPeers = environment.ELERA_PEERS ?? initialIntent.cluster.members.filter((member) => member.name !== identity.name).map((member) => `http://${member.address}:${config.httpPort}`).join(',');
+  const cycles = startSupervisorRouting({ routingEvent, routingBus, assignments: sharedRoutingAssignments, application: environment.ELERA_APPLICATION ?? 'default', peers: configuredPeers, token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, store: observationStore, health, node: identity.name, clusterId: initialIntent.cluster.name, getDrained, log });
   return { db, sqlReady, ...cycles };
 }
