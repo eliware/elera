@@ -41,6 +41,9 @@ that the implementation is complete.
 - [x] App-admin provisioning uses the canonical database, identity, and token
   endpoints with application-scoped authorization; unauthorized applications
   remain fail-closed.
+- [x] Fresh startup preserves `SUPERVISOR_INTENT_JSON` while injecting runtime
+  identity, so declared multi-member intent reaches the explicit bootstrap
+  state machine instead of silently falling back to a single-member default.
 - [ ] Verify every recovery observation is authenticated, epoch-bound,
   evidence-digested, quorum-authorized, and rejected when stale or changed.
 - [ ] Verify winner-only bootstrap, join-only followers, Primary verification,

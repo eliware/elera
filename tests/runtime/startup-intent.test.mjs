@@ -10,6 +10,12 @@ test('prefers persisted startup intent', async () => {
 test('loads environment intent with runtime identity fallback', async () => {
   let received;
   const result = await loadStartupIntent({ intentState: { read: async () => undefined }, loadEnvironmentIntent: (value) => { received = value; return { source: 'environment' }; }, node: { name: 'n', address: 'a' } });
-  expect(received).toEqual({ RUNTIME_NODE_NAME: 'n', RUNTIME_NODE_ADDRESS: 'a' });
+  expect(received).toEqual(expect.objectContaining({ RUNTIME_NODE_NAME: 'n', RUNTIME_NODE_ADDRESS: 'a' }));
   expect(result).toEqual({ source: 'environment' });
+});
+
+test('preserves a declared clustered environment intent during fresh startup', async () => {
+  let received;
+  await loadStartupIntent({ intentState: { read: async () => undefined }, loadEnvironmentIntent: (value) => { received = value; return { source: 'environment' }; }, environment: { SUPERVISOR_INTENT_JSON: '{"cluster":{"members":[{"name":"a"},{"name":"b"},{"name":"c"}]}}' }, node: { name: 'a', address: 'a' } });
+  expect(received.SUPERVISOR_INTENT_JSON).toContain('"members"');
 });
