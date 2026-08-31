@@ -7,16 +7,25 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
   let current;
   const read = async () => current ??= await store.read();
   const persist = (value, expectedEpoch) => store.write(value, expectedEpoch === undefined ? undefined : { expectedEpoch });
+  const isActivePrimary = (item, evidence) => {
+    const clusterUuid = item.galera?.clusterUuid;
+    const localUuid = evidence.find((candidate) => candidate.galera?.clusterUuid || candidate.node === nodes.find((node) => node.local)?.name)?.galera?.clusterUuid ?? evidence.find((candidate) => candidate.node === nodes.find((node) => node.local)?.name)?.uuid;
+    return item.active === true && item.galera?.clusterStatus === 'Primary' && item.galera?.localState === 'Synced' && item.galera?.ready !== false && typeof clusterUuid === 'string' && (!localUuid || localUuid === clusterUuid);
+  };
   const collect = async () => {
-    const evidence = await Promise.all(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node.url ?? node, node.name)));
-    const normalized = evidence.map((item) => ({ ...(item.state ?? item), node: item.node, dataDirectory: item.dataDirectory, galera: item.galera, active: item.active, generation: item.generation, observedAt: item.observedAt }));
-    return validateRecoveryEvidence(normalized, { now: now(), maxAgeMs: maxEvidenceAgeMs });
+    const results = await Promise.allSettled(nodes.map(async (node) => node.local ? localEvidence() : fetchEvidence(node.url ?? node, node.name)));
+    const evidence = results.filter((result) => result.status === 'fulfilled').map(({ value: item }) => ({ ...(item.state ?? item), node: item.node, dataDirectory: item.dataDirectory, galera: item.galera, active: item.active, generation: item.generation, observedAt: item.observedAt }));
+    const activePrimary = evidence.some((item) => isActivePrimary(item, evidence));
+    if (activePrimary) return { evidence, activePrimary: true };
+    const failed = results.find((result) => result.status === 'rejected');
+    if (failed) throw failed.reason;
+    return { evidence: validateRecoveryEvidence(evidence, { now: now(), maxAgeMs: maxEvidenceAgeMs }), activePrimary: false };
   };
   return {
-    async evidence() { return collect(); },
+    async evidence() { return (await collect()).evidence; },
     async plan() {
       let evidence;
-      try { evidence = await collect(); }
+      try { ({ evidence } = await collect()); }
       catch (error) {
         current = { version: 1, phase: 'blocked', reason: error.message, code: error.code ?? 'RECOVERY_EVIDENCE_UNAVAILABLE', evidence: [], updatedAt: now().toISOString() };
         await persist(current);
@@ -24,7 +33,8 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
         return { eligible: false, mode: 'blocked', ...current };
       }
       await publishEvent({ type: 'recovery.evidence-collected', evidence });
-      if (evidence.some((item) => item.active === true)) return { eligible: true, mode: 'join', reason: 'primary component already exists', evidence };
+      const active = evidence.find((item) => isActivePrimary(item, evidence));
+      if (active) return { eligible: true, mode: 'join', reason: 'primary component already exists', ...(Number.isInteger(active.galera.clusterSize) && active.galera.clusterSize > 0 ? { expectedMembership: active.galera.clusterSize } : {}), evidence };
       const decision = selectCandidate(evidence);
       if (!decision.eligible) { current = { version: 1, phase: 'blocked', reason: decision.reason, evidence, updatedAt: now().toISOString() }; await persist(current); await publishEvent({ type: 'recovery.refused', reason: decision.reason, evidence }); return { eligible: false, mode: 'blocked', ...current }; }
       const epoch = createRecoveryEpoch({ clusterId: decision.candidate.uuid, evidence, winner: decision.candidate, quorum: nodes.map((node) => node.name), now: now() });
@@ -51,7 +61,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       if (!existing || existing.epoch !== epoch || !validateRecoveryEpoch(existing, existing.clusterId)) throw Object.assign(new Error('unknown or stale recovery epoch'), { statusCode: 409 });
       if (existing.phase !== 'authorized' || winner !== existing.winner.node) throw Object.assign(new Error('bootstrap authority does not match the recovery epoch'), { statusCode: 409 });
       let latest;
-      try { latest = await collect(); } catch (error) {
+      try { ({ evidence: latest } = await collect()); } catch (error) {
         current = { ...existing, phase: 'blocked', reason: error.message, code: error.code ?? 'RECOVERY_EVIDENCE_UNAVAILABLE', updatedAt: now().toISOString() };
         await persist(current, existing.epoch);
         await publishEvent({ type: 'recovery.refused', epoch, reason: current.reason, code: current.code });
@@ -72,6 +82,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
     async complete({ epoch, winner, clusterId, membership } = {}) {
       const existing = await read();
       if (!existing || existing.epoch !== epoch) throw Object.assign(new Error('unknown or stale recovery epoch'), { statusCode: 409 });
+      if (winner !== existing.winner?.node || clusterId !== existing.clusterId) throw Object.assign(new Error('recovery completion authority does not match the authorized epoch'), { statusCode: 409 });
       if (!Array.isArray(membership) || membership.length !== existing.quorum.length || [...new Set(membership)].sort().join('\\0') !== existing.quorum.slice().sort().join('\\0')) throw Object.assign(new Error('recovery completion membership does not match the authorized quorum'), { statusCode: 409 });
       current = transitionRecoveryEpoch(existing, 'complete', { winner, clusterId, membership, completedAt: now().toISOString() });
       await persist(current, existing.epoch);

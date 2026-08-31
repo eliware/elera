@@ -35,6 +35,10 @@ test('rejects authenticated evidence attributed to another node', async () => {
   const evidence = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: '/tmp', health: {}, token: 'token', fetchImpl: async () => ({ ok: true, async json() { return { data: { node: 'other' } }; } }) });
   await expect(evidence.remote('http://peer', 'peer')).rejects.toMatchObject({ code: 'RECOVERY_EVIDENCE_IDENTITY_MISMATCH' });
 });
+test('rejects malformed remote evidence at the protocol boundary', async () => {
+  const evidence = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: '/tmp', health: {}, token: 'token', fetchImpl: async () => ({ ok: true, async json() { return { data: null }; } }) });
+  await expect(evidence.remote('http://peer')).rejects.toMatchObject({ code: 'INVALID_RECOVERY_EVIDENCE' });
+});
 
 test('handles recovered state, health failures, and rejected peers', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'elera-evidence-'));

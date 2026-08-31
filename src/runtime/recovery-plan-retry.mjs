@@ -4,6 +4,7 @@ export async function resolveRecoveryPlan({ recoveryProtocol, startupTimeoutMs =
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     plan = await recoveryProtocol.plan();
     if (plan.mode !== 'blocked' || attempt + 1 >= attempts) break;
+    if (['SPLIT_BRAIN', 'RECOVERY_EVIDENCE_CONFLICT'].includes(plan.code) || /UUIDs do not match|multiple nodes are marked safe_to_bootstrap|split.?brain/i.test(plan.reason ?? '')) break;
     await sleep(1000);
     await recoveryProtocol.retry();
   }

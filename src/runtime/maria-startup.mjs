@@ -10,15 +10,24 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
     if (config.elera && startupDecision.mode === 'join') {
       recoveryState.set('joining', { reason: startupDecision.reason });
       recoveryAudit.joinStart({ node: identity.name, epoch: startupDecision.epoch });
-      const expectedMembership = startupDecision.recoveryEpoch?.quorum?.length ?? config.clusterSize;
+      const expectedMembership = startupDecision.expectedMembership ?? startupDecision.recoveryEpoch?.quorum?.length ?? config.clusterSize;
       void createWatch({
         health,
         timeoutMs: config.startupTimeoutMs,
         isReady: (result) => result.values?.wsrep_local_state_comment === 'Synced' && result.values?.wsrep_ready === 'ON' && result.values?.wsrep_cluster_status === 'Primary' && Number(result.values?.wsrep_cluster_size) === expectedMembership,
+        onTimeout: async () => {
+          recoveryState.set('cluster-unavailable', { reason: 'join did not form a ready Primary view before timeout', epoch: startupDecision.epoch });
+          recoveryAudit.failure({ reason: 'join readiness timeout', epoch: startupDecision.epoch });
+          await processController.stop(config.shutdownTimeoutMs);
+        },
       })().then((result) => {
         if (!result.ready) return;
         recoveryState.set('complete', { reason: 'join completed with expected Primary membership', epoch: startupDecision.epoch });
         recoveryAudit.completion?.({ node: identity.name, epoch: startupDecision.epoch });
+      }).catch((error) => {
+        recoveryState.set('cluster-unavailable', { reason: error.message, epoch: startupDecision.epoch });
+        recoveryAudit.failure({ reason: error.message, epoch: startupDecision.epoch });
+        log.error('MariaDB join readiness failed', { error });
       });
     }
     if (config.elera && startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true) {
@@ -41,6 +50,10 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
         if (typeof recoveryCompletion?.publish === 'function' && startupDecision.epoch) recoveryCompletion.publish({ epoch: startupDecision.epoch, status: 'complete', clusterId: startupDecision.recoveryEpoch?.clusterId, winner: identity.name });
         recoveryAudit.completion?.({ epoch: startupDecision.epoch, winner: identity.name });
         await startupServer?.close();
+      }).catch((error) => {
+        recoveryState.set('cluster-unavailable', { reason: error.message, epoch: startupDecision.epoch });
+        recoveryAudit.failure({ reason: error.message, epoch: startupDecision.epoch });
+        log.error('MariaDB bootstrap readiness failed', { error });
       });
     }
   }).catch((error) => {

@@ -74,7 +74,7 @@ test('fails closed when evidence collection throws and can retry with fresh evid
 });
 
 test('joins when a peer already reports an active Primary component', async () => {
-  const active = { ...evidence('b', 2), active: true };
+  const active = { ...evidence('b', 2), active: true, galera: { clusterUuid: 'cluster', clusterStatus: 'Primary', localState: 'Synced', ready: true, clusterSize: 2 } };
   const store = { async read() {}, async write(value) { return value; } };
   const protocol = createColdRecoveryProtocol({
     nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }],
@@ -82,7 +82,23 @@ test('joins when a peer already reports an active Primary component', async () =
     fetchEvidence: async () => active,
     store,
   });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'join', reason: 'primary component already exists', expectedMembership: 2 });
+});
+
+test('joins an active Primary when another configured peer is unavailable', async () => {
+  const active = { ...evidence('b', 2), active: true, galera: { clusterUuid: 'cluster', clusterStatus: 'Primary', localState: 'Synced', ready: true } };
+  const protocol = createColdRecoveryProtocol({
+    nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }, { name: 'c', url: 'http://c' }],
+    localEvidence: async () => evidence('a', 1),
+    fetchEvidence: async (url) => { if (url.endsWith('c')) throw new Error('peer unavailable'); return active; },
+    store: { async read() {}, async write(value) { return value; } },
+  });
   await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, mode: 'join', reason: 'primary component already exists' });
+});
+test('does not treat a Primary from another cluster as a join target', async () => {
+  const active = { ...evidence('b', 2), active: true, galera: { clusterUuid: 'other', clusterStatus: 'Primary', localState: 'Synced', ready: true } };
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }, { name: 'b', url: 'http://b' }], localEvidence: async () => ({ ...evidence('a', 1), galera: { clusterUuid: 'cluster' } }), fetchEvidence: async () => active, store: { async read() {}, async write(value) { return value; } } });
+  await expect(protocol.plan()).resolves.toMatchObject({ mode: 'bootstrap' });
 });
 
 test('blocks ambiguous candidate decisions and exposes pending status', async () => {
@@ -116,4 +132,25 @@ test('blocks when the candidate cannot be revalidated before bootstrap', async (
 test('returns pending status when no recovery epoch is persisted', async () => {
   const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => evidence('a', 1), fetchEvidence: async () => undefined, store: { async read() { return undefined; }, async write(value) { return value; } } });
   await expect(protocol.status()).resolves.toEqual({ phase: 'pending' });
+});
+test('rejects completion from a different winner or cluster', async () => {
+  const { protocol } = makeProtocol();
+  const plan = await protocol.plan();
+  await expect(protocol.complete({ epoch: plan.epoch, winner: 'b', clusterId: 'cluster', membership: ['a', 'b', 'c'] })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(protocol.complete({ epoch: plan.epoch, winner: 'a', clusterId: 'other', membership: ['a', 'b', 'c'] })).rejects.toMatchObject({ statusCode: 409 });
+});
+test('blocks changed evidence after authorization', async () => {
+  let sequence = 0;
+  const store = { value: undefined, async read() { return this.value; }, async write(value) { this.value = value; return value; } };
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => evidence('a', ++sequence), fetchEvidence: async (node) => evidence(node, 1), store });
+  const plan = await protocol.plan(); await protocol.authorize({ epoch: plan.epoch, acknowledgements: ['a'] });
+  await expect(protocol.beginBootstrap({ epoch: plan.epoch, winner: 'a' })).rejects.toMatchObject({ statusCode: 409, code: 'RECOVERY_EVIDENCE_CHANGED' });
+});
+test('uses the configured node value when a remote URL is omitted', async () => {
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: false }], localEvidence: async () => evidence('a', 1), fetchEvidence: async (node) => evidence(node, 1), store: { async read() {}, async write(value) { return value; } } });
+  await expect(protocol.evidence()).resolves.toMatchObject([{ node: { name: 'a', local: false } }]);
+});
+test('uses the default unavailable code for an untyped evidence failure', async () => {
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', local: true }], localEvidence: async () => { throw new Error('temporary failure'); }, fetchEvidence: async () => undefined, store: { async read() {}, async write(value) { return value; } } });
+  await expect(protocol.plan()).resolves.toMatchObject({ mode: 'blocked', code: 'RECOVERY_EVIDENCE_UNAVAILABLE' });
 });
