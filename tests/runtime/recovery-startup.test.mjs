@@ -42,6 +42,25 @@ test('coordinates Elera recovery and closes evidence server after non-bootstrap 
   evidenceOptions.isActive();
 });
 
+test('mounts recovery routes on the shared listener without creating a temporary server', async () => {
+  plan.mockResolvedValueOnce({ mode: 'bootstrap', localWinner: false });
+  const setStartupHandler = jest.fn();
+  const result = await prepareSupervisorRecovery({
+    startupConfiguration: { initialIntent: { cluster: { members: [{ name: 'node-a' }] } }, args: [] },
+    intentState: {}, config: { elera: true, dataDir: 'data', httpPort: 8080 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: { ROOT_TOKEN: 'token' }, mariaProcess: {}, probes: { setStartupHandler }
+  });
+  expect(setStartupHandler).toHaveBeenCalledWith(undefined);
+  expect(result.startupServer).toBeUndefined();
+});
+
+test('keeps the shared listener open for a clean-restart join', async () => {
+  const setStartupHandler = jest.fn();
+  const consume = jest.fn(async () => ({ node: 'node-a', nonce: 'shared' }));
+  const result = await prepareSupervisorRecovery({ startupConfiguration: { initialIntent: { cluster: { members: [{ name: 'node-a' }, { name: 'node-b' }] } }, args: [] }, intentState: {}, config: { elera: true, dataDir: 'data', httpPort: 8080 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: {}, mariaProcess: {}, probes: { setStartupHandler }, restartMarker: { consume } });
+  expect(result.startupDecision.mode).toBe('join');
+  expect(result.startupServer).toBeUndefined();
+});
+
 test('retains the evidence server for the local bootstrap winner', async () => {
   plan.mockResolvedValueOnce({ mode: 'bootstrap', localWinner: true });
   const before = close.mock.calls.length;
@@ -69,6 +88,14 @@ test('returns the standalone decision when Elera mode is disabled', async () => 
 test('continues when authorization does not replace process arguments', async () => {
   authorize.mockResolvedValueOnce({ decision: { mode: 'join' } });
   const result = await prepareSupervisorRecovery({ startupConfiguration: { initialIntent: { cluster: { members: [{}] } }, args: ['--original'] }, intentState: {}, config: { elera: true, dataDir: 'data', httpPort: 8080 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: {}, mariaProcess: {} });
+  expect(result.args).toEqual(['--original']);
+});
+
+test('keeps original arguments when authorization returns no replacement', async () => {
+  authorize.mockClear();
+  plan.mockResolvedValueOnce({ mode: 'bootstrap', localWinner: false });
+  authorize.mockResolvedValueOnce({ decision: { mode: 'bootstrap', localWinner: false } });
+  const result = await prepareSupervisorRecovery({ startupConfiguration: { initialIntent: { cluster: { members: [{ name: 'node-a' }] } }, args: ['--original'] }, intentState: {}, config: { elera: true, dataDir: 'data', httpPort: 8080 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: {}, mariaProcess: {} });
   expect(result.args).toEqual(['--original']);
 });
 

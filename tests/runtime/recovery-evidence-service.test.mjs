@@ -8,3 +8,10 @@ test('composes evidence, completion, lease, and server dependencies', () => {
   expect(createRecoveryEvidenceService({ identity: { name: 'node-a' }, dataDir: '/data', httpPort: 8080, token: 'token', mariaProcess: { child: { exitCode: null } }, log: {}, readState: () => undefined, createEvidence, createCompletion, createLease, createServer })).toEqual({ evidence, completion, server });
   expect(createLease).toHaveBeenCalledWith('/run/elera/cold-recovery.lease');
 });
+
+test('creates route-only evidence for the shared listener', () => {
+  const evidence = jest.fn();
+  const result = createRecoveryEvidenceService({ identity: { name: 'node-a' }, dataDir: '/data', token: 'token', mariaProcess: {}, log: {}, createEvidence: () => evidence, createCompletion: () => ({}), createLease: () => ({}), createServer: null });
+  expect(result.server).toBeUndefined();
+  expect(result.routes).toBeDefined();
+});

@@ -1,4 +1,4 @@
-import { expect, test } from '@jest/globals';
+import { expect, test, jest } from '@jest/globals';
 import { startSupervisorRuntime } from '../../src/runtime/runtime-start.mjs';
 
 test('starts supervisor runtime dependencies', async () => {
@@ -9,7 +9,7 @@ test('starts supervisor runtime dependencies', async () => {
 });
 
 test('passes configured peer credentials and application to routing startup', async () => {
-  const result = await startSupervisorRuntime({ dbEnv: {}, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 1, elera: false }, health: { status: async () => ({ ready: true }) }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'standalone' }, initialIntent: { cluster: { name: 'cluster-a', members: [] } }, recoveryState: {}, recoveryAudit: {}, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: { upsert: () => {} }, getDrained: () => false, environment: { ELERA_APPLICATION: 'payments', ELERA_PEER_TOKEN: 'peer-token', ELERA_PEERS: 'node-b' } });
+  const result = await startSupervisorRuntime({ dbEnv: {}, probes: { listen: () => {} }, config: { httpPort: 8080, startupTimeoutMs: 100, elera: false }, health: { status: async () => ({ ready: true }) }, log: { info: () => {}, warn: () => {} }, startupDecision: { mode: 'standalone' }, initialIntent: { cluster: { name: 'cluster-a', members: [] } }, recoveryState: {}, recoveryAudit: {}, identity: { name: 'node-a' }, routingEvent: () => undefined, routingBus: { publish: () => {} }, sharedRoutingAssignments: { applications: () => [] }, observationStore: { upsert: jest.fn() }, getDrained: () => false, environment: { ELERA_APPLICATION: 'payments', ELERA_PEER_TOKEN: 'peer-token', ELERA_PEERS: 'node-b' } });
   clearInterval(result.routingTimer); clearInterval(result.peerTimer);
   expect(result.sqlReady).toBe(true);
 });

@@ -102,6 +102,17 @@ test('starts normal non-blocked startup without the pending recovery listener', 
   expect(captured.pending).toBeDefined();
 });
 
+test('awaits the shared HTTP listener before recovery preparation', async () => {
+  recoveryResult = { ...defaultResult(), startupDecision: { mode: 'join', reason: 'active peer' } };
+  const order = [];
+  const deps = dependencies();
+  deps.probes = { start: jest.fn(async (_port, _host, callback) => { order.push('listener'); callback(); }) };
+  const { prepareSupervisorRecovery } = await import('../../src/runtime/recovery-startup.mjs');
+  prepareSupervisorRecovery.mockImplementationOnce(async () => { order.push('recovery'); return recoveryResult; });
+  await startSupervisor(deps);
+  expect(order).toEqual(['listener', 'recovery']);
+});
+
 test('starts ordinary local bootstrap and records its initial recovery state', async () => {
   recoveryResult = { ...defaultResult(), startupDecision: { mode: 'bootstrap', localWinner: true, epoch: 13, recoveryEpoch: { clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] } } };
   const deps = dependencies();
