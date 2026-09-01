@@ -56,6 +56,10 @@ export async function startSupervisor({ config, identity, log, loadEnvironmentIn
       const runtime = await startRecoveryRuntime({ mode: 'bootstrap', localWinner: true, epoch: bootstrap?.epoch, recoveryEpoch: { clusterId: bootstrap?.clusterId, quorum: bootstrap?.quorum ?? members.map((member) => member.name) } });
       await recoverJoiners({ bootstrap, members, runtime });
       log.debug?.('Recovery phase: sequential joiners completed', { epoch: bootstrap?.epoch });
+      // The cluster-wide drain may have been propagated while the nodes were
+      // down. Clear the local traffic gate only after the winner and joiners
+      // have completed recovery, just as the ordinary startup path does.
+      await recoverTraffic();
       return onRecoveryBootstrap(bootstrap);
     };
     const onRecoveryJoin = (request) => startAuthorizedRecoveryJoin({ request, identity, args, mariaProcess: state.mariaProcess, recoveryState, recoveryAudit, startRuntime: (options) => startRecoveryRuntime(options.startupDecision), runtimeOptions: {} });

@@ -47,11 +47,13 @@ test('starts the local recovery winner and runtime after authorized bootstrap', 
   recoveryResult = defaultResult();
   recoveryResult.startupServer = { close: jest.fn() };
   const state = { mariaProcess: {} };
-  const result = await startSupervisor({ ...dependencies(), state });
+  const recoverTraffic = jest.fn().mockResolvedValue(undefined);
+  const result = await startSupervisor({ ...dependencies(), state, recoverTraffic });
   await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a' }, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] });
   expect(captured.processController.start).toHaveBeenCalledWith(expect.arrayContaining(['--wsrep-new-cluster']));
   expect(captured.pendingRuntime.shutdown).toHaveBeenCalledTimes(1);
   expect(recoveryResult.startupServer.close).toHaveBeenCalledTimes(1);
+  expect(recoverTraffic).toHaveBeenCalledTimes(1);
   await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a' }, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] });
   expect(captured.pendingRuntime.shutdown).toHaveBeenCalledTimes(1);
   expect(recoveryResult.startupServer.close).toHaveBeenCalledTimes(1);
