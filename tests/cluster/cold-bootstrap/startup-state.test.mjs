@@ -13,6 +13,10 @@ test("refuses MariaDB startup for blocked cluster recovery", () => {
   expect(shouldStartMariaDb({ elera: true, mode: "blocked" })).toBe(false);
 });
 
+test("starts initialized nodes for ordinary Galera rejoin", () => {
+  expect(shouldStartMariaDb({ elera: true, mode: "rejoin" })).toBe(true);
+});
+
 test("validates startup state inputs", () => {
   expect(() => shouldStartMariaDb()).toThrow("startup state requires");
 });

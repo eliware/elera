@@ -1,4 +1,7 @@
 import { expect, jest, test } from '@jest/globals';
+import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const listen = jest.fn(async () => {});
 const close = jest.fn(async () => {});
@@ -137,6 +140,16 @@ test('closes the evidence server when recovery remains blocked after planning', 
   expect(result.startupDecision.mode).toBe('blocked');
   expect(close.mock.calls.length).toBeGreaterThan(before);
   expect(retry).not.toHaveBeenCalled();
+});
+
+test('classifies initialized blocked recovery as normal rejoin', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'elera-rejoin-'));
+  await mkdir(join(directory, 'mysql'));
+  try {
+    plan.mockResolvedValueOnce({ mode: 'blocked', reason: 'peer evidence unavailable' });
+    const result = await prepareSupervisorRecovery({ startupConfiguration: { initialIntent: { cluster: { members: [{ name: 'node-a' }, { name: 'node-b' }] } }, args: [] }, intentState: {}, config: { elera: true, dataDir: directory, httpPort: 8080, startupTimeoutMs: 1 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: {}, mariaProcess: {} });
+    expect(result.startupDecision).toMatchObject({ mode: 'rejoin', bootstrapComplete: true });
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
 test('retries a blocked recovery plan before proceeding with a later plan', async () => {

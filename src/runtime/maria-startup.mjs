@@ -7,7 +7,7 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
     return;
   }
   processController.start().then(() => {
-    if (config.elera && startupDecision.mode === 'join') {
+    if (config.elera && ['join', 'rejoin'].includes(startupDecision.mode)) {
       recoveryState.set('joining', { reason: startupDecision.reason });
       recoveryAudit.joinStart({ node: identity.name, epoch: startupDecision.epoch });
       const minimumMembership = startupDecision.expectedMembership ?? 2;
@@ -18,7 +18,7 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
         onTimeout: async () => {
           recoveryState.set('cluster-unavailable', { reason: 'join did not form a ready Primary view before timeout', epoch: startupDecision.epoch });
           recoveryAudit.failure({ reason: 'join readiness timeout', epoch: startupDecision.epoch });
-          await processController.stop(config.shutdownTimeoutMs);
+          if (startupDecision.mode === 'join') await processController.stop(config.shutdownTimeoutMs);
         },
       })().then((result) => {
         if (!result.ready) return;

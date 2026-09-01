@@ -8,6 +8,7 @@ import { resolveSupervisorRejoin } from './rejoin-decision.mjs';
 import { resolveCleanRestart } from './clean-restart-recovery.mjs';
 import { resolveRecoveryPlan } from './recovery-plan-retry.mjs';
 import { createRecoveryEvidenceService } from './recovery-evidence-service.mjs';
+import { inspectDataDirectory } from '../lifecycle/data-directory.mjs';
 
 const replacementOrCurrent = (current, replacement = current) => replacement;
 
@@ -53,6 +54,12 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
       startupDecision = authorized.decision;
       args = replacementOrCurrent(args, authorized.args);
       startupDecision = await resolveSupervisorRejoin({ decision: startupDecision, members, config, environment, recoveryState });
+      // A blocked cold-recovery plan must not prevent an initialized member
+      // from starting MariaDB normally and allowing Galera to re-form quorum.
+      // Bootstrap remains blocked; only ordinary wsrep reconnect is allowed.
+      if (startupDecision.mode === 'blocked' && inspectDataDirectory(config.dataDir).action === 'start') {
+        startupDecision = { ...startupDecision, mode: 'rejoin', bootstrapComplete: true, reason: `normal Galera rejoin permitted: ${startupDecision.reason}` };
+      }
       log.debug?.('Recovery phase: rejoin decision resolved', { node: identity.name, mode: startupDecision.mode, localWinner: startupDecision.localWinner });
       if (!unifiedListener && !(startupDecision.mode === 'bootstrap' && startupDecision.localWinner === true)) await startupServer.close();
     }
