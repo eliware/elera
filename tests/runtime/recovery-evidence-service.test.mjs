@@ -15,3 +15,12 @@ test('creates route-only evidence for the shared listener', () => {
   expect(result.server).toBeUndefined();
   expect(result.routes).toBeDefined();
 });
+
+test('reads MariaDB activity from the current process controller', () => {
+  let processController = {};
+  let active;
+  createRecoveryEvidenceService({ identity: { name: 'node-a' }, dataDir: '/data', token: 'token', getMariaProcess: () => processController, log: {}, createEvidence: (options) => { active = options.isActive; return {}; }, createCompletion: () => ({}), createLease: () => ({}), createServer: null });
+  expect(active()).toBe(false);
+  processController = { child: { exitCode: null } };
+  expect(active()).toBe(true);
+});

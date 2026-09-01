@@ -12,7 +12,7 @@ import { inspectDataDirectory } from '../lifecycle/data-directory.mjs';
 
 const replacementOrCurrent = (current, replacement = current) => replacement;
 
-export async function prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess, environment = process.env, restartMarker, probes } = {}) {
+export async function prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess, getMariaProcess = () => mariaProcess?.mariaProcess ?? mariaProcess, environment = process.env, restartMarker, probes } = {}) {
   log.debug?.('Recovery phase: preparing startup decision', { node: identity.name, clusterMode: config.elera, dataDir: config.dataDir });
   const initialIntent = startupConfiguration.initialIntent;
   let args = startupConfiguration.args;
@@ -34,7 +34,7 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
       recoveryState.set('collecting-evidence');
       const setStartupHandler = probes && probes.setStartupHandler;
       const unifiedListener = typeof setStartupHandler === 'function';
-      const evidenceOptions = { identity, dataDir: config.dataDir, httpPort: config.httpPort, token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, mariaProcess, log };
+      const evidenceOptions = { identity, dataDir: config.dataDir, httpPort: config.httpPort, token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, mariaProcess, getMariaProcess, log };
       if (unifiedListener) evidenceOptions.createServer = null;
       const evidenceService = createRecoveryEvidenceService(evidenceOptions);
       const startupEvidence = evidenceService.evidence;

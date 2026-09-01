@@ -17,7 +17,7 @@ export async function startSupervisor({ config, identity, log, loadEnvironmentIn
   const startupConfiguration = await loadSupervisorStartupConfiguration({ intentState, loadEnvironmentIntent, node: identity, routingEnvironment, config });
   if (probes.start) await probes.start(config.httpPort, '0.0.0.0', () => log.info('HTTP listener started', { port: config.httpPort }));
   log.debug?.('Startup phase: recovery preparation complete', { node: identity.name, clusterSize: config.clusterSize });
-  const recoveryResult = await prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess: state.mariaProcess, environment, restartMarker: cleanRestartIntent, probes });
+  const recoveryResult = await prepareSupervisorRecovery({ startupConfiguration, intentState, config, identity, health, recoveryState, recoveryAudit, log, mariaProcess: state, environment, restartMarker: cleanRestartIntent, probes });
   const { initialIntent, args, localEvidence, members, startupDecision, startupServer } = recoveryResult;
   state.coldRecoveryProtocol = recoveryResult.coldRecoveryProtocol;
   state.recoveryCompletion = recoveryResult.recoveryCompletion;

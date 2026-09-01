@@ -10,7 +10,7 @@ const TRANSITIONS = new Map([
   ['bootstrapping', new Set(['joining', 'complete', 'cluster-unavailable'])],
   ['joining', new Set(['joining', 'complete', 'cluster-unavailable'])],
   ['complete', new Set(['collecting-evidence', 'cluster-unavailable'])],
-  ['cluster-unavailable', new Set(['collecting-evidence', 'blocked-ambiguous'])],
+  ['cluster-unavailable', new Set(['collecting-evidence', 'blocked-ambiguous', 'complete', 'joining'])],
   // A previously blocked recovery may become a normal Galera rejoin when
   // persisted peers return and the component reforms without bootstrap.
   ['blocked-ambiguous', new Set(['collecting-evidence', 'joining'])],

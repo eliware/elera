@@ -7,8 +7,8 @@ import { createRecoveryCompletion } from '../cluster/cold-bootstrap/completion.m
 import { runWsrepRecover } from './wsrep-recovery.mjs';
 import { createStartupEvidenceRoutes } from '../cluster/cold-bootstrap/startup-evidence-routes.mjs';
 
-export function createRecoveryEvidenceService({ identity, dataDir, httpPort, token, mariaProcess, log, leasePath = '/run/elera/cold-recovery.lease', createEvidence = createStartupLocalEvidence, createServer = createStartupEvidenceServer, createLease = createRecoveryLease, readState = readStateFile, inspect = inspectDataDirectory, recover = runWsrepRecover, createCompletion = createRecoveryCompletion } = {}) {
-  const evidence = createEvidence({ node: identity, dataDir, readState: (directory) => readState(directory), runRecover: recover, inspect, isActive: () => Boolean(mariaProcess?.child && mariaProcess.child.exitCode === null) });
+export function createRecoveryEvidenceService({ identity, dataDir, httpPort, token, mariaProcess, getMariaProcess = () => mariaProcess?.mariaProcess ?? mariaProcess, log, leasePath = '/run/elera/cold-recovery.lease', createEvidence = createStartupLocalEvidence, createServer = createStartupEvidenceServer, createLease = createRecoveryLease, readState = readStateFile, inspect = inspectDataDirectory, recover = runWsrepRecover, createCompletion = createRecoveryCompletion } = {}) {
+  const evidence = createEvidence({ node: identity, dataDir, readState: (directory) => readState(directory), runRecover: recover, inspect, isActive: () => { const current = getMariaProcess?.(); return Boolean(current?.child && current.child.exitCode === null); } });
   const completion = createCompletion();
   const lease = createLease(leasePath);
   const server = createServer?.({ port: httpPort, token, evidence, lease, completion, log });

@@ -19,6 +19,10 @@ test('allows recovery to recollect evidence after an outage', () => {
   const state = createRecoveryState('cluster-unavailable');
   expect(state.set('collecting-evidence').state).toBe('collecting-evidence');
 });
+test('allows verified readiness to clear a stale unavailable state', () => {
+  const state = createRecoveryState('cluster-unavailable');
+  expect(state.set('complete', { reason: 'ready Primary observed' }).state).toBe('complete');
+});
 test('includes optional reason and epoch only when present', () => { const state = createRecoveryState(); expect(state.snapshot()).toEqual({ state: 'pending' }); expect(state.set('collecting-evidence', { reason: 'collecting', epoch: 'e1' })).toEqual({ state: 'collecting-evidence', reason: 'collecting', epoch: 'e1' }); });
 test('reaches a terminal complete state after bootstrap or join', () => {
   const state = createRecoveryState('bootstrapping');
