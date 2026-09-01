@@ -38,8 +38,8 @@ test('composes collaborators and forwards live runtime dependencies', async () =
   firstManagedAuth = managedAuth;
   expect(servers).toHaveLength(1);
   expect(captured.control.coldState).toEqual(expect.objectContaining({ drain: {}, clusterDrain: {}, coldEvidence: expect.any(Function) }));
-  liveColdState = { ...liveColdState, coldRecoveryProtocol: () => ({ live: true }) };
-  expect(captured.control.getColdRecoveryProtocol()).toEqual({ live: true });
+  liveColdState = { ...liveColdState, coldRecoveryProtocol: () => ({ status: async () => ({ live: true }) }) };
+  await expect(captured.control.getColdRecoveryProtocol().status()).resolves.toEqual({ live: true });
   result.lifecycleWiring({ errors: [] });
   expect(captured.lifecycle.getTimers()).toEqual(['peer', 'routing']);
   expect(captured.probes.getStatus()).toEqual({});

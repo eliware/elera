@@ -11,6 +11,7 @@ import { closeServer } from './server-lifecycle.mjs';
 import { createSupervisorTraffic } from './traffic-wiring.mjs';
 import { createColdBootstrapEvidence } from '../cluster/cold-bootstrap/peer-evidence.mjs';
 import { runWsrepRecover } from './wsrep-recovery.mjs';
+import { createDeferredRecoveryProtocol } from './deferred-recovery-protocol.mjs';
 
 export function createSupervisorEntryComposition({ config, identity, lifecycle, telemetry, recoveryState, recovery, log, environment = process.env, getDb, setDrained, getDrained, getTimers, getMariaProcess, restartMarker, getColdState = () => ({}), applyIntent = (intent) => intent, servers = [] }) {
   const health = createHealthService({
@@ -39,11 +40,12 @@ export function createSupervisorEntryComposition({ config, identity, lifecycle, 
   const traffic = createSupervisorTraffic({ telemetry, identity, config, health, routingBus: routing.routingBus, log, getDb, setDrained });
   const coldState = getColdState();
   const currentColdState = () => getColdState();
+  const deferredRecoveryProtocol = createDeferredRecoveryProtocol(() => currentColdState().coldRecoveryProtocol?.(), { timeoutMs: config.startupTimeoutMs ?? 5000 });
   const control = createSupervisorControlComposition({
     db: { query: (...args) => getDb()?.query?.(...args) }, ...domain, routingBundles: routing.routingBundles,
     routingEvent: routing.routingEvent, recovery, observationStore: domain.observationStore, health,
     clusterDrain: traffic.clusterDrain, lifecycle, telemetry, config, intentState: domain.intentState,
-    coldState: { ...coldState, coldEvidence: coldState.coldEvidence ?? coldEvidence }, getColdRecoveryProtocol: () => currentColdState().coldRecoveryProtocol?.(), processController: { start: (...args) => getMariaProcess()?.start?.(...args), stop: (...args) => getMariaProcess()?.stop?.(...args) }, applyIntent, environment, log,
+    coldState: { ...coldState, coldEvidence: coldState.coldEvidence ?? coldEvidence }, getColdRecoveryProtocol: () => deferredRecoveryProtocol, processController: { start: (...args) => getMariaProcess()?.start?.(...args), stop: (...args) => getMariaProcess()?.stop?.(...args) }, applyIntent, environment, log,
   });
   const probes = createSupervisorProbes({
     getStatus: () => health.status(), isDraining: () => traffic.drain.isDraining(),
