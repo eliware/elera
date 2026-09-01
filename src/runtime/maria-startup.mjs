@@ -11,17 +11,21 @@ export function startSupervisorMariaDb({ processController, config, startupDecis
       recoveryState.set('joining', { reason: startupDecision.reason });
       recoveryAudit.joinStart({ node: identity.name, epoch: startupDecision.epoch });
       const minimumMembership = startupDecision.expectedMembership ?? 2;
+      let timedOut = false;
       void createWatch({
         health,
         timeoutMs: config.startupTimeoutMs,
         isReady: (result) => result.values?.wsrep_local_state_comment === 'Synced' && result.values?.wsrep_ready === 'ON' && result.values?.wsrep_cluster_status === 'Primary' && Number(result.values?.wsrep_cluster_size) >= minimumMembership,
         onTimeout: async () => {
+          timedOut = true;
           recoveryState.set('cluster-unavailable', { reason: 'join did not form a ready Primary view before timeout', epoch: startupDecision.epoch });
           recoveryAudit.failure({ reason: 'join readiness timeout', epoch: startupDecision.epoch });
           if (startupDecision.mode === 'join') await processController.stop(config.shutdownTimeoutMs);
         },
       })().then((result) => {
-        if (!result.ready) return;
+        // A watch that timed out must not later overwrite the failure with a
+        // stale success if a final health sample arrives after cancellation.
+        if (!result.ready || timedOut) return;
         recoveryState.set('complete', { reason: 'join completed with expected Primary membership', epoch: startupDecision.epoch });
         recoveryAudit.completion?.({ node: identity.name, epoch: startupDecision.epoch });
       }).catch((error) => {
