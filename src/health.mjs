@@ -12,9 +12,11 @@ export function createHealthService({ db, timeoutMs, log, elera = true, clusterS
     const [rows] = result;
     const values = Object.fromEntries(rows.map((row) => [row.Variable_name, row.Value]));
     const recovery = getRecoveryState();
-    const recoveryBlocked = recovery && ['cluster-unavailable', 'blocked-ambiguous', 'awaiting-quorum', 'recovery-authorized', 'bootstrapping', 'joining', 'collecting-evidence', 'pending'].includes(recovery.state);
+    const galeraReady = values.wsrep_local_state_comment === 'Synced' && values.wsrep_ready === 'ON' && values.wsrep_cluster_status === 'Primary';
+    // A prior join timeout must not permanently mask a later Galera convergence.
+    const recoveryBlocked = recovery && !galeraReady && ['cluster-unavailable', 'blocked-ambiguous', 'awaiting-quorum', 'recovery-authorized', 'bootstrapping', 'joining', 'collecting-evidence', 'pending'].includes(recovery.state);
     const explicitBootstrap = recovery?.state === 'complete' && recovery.reason?.startsWith('explicit bootstrap');
-    const ready = !elera || (!recoveryBlocked && values.wsrep_local_state_comment === 'Synced' && values.wsrep_ready === 'ON' && values.wsrep_cluster_status === 'Primary' && isQuorumReady(values, { expectedSize: explicitBootstrap ? 1 : clusterSize }));
+    const ready = !elera || (!recoveryBlocked && galeraReady && isQuorumReady(values, { expectedSize: explicitBootstrap ? 1 : clusterSize }));
     log.debug('Elera status checked', { ready, state: values.wsrep_local_state_comment, wsrepReady: values.wsrep_ready, clusterStatus: values.wsrep_cluster_status });
     return { values, ready, recovery, telemetry: getTelemetry() };
   }

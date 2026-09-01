@@ -7,8 +7,8 @@ describe('health service', () => {
   test('requires quorum for an Elera cluster', async () => { const query = jest.fn(async () => [[...Object.entries({ ...values, wsrep_cluster_size: '1' }).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]); const service = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, log: { debug: jest.fn() } }); expect((await service.status()).ready).toBe(false); });
   test('accepts a completed explicit bootstrap as a one-node ready component', async () => { const query = jest.fn(async () => [[...Object.entries({ ...values, wsrep_cluster_size: '1' }).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]); const service = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state: 'complete', reason: 'explicit bootstrap completed with expected Primary membership' }), log: { debug: jest.fn() } }); expect((await service.status()).ready).toBe(true); });
   test('keeps recovery-authorized bootstrap subject to the configured quorum', async () => { const query = jest.fn(async () => [[...Object.entries({ ...values, wsrep_cluster_size: '1' }).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]); const service = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state: 'complete', reason: 'bootstrap completed with expected Primary membership' }), log: { debug: jest.fn() } }); expect((await service.status()).ready).toBe(false); });
-  test('keeps recovery states unavailable during startup and permits authorized state', async () => {
-    const query = jest.fn(async () => [[...Object.entries(values).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]);
+  test('keeps recovery states unavailable before Galera converges', async () => {
+    const query = jest.fn(async () => [[...Object.entries({ ...values, wsrep_local_state_comment: 'Initialized', wsrep_ready: 'OFF', wsrep_cluster_status: 'non-Primary' }).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]);
     const blocked = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state: 'awaiting-quorum' }), log: { debug: jest.fn() } });
     expect((await blocked.status()).ready).toBe(false);
     const authorized = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state: 'recovery-authorized' }), log: { debug: jest.fn() } });
@@ -17,6 +17,16 @@ describe('health service', () => {
       const recovering = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state }), log: { debug: jest.fn() } });
       expect((await recovering.status()).ready).toBe(false);
     }
+  });
+  test('does not let a stale join timeout mask a converged Galera view', async () => {
+    const query = jest.fn(async () => [[...Object.entries(values).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]);
+    const service = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state: 'cluster-unavailable', reason: 'join readiness timeout' }), log: { debug: jest.fn() } });
+    expect((await service.status()).ready).toBe(true);
+  });
+  test('keeps a donor/desynced node unavailable during SST', async () => {
+    const query = jest.fn(async () => [[...Object.entries({ ...values, wsrep_local_state_comment: 'Donor/Desynced' }).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]);
+    const service = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state: 'complete' }), log: { debug: jest.fn() } });
+    expect((await service.status()).ready).toBe(false);
   });
   test('calculates safe and pressured weights', () => { expect(calculateWeight(values)).toBe(100); expect(calculateWeight({ ...values, wsrep_local_state_comment: 'Joining' })).toBe(0); expect(calculateWeight({ ...values, wsrep_local_recv_queue: '17' })).toBe(0); expect(calculateWeight({ ...values, wsrep_flow_control_paused: '0.05' })).toBe(0); });
   test('reports unavailable database and query timeout', async () => { const service = createHealthService({ db: undefined, timeoutMs: 1, log: { debug: jest.fn() } }); await expect(service.status()).rejects.toThrow('unavailable'); const slow = createHealthService({ db: { query: () => new Promise(() => {}) }, timeoutMs: 1, log: { debug: jest.fn() } }); await expect(slow.status()).rejects.toThrow('timeout'); });
