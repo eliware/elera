@@ -28,6 +28,24 @@ describe('health service', () => {
     const service = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, getRecoveryState: () => ({ state: 'complete' }), log: { debug: jest.fn() } });
     expect((await service.status()).ready).toBe(false);
   });
+  test('enforces the complete Galera readiness truth table', async () => {
+    const cases = [
+      ['Initialized', 'OFF', 'non-Primary', '3', false],
+      ['Joining', 'OFF', 'non-Primary', '3', false],
+      ['Joined', 'OFF', 'non-Primary', '3', false],
+      ['Synced', 'OFF', 'Primary', '3', false],
+      ['Synced', 'ON', 'non-Primary', '3', false],
+      ['Synced', 'ON', 'Primary', '1', false],
+      ['Synced', 'ON', 'Primary', '2', true],
+      ['Synced', 'ON', 'Primary', '3', true],
+      ['Donor/Desynced', 'ON', 'Primary', '3', false],
+    ];
+    for (const [state, ready, status, size, expected] of cases) {
+      const query = jest.fn(async () => [[...Object.entries({ ...values, wsrep_local_state_comment: state, wsrep_ready: ready, wsrep_cluster_status: status, wsrep_cluster_size: size }).map(([Variable_name, Value]) => ({ Variable_name, Value }))]]);
+      const service = createHealthService({ db: { query }, timeoutMs: 100, clusterSize: 3, log: { debug: jest.fn() } });
+      expect((await service.status()).ready).toBe(expected);
+    }
+  });
   test('calculates safe and pressured weights', () => { expect(calculateWeight(values)).toBe(100); expect(calculateWeight({ ...values, wsrep_local_state_comment: 'Joining' })).toBe(0); expect(calculateWeight({ ...values, wsrep_local_recv_queue: '17' })).toBe(0); expect(calculateWeight({ ...values, wsrep_flow_control_paused: '0.05' })).toBe(0); });
   test('reports unavailable database and query timeout', async () => { const service = createHealthService({ db: undefined, timeoutMs: 1, log: { debug: jest.fn() } }); await expect(service.status()).rejects.toThrow('unavailable'); const slow = createHealthService({ db: { query: () => new Promise(() => {}) }, timeoutMs: 1, log: { debug: jest.fn() } }); await expect(slow.status()).rejects.toThrow('timeout'); });
   test('rejects an invalid SQL status result without destructuring it', async () => { const service = createHealthService({ db: { query: async () => undefined }, timeoutMs: 10, log: { debug: jest.fn() } }); await expect(service.status()).rejects.toThrow('invalid result'); });
