@@ -43,7 +43,7 @@ export async function prepareSupervisorRecovery({ startupConfiguration, intentSt
       if (unifiedListener) setStartupHandler(evidenceService.routes);
       if (!unifiedListener) await startupServer.listen();
       log.debug?.('Recovery phase: evidence routes mounted', { node: identity.name, port: config.httpPort, unified: Boolean(probes?.setStartupHandler) });
-      startupDecision = await resolveCleanRestart({ restartMarker, recoveryProtocol: coldRecoveryProtocol, identity, startupTimeoutMs: config.startupTimeoutMs ?? 15000 }) ?? startupDecision;
+      startupDecision = await resolveCleanRestart({ restartMarker, recoveryProtocol: coldRecoveryProtocol, identity, startupTimeoutMs: config.startupTimeoutMs ?? 15000, log }) ?? startupDecision;
       log.debug?.('Recovery phase: clean-restart decision evaluated', { node: identity.name, mode: startupDecision.mode, reason: startupDecision.reason });
       if (startupDecision.mode === 'join') { if (!unifiedListener) await startupServer.close(); return { initialIntent, args, localEvidence, members, coldRecoveryProtocol, startupDecision, recoveryCompletion, startupServer }; }
       const recoveryPlan = await resolveRecoveryPlan({ recoveryProtocol: coldRecoveryProtocol, startupTimeoutMs: config.startupTimeoutMs ?? 15000 });
