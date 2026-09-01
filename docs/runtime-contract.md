@@ -1,5 +1,14 @@
 # Elera image runtime contract
 
+## Deployment platform
+
+This contract applies to the Linux container image. Elera Supervisor and the
+MariaDB/Galera process it manages are not supported for direct execution on a
+Windows host. Windows users must run the complete Supervisor/MariaDB/Galera
+stack inside a Linux container runtime (for example Docker Desktop with its
+Linux/WSL2 backend). Native Windows processes, Windows services, and direct
+PowerShell/CMD launches are outside the supported deployment model.
+
 ## Identity and filesystem
 
 The image runs as UID `100`, GID `101` (`mysql`). These paths must be writable

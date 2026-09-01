@@ -1,8 +1,8 @@
 {
   "apiVersion": "elera.eliware.dev/v1alpha1",
   "kind": "SupervisorIntent",
-  "cluster": { "name": "local-elera", "members": [{ "name": "elera-1", "address": "elera-1", "port": 3306 }] },
+  "cluster": { "name": "local-elera", "members": [{ "name": "elera-1.cluster.local", "address": "elera-1.cluster.local", "port": 3306 }] },
   "mariadb": { "port": 3306, "dataDir": "/var/lib/mysql", "binlogFormat": "ROW" },
-  "routing": { "healthIntervalMs": 1000, "weights": { "elera-1": 1 } },
+  "routing": { "healthIntervalMs": 1000, "weights": { "elera-1.cluster.local": 1 } },
   "drain": { "queryTimeoutMs": 5000, "shutdownTimeoutMs": 30000 }
 }

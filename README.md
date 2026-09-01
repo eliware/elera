@@ -13,6 +13,15 @@ HAProxy does not proxy raw MySQL traffic.
 
 Requires Node.js 26.
 
+## Supported runtime boundary
+
+Elera Supervisor and its managed MariaDB/Galera process target containerized
+Linux deployment only. Direct execution on Windows is not supported, including
+running the Supervisor or MariaDB/Galera natively from PowerShell, CMD, or a
+Windows service. On Windows, run the complete stack inside a Linux container
+runtime such as Docker Desktop/WSL2; the container must provide the Linux
+filesystem, process, networking, and Galera environment required by the image.
+
 ```bash
 npm ci
 npm test
