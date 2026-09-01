@@ -6,13 +6,13 @@ test('requires configured cluster dependencies', () => {
 });
 test('serves evidence through the cluster route', async () => {
   const response = { json: jest.fn() };
-  const evidence = jest.fn(async () => ({ node: 'a', active: false }));
+  const evidence = jest.fn(async () => ({ node: 'a.example.test', active: false }));
   await expect(handleClusterRoute({ method: 'GET', path: '/api/v1/cluster/cold-bootstrap/evidence', request: {}, response, url: new URL('http://localhost'), getStatus: async () => ({}), getConfig: () => ({ elera: true }), coldEvidence: evidence })).resolves.toBe(true);
   expect(evidence).toHaveBeenCalled();
 });
-const nodes = [{ name: 'a', dataDir: '/a' }];
+const nodes = [{ name: 'a.example.test', dataDir: '/a' }];
 const state = { uuid: 'cluster', seqno: 1, safeToBootstrap: true };
-test('plans and executes only after explicit confirmation', async () => { const bootstrap = jest.fn(); const service = createColdBootstrapService({ nodes, readState: async () => state, isOnline: async () => false, bootstrap }); await expect(service.plan()).resolves.toMatchObject({ eligible: true }); await expect(service.execute()).rejects.toMatchObject({ statusCode: 409 }); await expect(service.execute({ confirm: true })).resolves.toMatchObject({ candidate: { node: 'a' } }); expect(bootstrap).toHaveBeenCalledWith('a'); });
+test('plans and executes only after explicit confirmation', async () => { const bootstrap = jest.fn(); const service = createColdBootstrapService({ nodes, readState: async () => state, isOnline: async () => false, bootstrap }); await expect(service.plan()).resolves.toMatchObject({ eligible: true }); await expect(service.execute()).rejects.toMatchObject({ statusCode: 409 }); await expect(service.execute({ confirm: true })).resolves.toMatchObject({ candidate: { node: 'a.example.test' } }); expect(bootstrap).toHaveBeenCalledWith('a.example.test'); });
 test('refuses an unsafe plan', async () => { const service = createColdBootstrapService({ nodes, readState: async () => ({ ...state, safeToBootstrap: false, seqno: -1 }), recover: async () => ({ uuid: 'cluster', seqno: -1 }), isOnline: async () => false, bootstrap: async () => {} }); await expect(service.execute({ confirm: true })).rejects.toMatchObject({ statusCode: 409 }); });
 test('revalidates evidence immediately before bootstrap', async () => { let reads = 0; const bootstrap = jest.fn(); const service = createColdBootstrapService({ nodes, readState: async () => ({ ...state, seqno: ++reads }), isOnline: async () => false, bootstrap }); await expect(service.execute({ confirm: true })).rejects.toThrow('evidence changed'); expect(bootstrap).not.toHaveBeenCalled(); });
 test('rejects a candidate that fails final verification', async () => { const service = createColdBootstrapService({ nodes, readState: async () => state, isOnline: async () => false, bootstrap: jest.fn(), verifyCandidate: async () => false }); await expect(service.execute({ confirm: true })).rejects.toThrow('revalidation failed'); });

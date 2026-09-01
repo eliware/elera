@@ -3,7 +3,7 @@ import { handleColdBootstrapEvidence } from '../../../src/api/routes/cold-bootst
 
 test('handles cold-bootstrap evidence route', async () => {
   const response = { json: jest.fn() };
-  const coldEvidence = jest.fn(async () => ({ node: 'a' }));
+  const coldEvidence = jest.fn(async () => ({ node: 'a.example.test' }));
   await expect(handleColdBootstrapEvidence({ method: 'GET', path: '/api/v1/cluster/cold-bootstrap/evidence', response, coldEvidence })).resolves.toBe(true);
   expect(coldEvidence).toHaveBeenCalled();
 });

@@ -10,8 +10,8 @@ import { startSupervisor } from './runtime/startup-coordinator.mjs';
 import { createCleanRestartMarker } from './runtime/clean-restart-marker.mjs';
 import { createSupervisorRecoveryJoiner } from './runtime/recovery-join-wiring.mjs';
 
-const config = loadSupervisorConfig();
 const identity = runtimeIdentity();
+const config = loadSupervisorConfig(process.env, undefined, identity);
 const dbEnv = supervisorDbEnvironment();
 const state = { db: undefined, drained: false, shuttingDown: false, restarting: false, bootstrapMaria: undefined, coldBootstrapLocal: undefined, coldBootstrapService: undefined, coldEvidence: undefined, coldRecoveryProtocol: undefined, peerTimer: undefined, routingTimer: undefined, mariaProcess: undefined, recoveryCompletion: undefined, applyIntent: undefined, signals: undefined };
 let signals;
@@ -47,5 +47,5 @@ async function main() {
 
 main().catch((error) => {
   log.error('Supervisor startup failed', { error });
-  void signals.shutdown('startup-failure').then(() => process.exit(1));
+  void Promise.resolve(signals?.shutdown?.('startup-failure')).then(() => process.exit(1));
 });

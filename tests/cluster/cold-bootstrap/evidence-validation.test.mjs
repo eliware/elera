@@ -1,7 +1,7 @@
 import { expect, test } from '@jest/globals';
 import { validateRecoveryEvidence } from '../../../src/cluster/cold-bootstrap/evidence-validation.mjs';
 
-const valid = { node: 'elera-0', uuid: 'cluster', seqno: 1, active: false, generation: 2, observedAt: '2026-08-29T16:00:00.000Z' };
+const valid = { node: 'elera-0.example.test', uuid: 'cluster', seqno: 1, active: false, generation: 2, observedAt: '2026-08-29T16:00:00.000Z' };
 test('accepts complete fresh evidence', () => expect(validateRecoveryEvidence([valid], { now: new Date('2026-08-29T16:00:01.000Z'), maxAgeMs: 2000 })).toEqual([valid]));
 test('accepts explicitly valid data-directory evidence', () => expect(validateRecoveryEvidence([{ ...valid, dataDirectory: { valid: true } }], { now: new Date(valid.observedAt) })).toHaveLength(1));
 test('uses the current time when no validation options are supplied', () => { const observedAt = new Date().toISOString(); expect(validateRecoveryEvidence([{ ...valid, observedAt }])).toHaveLength(1); });
@@ -26,6 +26,6 @@ test('rejects each malformed evidence field', () => {
   for (const item of [
     { ...fresh, node: '' }, { ...fresh, uuid: '' }, { ...fresh, seqno: 1.2 },
     { ...fresh, generation: 0 }, { ...fresh, generation: '1' },
-    { ...fresh, active: 1 }, { ...fresh, observedAt: 'invalid' }, { ...fresh, dataDirectory: {} },
+    { ...fresh, active: 1 }, { ...fresh, observedAt: 'invalid' }, { ...fresh, dataDirectory: {} }, { ...fresh, node: 'elera-0' },
   ]) expect(() => validateRecoveryEvidence([item])).toThrow('malformed');
 });

@@ -1,11 +1,11 @@
 import { createStartupRecoveryDecision } from '../../../src/cluster/cold-bootstrap/startup-decision.mjs';
 
-const state = (node, seqno, safeToBootstrap = false) => ({ node, state: { uuid: 'cluster', seqno, safeToBootstrap }, active: false });
-const nodes = [{ name: 'a', local: true }, { name: 'b' }, { name: 'c' }];
+const state = (node, seqno, safeToBootstrap = false) => ({ node: node.includes('.') ? node : `${node}.example.test`, state: { uuid: 'cluster', seqno, safeToBootstrap }, active: false });
+const nodes = [{ name: 'a.example.test', local: true }, { name: 'b.example.test' }, { name: 'c.example.test' }];
 
 test('validates required startup decision dependencies', () => {
   expect(() => createStartupRecoveryDecision()).toThrow('complete node inventory');
-  expect(() => createStartupRecoveryDecision({ nodes: [{ name: 'a' }, { name: 'a' }], localEvidence: async () => {}, fetchEvidence: async () => {} })).toThrow('complete node inventory');
+  expect(() => createStartupRecoveryDecision({ nodes: [{ name: 'a.example.test' }, { name: 'a.example.test' }], localEvidence: async () => {}, fetchEvidence: async () => {} })).toThrow('complete node inventory');
 });
 
 test('rejects an incomplete inventory before collecting evidence', () => {
@@ -14,7 +14,7 @@ test('rejects an incomplete inventory before collecting evidence', () => {
 
 test('selects one local winner from quorum evidence and assigns an epoch', async () => {
   const decide = createStartupRecoveryDecision({ nodes, localEvidence: async () => state('a', 12), fetchEvidence: async (node) => state(node.name, node.name === 'b' ? 20 : 19), epoch: () => 'epoch-1' });
-  await expect(decide()).resolves.toMatchObject({ mode: 'bootstrap', winner: 'b', localWinner: false, epoch: 'epoch-1' });
+  await expect(decide()).resolves.toMatchObject({ mode: 'bootstrap', winner: 'b.example.test', localWinner: false, epoch: 'epoch-1' });
 });
 
 test('blocks ambiguous or unavailable evidence without bootstrap', async () => {

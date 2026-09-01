@@ -139,3 +139,15 @@ test('skips notification for an already-closed client', async () => {
   expect(socket.close).not.toHaveBeenCalled();
   websocketServer.close();
 });
+
+test('does not invent a node identity when shutdown identity is unavailable', async () => {
+  const websocketServer = new WebSocketServer({ noServer: true });
+  const stream = createRoutingStream({ token: 'secret', getEvent: () => undefined, bus: bus(), websocketServer });
+  const socket = { readyState: 1, close: jest.fn(), on: jest.fn(), send: jest.fn((_payload, callback) => callback?.()), ping: jest.fn() };
+  websocketServer.emit('connection', socket, { url: '/api/v1/routing/stream' });
+  await stream.shutdown();
+  const payload = JSON.parse(socket.send.mock.calls[0][0]);
+  expect(payload.node).toBeUndefined();
+  expect(payload.nodeIdentity).toBeUndefined();
+  websocketServer.close();
+});

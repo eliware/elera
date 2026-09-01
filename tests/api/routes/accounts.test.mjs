@@ -24,6 +24,10 @@ test('rejects unsafe imported grant statements and missing confirmation', async 
   await expect(handleAccountRoute({ method: 'POST', path: '/api/v1/accounts/import', request: request({ accounts: [] }), response: response(), db })).rejects.toMatchObject({ statusCode: 409 });
   await expect(handleAccountRoute({ method: 'POST', path: '/api/v1/accounts/import', request: request({ confirm: true, accounts: [{ user: 'app', grants: ['DROP;'] }] }), response: response(), db })).rejects.toMatchObject({ statusCode: 400 });
 });
+test('rejects imported statements that are not privilege grants', async () => {
+  const db = { query: async () => [[]] };
+  await expect(handleAccountRoute({ method: 'POST', path: '/api/v1/accounts/import', request: request({ confirm: true, accounts: [{ user: 'app', grants: ['DROP DATABASE production'] }] }), response: response(), db })).rejects.toMatchObject({ statusCode: 400 });
+});
 
 test('exports accounts when grant lookup fails or returns an empty grant row', async () => {
   let grantCalls = 0;

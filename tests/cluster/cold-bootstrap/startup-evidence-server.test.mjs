@@ -3,7 +3,7 @@ import { createStartupEvidenceServer } from '../../../src/cluster/cold-bootstrap
 test('validates server dependencies', () => expect(() => createStartupEvidenceServer()).toThrow('startup evidence server dependencies are required'));
 
 test('serves authenticated startup evidence and rejects other requests', async () => {
-  const service = createStartupEvidenceServer({ port: 0, token: 'secret', evidence: async () => ({ node: 'a' }), lease: { claim: async (value) => ({ granted: true, ...value }) } });
+  const service = createStartupEvidenceServer({ port: 0, token: 'secret', evidence: async () => ({ node: 'a.example.test' }), lease: { claim: async (value) => ({ granted: true, ...value }) } });
   await service.listen();
   const port = service.server.address().port;
   const request = (url, options) => fetch(url, { ...options, headers: { connection: 'close', ...options?.headers } });
@@ -12,9 +12,9 @@ test('serves authenticated startup evidence and rejects other requests', async (
   const wrong = await request(`http://127.0.0.1:${port}/wrong`); expect(wrong.status).toBe(404); await wrong.text();
   const unauthorized = await request(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`); expect(unauthorized.status).toBe(401); await unauthorized.text();
   const response = await request(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`, { headers: { authorization: 'Bearer secret' } });
-  await expect(response.json()).resolves.toMatchObject({ data: { node: 'a' } });
-  const lease = await request(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { authorization: 'Bearer secret', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 'e1', winner: 'a' }) });
-  expect(lease.status).toBe(200); await expect(lease.json()).resolves.toMatchObject({ data: { granted: true, epoch: 'e1' } });
+  await expect(response.json()).resolves.toMatchObject({ data: { node: 'a.example.test' } });
+  const lease = await request(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { authorization: 'Bearer secret', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 'e1', winner: 'a.example.test' }) });
+  expect(lease.status).toBe(200); await expect(lease.json()).resolves.toMatchObject({ data: { granted: true, epoch: 'e1', winner: 'a.example.test' } });
   await service.close();
 });
 
@@ -43,7 +43,7 @@ test('rejects unauthorized and malformed lease requests', async () => {
 
 test('serves and authorizes completion events', async () => {
   const completion = { read: () => ({ epoch: 'e1', status: 'complete' }) };
-  const service = createStartupEvidenceServer({ port: 0, token: 'secret', evidence: async () => ({}), completion });
+  const service = createStartupEvidenceServer({ port: 0, token: 'secret', evidence: async () => ({ node: 'a.example.test' }), completion });
   await service.listen(); const port = service.server.address().port;
   const missing = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/completion`, { headers: { connection: 'close' } });
   expect(missing.status).toBe(401); await missing.text();

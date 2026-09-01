@@ -1,4 +1,4 @@
-import { expect, test } from '@jest/globals';
+import { expect, jest, test } from '@jest/globals';
 import { mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -63,4 +63,13 @@ test('tolerates cleanup failures after the operation completes', async () => {
   const handle = { writeFile: async () => {}, close: async () => { throw new Error('already closed'); } };
   const lock = createOperationLock({ path: 'lock', makeDirectory: async () => {}, openFile: async () => handle, remove: async () => { throw new Error('already removed'); } });
   await expect(lock.run(async () => 'ok')).resolves.toBe('ok');
+});
+
+test('cleans up a lock when lock metadata cannot be written', async () => {
+  const handle = { writeFile: async () => { throw new Error('disk full'); }, close: jest.fn(async () => {}) };
+  const remove = jest.fn(async () => {});
+  const lock = createOperationLock({ path: 'lock', makeDirectory: async () => {}, openFile: async () => handle, remove });
+  await expect(lock.run(async () => 'never')).rejects.toThrow('disk full');
+  expect(handle.close).toHaveBeenCalled();
+  expect(remove).toHaveBeenCalledWith('lock');
 });

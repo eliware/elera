@@ -6,13 +6,28 @@ const backing = (accepted = true) => { const values = []; return { values, upser
 
 test('loads observations and persists accepted updates and clears', async () => {
   const store = backing(); let written;
-  const durable = createDurableObservationStore({ store, statePath: '/state/observations.json', read: async () => JSON.stringify([item]), makeDirectory: async () => {}, write: async (_path, value) => { written = value; } });
+  const durable = createDurableObservationStore({ store, statePath: '/state/observations.json', read: async () => JSON.stringify([item]), makeDirectory: async () => {}, write: async (_path, value) => { written = value; }, renameFile: async () => {} });
   await durable.initialize();
   expect(durable.all()).toHaveLength(1);
   durable.upsert({ ...item, nodeId: 'n2' }); await durable.flush();
   expect(JSON.parse(written)).toHaveLength(2);
   durable.clear(); await durable.flush(); expect(durable.all()).toEqual([]);
   expect(durable.snapshot('fresh')).toMatchObject({ args: ['fresh'] });
+});
+
+test('does not partially restore state when one persisted observation is invalid', async () => {
+  const store = backing();
+  const durable = createDurableObservationStore({ store, statePath: '/state/invalid-item', read: async () => JSON.stringify([item, { nodeId: 'broken' }]), makeDirectory: async () => {}, log: { warn: jest.fn() } });
+  await durable.initialize();
+  expect(durable.all()).toEqual([]);
+});
+
+test('persists through a temporary file and atomic rename', async () => {
+  const store = backing(); const writes = []; const renames = [];
+  const durable = createDurableObservationStore({ store, statePath: '/state/atomic.json', makeDirectory: async () => {}, write: async (...args) => writes.push(args), renameFile: async (...args) => renames.push(args) });
+  durable.upsert(item); await durable.flush();
+  expect(writes[0][0]).toBe('/state/atomic.json.tmp');
+  expect(renames).toEqual([['/state/atomic.json.tmp', '/state/atomic.json']]);
 });
 
 test('ignores missing state, warns on invalid state and persistence errors', async () => {

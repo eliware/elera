@@ -1,11 +1,13 @@
 import { mkdir, open, readFile, unlink } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
+const isFqdn = (value) => typeof value === 'string' && value.includes('.') && value.split('.').every((label) => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label));
+
 export function createRecoveryLease(path, { openFile = open, staleAfterMs = 120000, now = () => Date.now() } = {}) {
   if (!path) throw new TypeError('recovery lease path is required');
   return {
     async claim({ epoch, winner } = {}) {
-      if (!epoch || !winner) throw new TypeError('recovery lease epoch and winner are required');
+      if (!epoch || !isFqdn(winner)) throw new TypeError('recovery lease epoch and FQDN winner are required');
       await mkdir(dirname(path), { recursive: true });
       const value = JSON.stringify({ epoch, winner, claimedAt: new Date().toISOString() });
       try { const handle = await openFile(path, 'wx'); await handle.writeFile(value); await handle.close(); return { granted: true, epoch, winner }; }

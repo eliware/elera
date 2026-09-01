@@ -1,21 +1,23 @@
 import { expect, test } from '@jest/globals';
 import { loadStartupIntent } from '../../src/runtime/startup-intent.mjs';
+import fixture from '../../contracts/supervisor-intent.fixture.json' with { type: 'json' };
 
 test('prefers persisted startup intent', async () => {
-  const persisted = { source: 'persisted' };
-  const result = await loadStartupIntent({ intentState: { read: async () => persisted }, loadEnvironmentIntent: () => { throw new Error('unexpected'); }, node: { name: 'n', address: 'a' } });
+  const persisted = structuredClone(fixture);
+  const result = await loadStartupIntent({ intentState: { read: async () => persisted }, loadEnvironmentIntent: () => { throw new Error('unexpected'); }, identity: { name: persisted.cluster.members[0].name } });
   expect(result).toBe(persisted);
 });
 
-test('loads environment intent with runtime identity fallback', async () => {
+test('loads environment intent without injecting legacy identity variables', async () => {
   let received;
-  const result = await loadStartupIntent({ intentState: { read: async () => undefined }, loadEnvironmentIntent: (value) => { received = value; return { source: 'environment' }; }, node: { name: 'n', address: 'a' } });
-  expect(received).toEqual(expect.objectContaining({ RUNTIME_NODE_NAME: 'n', RUNTIME_NODE_ADDRESS: 'a' }));
-  expect(result).toEqual({ source: 'environment' });
+  const identity = { name: 'node.example.test' };
+  const result = await loadStartupIntent({ intentState: { read: async () => undefined }, loadEnvironmentIntent: (value, actualIdentity) => { received = [value, actualIdentity]; return structuredClone(fixture); }, identity });
+  expect(received).toEqual([process.env, identity]);
+  expect(result).toEqual(fixture);
 });
 
 test('preserves a declared clustered environment intent during fresh startup', async () => {
   let received;
-  await loadStartupIntent({ intentState: { read: async () => undefined }, loadEnvironmentIntent: (value) => { received = value; return { source: 'environment' }; }, environment: { SUPERVISOR_INTENT_JSON: '{"cluster":{"members":[{"name":"a"},{"name":"b"},{"name":"c"}]}}' }, node: { name: 'a', address: 'a' } });
+  await loadStartupIntent({ intentState: { read: async () => undefined }, loadEnvironmentIntent: (value) => { received = value; return structuredClone(fixture); }, environment: { SUPERVISOR_INTENT_JSON: JSON.stringify(fixture) }, identity: { name: fixture.cluster.members[0].name } });
   expect(received.SUPERVISOR_INTENT_JSON).toContain('"members"');
 });

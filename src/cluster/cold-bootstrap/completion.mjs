@@ -3,6 +3,7 @@ export function createRecoveryCompletion() {
   return {
     publish(completion) {
       if (!completion?.epoch || !['complete', 'failed'].includes(completion.status)) throw new TypeError('valid bootstrap completion is required');
+      if (value?.status === 'complete' && value.epoch === completion.epoch) return value;
       value = Object.freeze({ ...completion });
       return value;
     },

@@ -10,8 +10,10 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
   const persist = (value, expectedEpoch) => store.write(value, expectedEpoch === undefined ? undefined : { expectedEpoch });
   const isActivePrimary = (item, evidence) => {
     const clusterUuid = item.galera?.clusterUuid;
-    const localUuid = evidence.find((candidate) => candidate.galera?.clusterUuid || candidate.node === nodes.find((node) => node.local)?.name)?.galera?.clusterUuid ?? evidence.find((candidate) => candidate.node === nodes.find((node) => node.local)?.name)?.uuid;
-    return item.active === true && item.galera?.clusterStatus === 'Primary' && item.galera?.localState === 'Synced' && item.galera?.ready !== false && typeof clusterUuid === 'string' && (!localUuid || localUuid === clusterUuid);
+    const localName = nodes.find((node) => node.local)?.name;
+    const localItem = evidence.find((candidate) => candidate.node === localName);
+    const localUuid = localItem?.galera?.clusterUuid ?? localItem?.uuid;
+    return item.active === true && item.galera?.clusterStatus === 'Primary' && item.galera?.localState === 'Synced' && (item.galera?.ready === 'ON' || item.galera?.ready === true) && typeof clusterUuid === 'string' && (!localUuid || localUuid === clusterUuid);
   };
   const collect = async () => {
     debug('Collecting recovery evidence', { nodes: nodes.map((node) => node.name) });
@@ -24,14 +26,15 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
     const validated = validateRecoveryEvidence(evidence, { now: now(), maxAgeMs: maxEvidenceAgeMs });
     if (failed && validated.length < Math.floor(nodes.length / 2) + 1) throw failed.reason;
     debug('Recovery evidence validated', { evidence: validated, partial: Boolean(failed) });
-    return { evidence: validated, activePrimary: false, partial: Boolean(failed) };
+    return { evidence: validated, failures: results.filter((result) => result.status === 'rejected').map((result) => result.reason), activePrimary: false, partial: Boolean(failed) };
   };
   return {
     async evidence() { return (await collect()).evidence; },
     async plan() {
       debug('Evaluating recovery plan');
       let evidence;
-      try { ({ evidence } = await collect()); }
+      let failures = [];
+      try { ({ evidence, failures } = await collect()); }
       catch (error) {
         current = { version: 1, phase: 'blocked', reason: error.message, code: error.code ?? 'RECOVERY_EVIDENCE_UNAVAILABLE', evidence: [], updatedAt: now().toISOString() };
         await persist(current);
@@ -44,8 +47,11 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       // Autonomous bootstrap requires confirmation from every configured supervisor,
       // but a stale/divergent SQL volume must not veto the surviving majority history.
       if (evidence.length < nodes.length) {
-        const reason = 'all configured supervisors must provide recovery evidence before bootstrap';
-        current = { version: 1, phase: 'blocked', code: 'INSUFFICIENT_RECOVERY_EVIDENCE', reason, evidence, updatedAt: now().toISOString() };
+        const failedReason = 'recovery evidence is incomplete';
+        const reason = `${failedReason}: all configured supervisors must provide recovery evidence before bootstrap`;
+        const mismatch = failures.find((failure) => failure?.code === 'RECOVERY_EVIDENCE_IDENTITY_MISMATCH');
+        const code = mismatch ? mismatch.code : 'INSUFFICIENT_RECOVERY_EVIDENCE';
+        current = { version: 1, phase: 'blocked', code, reason: mismatch ? mismatch.message : reason, evidence, errors: failures.map((failure) => ({ code: failure.code, message: failure.message, endpoint: failure.endpoint, expectedNode: failure.expectedNode, actualNode: failure.actualNode })), updatedAt: now().toISOString() };
         await persist(current);
         await publishEvent({ type: 'recovery.refused', reason, code: current.code, evidence });
         return { eligible: false, mode: 'blocked', ...current };
@@ -60,6 +66,7 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       return { eligible: true, mode: 'bootstrap', ...current };
     },
     async retry() {
+      if (current?.code === 'RECOVERY_EVIDENCE_IDENTITY_MISMATCH') return current;
       current = undefined;
       return this.plan();
     },

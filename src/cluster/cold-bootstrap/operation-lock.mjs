@@ -11,6 +11,7 @@ export function createOperationLock({ path, staleAfterMs = 120000, makeDirectory
         handle = await openFile(path, 'wx');
         await handle.writeFile(JSON.stringify({ operation: 'cold-bootstrap', createdAt: new Date().toISOString() }));
       } catch (error) {
+        if (handle) { await handle.close().catch(() => {}); await remove(path).catch(() => {}); }
         if (error.code === 'EEXIST') {
           try { const age = Date.now() - (await statFile(path)).mtimeMs; if (age > staleAfterMs) await remove(path); else throw Object.assign(new Error('cold bootstrap already in progress'), { statusCode: 409 }); }
           catch (staleError) { if (staleError.statusCode) throw staleError; if (staleError.code !== 'ENOENT') throw staleError; }

@@ -8,7 +8,7 @@ test('recovery bootstrap replaces any stale bootstrap flag with one explicit fla
 
 test('recovery join rewrites the cluster address without adding bootstrap authority', () => {
   const args = ['--datadir=/data', '--wsrep-cluster-address=gcomm://old'];
-  expect(startupArguments(args, { mode: 'join' }, { joinAddress: 'peer:4567' })).toEqual(['--datadir=/data', '--wsrep-cluster-address=gcomm://peer:4567']);
+  expect(startupArguments(args, { mode: 'join' }, { joinAddress: 'peer.example.test:4567' })).toEqual(['--datadir=/data', '--wsrep-cluster-address=gcomm://peer.example.test:4567']);
 });
 
 test('non-authoritative decisions preserve the base arguments', () => {
@@ -28,5 +28,5 @@ test('does not rewrite a join without a usable peer address', () => {
 });
 
 test('preserves non-address join arguments while rewriting only the cluster address', () => {
-  expect(startupArguments(['--datadir=/data', '--user=mysql'], { mode: 'join' }, { joinAddress: 'peer:4567' })).toEqual(['--datadir=/data', '--user=mysql']);
+  expect(startupArguments(['--datadir=/data', '--user=mysql'], { mode: 'join' }, { joinAddress: 'peer.example.test:4567' })).toEqual(['--datadir=/data', '--user=mysql']);
 });

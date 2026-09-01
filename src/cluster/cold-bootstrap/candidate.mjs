@@ -1,6 +1,8 @@
+const isFqdn = (value) => typeof value === 'string' && value.length <= 253 && value.includes('.') && value.split('.').every((label) => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label));
+
 export function selectCandidate(states, { minimumHistorySize = 1 } = {}) {
   if (!Array.isArray(states) || states.length === 0) throw new Error('no Galera state evidence was provided');
-  if (states.some((state) => !state?.node || !state?.uuid || !Number.isInteger(state.seqno))) return { eligible: false, reason: 'incomplete recovery evidence', candidates: states };
+  if (states.some((state) => !isFqdn(state?.node) || !state?.uuid || !Number.isInteger(state.seqno))) return { eligible: false, reason: 'incomplete recovery evidence', candidates: states };
   const histories = Map.groupBy(states, (state) => state.uuid);
   const ranked = [...histories.entries()].map(([uuid, candidates]) => ({ uuid, candidates, highest: Math.max(...candidates.map(({ seqno }) => seqno)) })).sort((left, right) => right.highest - left.highest || right.candidates.length - left.candidates.length || left.uuid.localeCompare(right.uuid));
   const strongest = ranked[0];

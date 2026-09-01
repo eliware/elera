@@ -14,13 +14,15 @@ import { runWsrepRecover } from './wsrep-recovery.mjs';
 import { createDeferredRecoveryProtocol } from './deferred-recovery-protocol.mjs';
 
 export function createSupervisorEntryComposition({ config, identity, lifecycle, telemetry, recoveryState, recovery, log, environment = process.env, getDb, setDrained, getDrained, getTimers, getMariaProcess, restartMarker, getColdState = () => ({}), applyIntent = (intent) => intent, servers = [] }) {
+  if (!config?.dataDir || !identity?.name || !identity.name.includes('.') || typeof getDb !== 'function' || typeof telemetry?.summary !== 'function' || typeof recoveryState?.snapshot !== 'function') throw new TypeError('entry composition requires validated config, shared FQDN identity, database, telemetry, and recovery state');
+  if (typeof setDrained !== 'function' || typeof getDrained !== 'function' || typeof getMariaProcess !== 'function') throw new TypeError('entry composition lifecycle dependencies are required');
   const health = createHealthService({
     db: { query: (...args) => getDb()?.query?.(...args), health: (...args) => getDb()?.health?.(...args) },
     timeoutMs: config.timeoutMs, elera: config.elera, clusterSize: config.clusterSize,
     getTelemetry: () => telemetry.summary(), getRecoveryState: () => recoveryState.snapshot(), log,
   });
-  const domain = createSupervisorComposition({ query: (...args) => getDb()?.query?.(...args), log });
-  const coldEvidence = identity?.name && config.dataDir ? createColdBootstrapEvidence({ localNode: identity, dataDir: config.dataDir, health, token: environment.ROOT_TOKEN, run: runWsrepRecover, log }).local : undefined;
+  const domain = createSupervisorComposition({ query: (...args) => getDb()?.query?.(...args), identity, log });
+  const coldEvidence = createColdBootstrapEvidence({ localNode: identity, dataDir: config.dataDir, health, token: environment.ROOT_TOKEN, run: runWsrepRecover, log }).local;
   const routing = createRoutingComposition({
     environment: { ...environment, ELERA_EVENT_VERSION_PATH: environment.ELERA_EVENT_VERSION_PATH ?? `${config.dataDir}/elera-state/routing-event-versions.json` },
     config, identity, observationStore: domain.observationStore, managed: domain.managed,
@@ -44,7 +46,7 @@ export function createSupervisorEntryComposition({ config, identity, lifecycle, 
   const control = createSupervisorControlComposition({
     db: { query: (...args) => getDb()?.query?.(...args) }, ...domain, routingBundles: routing.routingBundles,
     routingEvent: routing.routingEvent, recovery, observationStore: domain.observationStore, health,
-    clusterDrain: traffic.clusterDrain, lifecycle, telemetry, config, intentState: domain.intentState,
+    clusterDrain: traffic.clusterDrain, lifecycle, telemetry, config, identity, intentState: domain.intentState,
     coldState: { ...coldState, coldEvidence: coldState.coldEvidence ?? coldEvidence }, getColdRecoveryProtocol: () => deferredRecoveryProtocol, processController: { start: (...args) => getMariaProcess()?.start?.(...args), stop: (...args) => getMariaProcess()?.stop?.(...args) }, applyIntent, environment, log,
   });
   const probes = createSupervisorProbes({

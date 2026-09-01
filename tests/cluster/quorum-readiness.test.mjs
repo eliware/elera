@@ -6,4 +6,10 @@ describe('quorum readiness', () => {
     expect(isQuorumReady({ wsrep_cluster_size: String(actual) }, { expectedSize: expected })).toBe(ready);
   });
   test('rejects malformed values', () => { expect(isQuorumReady({ wsrep_cluster_size: 'unknown' }, { expectedSize: 3 })).toBe(false); });
+  test('rejects missing, negative, and non-numeric cluster sizes', () => {
+    expect(isQuorumReady(undefined, { expectedSize: 3 })).toBe(false);
+    expect(isQuorumReady({ wsrep_cluster_size: '-1' }, { expectedSize: 3 })).toBe(false);
+    expect(isQuorumReady({ wsrep_cluster_size: true }, { expectedSize: 1 })).toBe(false);
+    expect(isQuorumReady({ wsrep_cluster_size: '2.5' }, { expectedSize: 3 })).toBe(false);
+  });
 });

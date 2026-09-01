@@ -6,7 +6,7 @@ const request = (method, url, headers = {}) => ({ method, url, headers, on: jest
 
 test('validates route dependencies', () => expect(() => createStartupEvidenceRoutes()).toThrow('startup evidence route dependencies are required'));
 test('handles evidence authentication and success', async () => {
-  const handler = createStartupEvidenceRoutes({ token: 'secret', evidence: async () => ({ node: 'a' }) });
+  const handler = createStartupEvidenceRoutes({ token: 'secret', evidence: async () => ({ node: 'a.example.test' }) });
   const denied = response(); await expect(handler(request('GET', '/api/v1/cluster/cold-bootstrap/evidence'), denied)).resolves.toBe(true); expect(denied.writeHead).toHaveBeenCalledWith(401);
   const accepted = response(); await handler(request('GET', '/api/v1/cluster/cold-bootstrap/evidence', { authorization: 'Bearer secret' }), accepted); expect(accepted.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
 });

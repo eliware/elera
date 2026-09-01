@@ -16,6 +16,9 @@ export function createRoutingComposition({
   log,
   getDrained = () => false,
 } = {}) {
+  if (!config?.clusterSize || !Array.isArray(config.intent?.cluster?.members) || typeof query !== 'function' || typeof resolveAddress !== 'function') throw new TypeError('routing composition requires validated config, query, and address resolution dependencies');
+  if (!identity?.name || !identity.name.includes('.') || !config.intent.cluster.members.some((member) => member.name === identity.name)) throw new TypeError('routing composition requires the shared configured FQDN identity');
+  if (typeof getDrained !== 'function') throw new TypeError('routing drain state reader is required');
   const routingEnvironment = { ...environment, ELERA_CLUSTER_SIZE: String(config.clusterSize) };
   const sharedRoutingAssignments = createMetadataAssignmentStore({ query });
   const routingAssignments = createAssignmentStore({
@@ -24,6 +27,7 @@ export function createRoutingComposition({
   const routingBundles = createRoutingBundleService({
     managed,
     observationStore,
+    identity,
     environment: routingEnvironment,
     assignmentStore: sharedRoutingAssignments,
     validateAddresses: true,

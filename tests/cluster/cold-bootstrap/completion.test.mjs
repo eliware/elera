@@ -5,7 +5,14 @@ test('publishes only complete epoch handoffs', () => {
   const completion = createRecoveryCompletion();
   expect(() => completion.publish({ epoch: 'e', status: 'authorized' })).toThrow();
   expect(completion.publish({ epoch: 'e', status: 'complete' })).toMatchObject({ epoch: 'e', status: 'complete' });
-  expect(completion.publish({ epoch: 'e', status: 'failed' })).toMatchObject({ status: 'failed' });
+  expect(completion.publish({ epoch: 'e2', status: 'failed' })).toMatchObject({ status: 'failed' });
+});
+
+test('does not let a late failure overwrite completed recovery', () => {
+  const completion = createRecoveryCompletion();
+  const complete = completion.publish({ epoch: 'e', status: 'complete' });
+  expect(completion.publish({ epoch: 'e', status: 'failed', reason: 'late timeout' })).toBe(complete);
+  expect(completion.read()).toBe(complete);
 });
 
 test('waits for matching completion and rejects a different epoch', async () => {

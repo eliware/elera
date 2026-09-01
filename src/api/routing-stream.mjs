@@ -31,7 +31,7 @@ export function createRoutingStream({ token, authorize, nodeIdentity, getEvent, 
   async function shutdown(event = {}, { code = 1012, reason = 'supervisor restarting' } = {}) {
     stopping = true;
     const timestamp = Date.now();
-    const payload = JSON.stringify({ type: 'routing.shutdown', version: ++eventVersion, generatedAt: new Date(timestamp).toISOString(), reconnect: true, node: nodeIdentity?.name ?? 'supervisor', ...(nodeIdentity ? { nodeIdentity } : {}), ...(loadBalancerEndpoint ? { loadBalancerEndpoint } : {}), reason, ...event });
+    const payload = JSON.stringify({ type: 'routing.shutdown', version: ++eventVersion, generatedAt: new Date(timestamp).toISOString(), reconnect: true, ...(nodeIdentity ? { node: nodeIdentity.name, nodeIdentity } : {}), ...(loadBalancerEndpoint ? { loadBalancerEndpoint } : {}), reason, ...event });
     await Promise.all([...sockets].map((socket) => new Promise((resolve) => {
       if (socket.readyState !== 1) { resolve(); return; }
       try { socket.send(payload, () => { socket.close(code, reason); resolve(); }); } catch { socket.close(code, reason); resolve(); }

@@ -1,9 +1,11 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { EventEmitter } from 'node:events';
 import { log } from '@eliware/common';
-import { startPendingInitRuntime } from '../../../src/lifecycle/pending-init/runtime.mjs';
+import { startPendingInitRuntime as startPendingInitRuntimeImpl } from '../../../src/lifecycle/pending-init/runtime.mjs';
 
-const environments = { ROOT_TOKEN: 'root', ELERA_HTTP_PORT: '0', RUNTIME_NODE_NAME: 'elera-0', MARIADB_DATA_DIR: 'data' };
+const environments = { ROOT_TOKEN: 'root', ELERA_HTTP_PORT: '0', MARIADB_DATA_DIR: 'data' };
+const identity = { name: 'elera-0.cluster.local' };
+const startPendingInitRuntime = (options = {}) => startPendingInitRuntimeImpl({ identity, ...options });
 const active = new Set();
 
 afterEach(() => {

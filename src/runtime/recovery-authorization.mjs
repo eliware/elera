@@ -4,11 +4,15 @@ import { access } from 'node:fs/promises';
 import { promoteSafeToBootstrap } from '../cluster/cold-bootstrap/promote-state.mjs';
 
 export async function authorizeSupervisorRecovery({ decision, members, config, intentState, recoveryProtocol, recoveryState, recoveryAudit, log, environment = process.env, fetchImpl = fetch, argumentsFor = mariaDbArguments, applyArguments = startupArguments, pathExists = access, promote = promoteSafeToBootstrap } = {}) {
+  if (!decision || !Array.isArray(members) || members.length === 0 || !config?.dataDir || !intentState?.paths?.renderedPath || typeof fetchImpl !== 'function' || typeof recoveryProtocol?.authorize !== 'function' || typeof recoveryProtocol?.beginBootstrap !== 'function') throw new TypeError('recovery authorization dependencies are required');
   if (!(decision.localWinner === true && decision.mode === 'bootstrap')) return { decision, args: undefined };
+  if (!decision.winner || !members.some((node) => node.local && node.name === decision.winner)) return { decision: { ...decision, mode: 'blocked', reason: 'recovery winner is not the validated local member' }, args: undefined };
   const claims = await Promise.all(members.map(async (node) => {
-    const url = node.local ? `http://127.0.0.1:${config.httpPort}` : node.url;
+    const url = node.url ?? `http://${node.name}:${config.httpPort}`;
+    const parsed = new URL(url);
+    if (parsed.hostname !== node.name) throw new Error(`recovery lease URL ${url} does not match configured member ${node.name}`);
     try {
-      const response = await fetchImpl(`${url}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { authorization: `Bearer ${environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify({ epoch: decision.epoch, winner: decision.winner }), signal: AbortSignal.timeout(config.timeoutMs) });
+      const response = await fetchImpl(`${url.replace(/\/$/, '')}/api/v1/cluster/cold-bootstrap/lease`, { method: 'POST', headers: { authorization: `Bearer ${environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN}`, 'content-type': 'application/json' }, body: JSON.stringify({ epoch: decision.epoch, winner: decision.winner }), signal: AbortSignal.timeout(config.timeoutMs) });
       const granted = response.ok && (await response.json()).data?.granted === true;
       recoveryAudit.lease({ node: node.name, granted, epoch: decision.epoch });
       return granted;

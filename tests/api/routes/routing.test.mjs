@@ -8,9 +8,9 @@ const request = (body = {}) => ({
   },
 });
 const node = {
-  nodeId: "n",
+  nodeId: "n.example.test",
   clusterId: "c",
-  address: "db",
+  address: "n.example.test",
   sqlPort: 3306,
   synced: true,
   primary: "Primary",
@@ -24,6 +24,7 @@ const context = (method, path, observations = [node], body = {}) => {
     method,
     path,
     url: new URL(`http://localhost${path}`),
+    identity: { name: "n.example.test" },
     request: request(body),
     response,
     observationStore,
@@ -36,7 +37,7 @@ const context = (method, path, observations = [node], body = {}) => {
     })),
     routingBundles: {
       lease: jest.fn(async () => ({
-        routes: { primary: [{ host: "db", port: 3306 }] },
+        routes: { primary: [{ host: "n.example.test", port: 3306 }] },
         bundleVersion: "v1",
         expiresAt: "2099-01-01",
       })),
@@ -44,7 +45,6 @@ const context = (method, path, observations = [node], body = {}) => {
     routingEvent: jest.fn(() => undefined),
     environment: {
       ELERA_CLUSTER_SIZE: "1",
-      ELERA_NODE_ADDRESS: "local",
       ELERA_NODE_SQL_PORT: "3306",
       ELERA_PEERS: "",
     },
@@ -105,8 +105,8 @@ test("returns false for unrelated routing requests", async () => {
 });
 test("uses seeded and cached routes and refreshes from peers", async () => {
   const seed = {
-    primary: [{ host: "seed", port: 3306 }],
-    balanced: [{ host: "seed", port: 3306 }],
+    primary: [{ host: "seed.example.test", port: 3306 }],
+    balanced: [{ host: "seed.example.test", port: 3306 }],
   };
   const seeded = context("GET", "/api/v1/routes", []);
   seeded.routingEvent = () => ({ routes: seed });
@@ -120,7 +120,7 @@ test("uses seeded and cached routes and refreshes from peers", async () => {
   await handleRoutingRoute(cached);
   expect(cached.response.json).toHaveBeenCalled();
   const peer = context("GET", "/api/v1/routes", []);
-  peer.environment.ELERA_PEERS = "http://peer";
+  peer.environment.ELERA_PEERS = "http://peer.example.test";
   peer.getStatus.mockRejectedValue(new Error("status unavailable"));
   peer.fetchImpl = undefined;
   peer.observationStore.snapshot = () => [node];
@@ -146,7 +146,6 @@ test("retains recent calculated routes during a temporary observation gap", asyn
 test("handles route inspection without a status fallback provider", async () => {
   const c = context("GET", "/api/v1/routes", []);
   c.getStatus = undefined;
-  c.environment.ELERA_NODE_ADDRESS = undefined;
   await expect(handleRoutingRoute(c)).resolves.toBe(true);
 });
 test("handles absent observation APIs and peer-refreshed routes", async () => {
@@ -163,7 +162,7 @@ test("handles absent observation APIs and peer-refreshed routes", async () => {
       observations = [item];
     },
   };
-  peer.environment.ELERA_PEERS = "http://peer";
+  peer.environment.ELERA_PEERS = "http://peer.example.test";
   peer.fetchImpl = async () => ({
     ok: true,
     json: async () => ({ data: [node] }),
@@ -179,14 +178,12 @@ test("handles a failed status provider during local route fallback", async () =>
   const c = context("GET", "/api/v1/routes", []);
   c.getStatus = jest.fn().mockRejectedValue(new Error("status unavailable"));
   c.observationStore = { snapshot: () => [], upsert: jest.fn() };
-  c.environment.ELERA_NODE_ADDRESS = undefined;
   await expect(handleRoutingRoute(c)).resolves.toBe(true);
 });
 test("uses the local fallback port and optional observation snapshot paths", async () => {
   const c = context("GET", "/api/v1/routes", []);
   c.observationStore = { snapshot: undefined, upsert: jest.fn() };
   c.environment.ELERA_NODE_SQL_PORT = undefined;
-  c.clientAddress = () => 'local';
   await expect(handleRoutingRoute(c)).resolves.toBe(true);
 });
 test("uses default local SQL port when a ready node has no observation", async () => {
@@ -194,13 +191,12 @@ test("uses default local SQL port when a ready node has no observation", async (
   c.url = new URL("http://localhost/api/v1/routes?application=port-test");
   c.observationStore = { snapshot: () => null, upsert: jest.fn() };
   c.environment.ELERA_NODE_SQL_PORT = undefined;
-  c.clientAddress = () => 'local';
   await expect(handleRoutingRoute(c)).resolves.toBe(true);
   expect(c.response.json).toHaveBeenCalledWith(
     200,
     expect.objectContaining({
       data: expect.objectContaining({
-        primary: [{ host: "local", port: 3306, weight: 100 }],
+        primary: [{ host: "n.example.test", port: 3306, weight: 100 }],
       }),
     }),
   );

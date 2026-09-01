@@ -2,17 +2,19 @@ import { createServer } from "node:http";
 import { readBody } from "../../api/http.mjs";
 import { initializePendingData } from "./initialize.mjs";
 import { loadIntent } from "../../intent/model.mjs";
-import { runtimeIdentity } from "../../runtime/identity.mjs";
 import { createPendingInitAuthenticator } from './authentication.mjs';
 import { handlePendingRecoveryRoute } from './recovery-routes.mjs';
 import { json } from './responses.mjs';
-export function createPendingInitServer({ environment = process.env, log = console, initialize = initializePendingData, onInitialized = () => {}, onRecoveryBootstrap = () => {}, onRecoveryComplete = () => {}, onRecoveryJoin = () => {}, nodeDataReset, coldEvidence, recoveryRequired = false, recoveryReason = 'recovery evidence is unavailable', recoveryProtocol } = {}) {
+export function createPendingInitServer({ environment = process.env, identity, log = console, initialize = initializePendingData, onInitialized = () => {}, onRecoveryBootstrap = () => {}, onRecoveryComplete = () => {}, onRecoveryJoin = () => {}, nodeDataReset, coldEvidence, recoveryRequired = false, recoveryReason = 'recovery evidence is unavailable', recoveryProtocol } = {}) {
+  if (!identity?.name) throw new TypeError('runtime identity is required for pending initialization');
+  const intent = loadIntent(environment, identity);
   let operation;
   const standaloneOperation = () => {
-    const intent = loadIntent(environment);
     if (intent.cluster.members.length < 2) return "standalone-init";
-    const nodeName = environment.RUNTIME_NODE_NAME ?? runtimeIdentity(environment).name;
-    return intent.cluster.members[0].name === nodeName ? "bootstrap" : "join-pending";
+    const nodeName = identity?.name;
+    const localMembers = intent.cluster.members.filter((member) => member.name === nodeName);
+    if (localMembers.length !== 1) throw new Error(`runtime hostname ${nodeName} must match exactly one configured cluster member; configured members: ${intent.cluster.members.map((member) => member.name).join(', ')}`);
+    return localMembers[0].name === intent.cluster.members[0].name ? "bootstrap" : "join-pending";
   };
   const authorized = createPendingInitAuthenticator(environment);
   const server = createServer(async (request, response) => {
@@ -24,7 +26,7 @@ export function createPendingInitServer({ environment = process.env, log = conso
       try { return json(response, 200, { ok: true, operation: "cluster.cold-bootstrap.evidence", status: "completed", data: await coldEvidence() }); }
       catch (error) { return json(response, 503, { ok: false, error: error.message }); }
     }
-    if (await handlePendingRecoveryRoute({ request, response, authorized, recoveryRequired, recoveryReason, recoveryProtocol, onRecoveryBootstrap, onRecoveryComplete, onRecoveryJoin, log })) return;
+    if (await handlePendingRecoveryRoute({ request, response, authorized, recoveryRequired, recoveryReason, recoveryProtocol, onRecoveryBootstrap, onRecoveryComplete, onRecoveryJoin, identity, members: intent.cluster.members, log })) return;
     if (recoveryRequired && request.method === 'POST' && ['/api/v1/cluster/bootstrap', '/api/v1/initialization/apply'].includes(request.url)) {
       if (!authorized(request)) return json(response, 401, { ok: false, error: "authentication required" });
       return json(response, 503, { ok: false, error: 'cluster recovery required; initialization is not permitted', reason: recoveryReason });
@@ -37,8 +39,13 @@ export function createPendingInitServer({ environment = process.env, log = conso
         return json(response, 503, { ok: false, error: 'cluster recovery required; initialization is not permitted', reason: recoveryReason });
       }
       if (body.confirm !== true) return json(response, 409, { ok: false, error: "explicit confirmation required" });
-      const operationName = request.url.endsWith("/join") || (request.url.endsWith("/lifecycle/apply") && body.action === "join") ? "join" : request.url.endsWith("/initialization/apply") ? standaloneOperation() : "bootstrap";
-      if (request.url.endsWith("/lifecycle/apply") && !["bootstrap", "join"].includes(body.action)) return json(response, 400, { ok: false, error: "unsupported lifecycle action" });
+      let operationName;
+      try {
+        if (request.url.endsWith("/lifecycle/apply") && !["bootstrap", "join"].includes(body.action)) return json(response, 400, { ok: false, error: "unsupported lifecycle action" });
+        operationName = request.url.endsWith("/join") || (request.url.endsWith("/lifecycle/apply") && body.action === "join") ? "join" : request.url.endsWith("/initialization/apply") ? standaloneOperation() : "bootstrap";
+      } catch (error) {
+        return json(response, error.statusCode ?? 400, { ok: false, error: error.message });
+      }
       if (operation) return json(response, 409, { ok: false, error: `${operationName} already in progress` });
       operation = Promise.resolve().then(() => initialize({ environment, log }));
       try {
