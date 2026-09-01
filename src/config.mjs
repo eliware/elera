@@ -12,7 +12,7 @@ export function loadSupervisorConfig(environment = process.env, intent = undefin
     httpPort: number('ELERA_HTTP_PORT', 8080),
     clusterSize: intent?.cluster?.members?.length ?? 1,
     timeoutMs: Number(environment.ELERA_QUERY_TIMEOUT_MS ?? 5000), drainTimeoutMs: clientDrainTimeout(environment.ELERA_DRAIN_TIMEOUT_MS ?? 45000), shutdownTimeoutMs: Number(environment.ELERA_SHUTDOWN_TIMEOUT_MS ?? 60000), startupTimeoutMs: Number(environment.ELERA_STARTUP_TIMEOUT_MS ?? 30000), dataDir: intent?.mariadb?.dataDir ?? environment.MARIADB_DATA_DIR ?? '/var/lib/mysql', elera: (intent?.cluster?.members?.length ?? 1) > 1,
-    intent, runtimeNodeName: environment.RUNTIME_NODE_NAME ?? runtimeIdentity().name,
+    intent, runtimeNodeName: runtimeIdentity().name,
     environment,
   });
 }
