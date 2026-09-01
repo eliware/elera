@@ -4,15 +4,18 @@ import { createSqlDrainIntegration } from '../lifecycle/sql-routing.mjs';
 import { createDrainPropagation } from '../cluster/drain-propagation.mjs';
 import { createDrainEventPublisher } from '../lifecycle/drain-events.mjs';
 
-export function createSupervisorTraffic({ telemetry, identity, config, health, routingBus, log, environment = process.env, getDb, setDrained = () => {} } = {}) {
+export function createSupervisorTraffic({ telemetry, identity, config, health, routingBus, log, environment = process.env, getDb, setDrained = () => {}, fetchImpl = fetch } = {}) {
   let drained = false;
   const updateLocalSqlRoute = createSqlDrainIntegration({ getClient: getDb, node: identity.name, log });
   const publishDrainEvent = createDrainEventPublisher({ bus: routingBus, node: identity.name, getReady: () => health.status(), getContext: () => ({ nodeIdentity: identity, reconnectDeadlineMs: config.shutdownTimeoutMs, ...(environment.ELERA_LOAD_BALANCER_ENDPOINT ? { loadBalancerEndpoint: environment.ELERA_LOAD_BALANCER_ENDPOINT } : {}) }), log });
   const drain = createDrainManager({ onChange: (value) => { telemetry.recordEvent(value ? 'traffic.drain' : 'traffic.undrain'); drained = value; setDrained(value); updateLocalSqlRoute(value); log.info(value ? 'Traffic drained' : 'Traffic undrained'); void publishDrainEvent(value); } });
   const sqlQuiesce = createSqlQuiesce({ drain, timeoutMs: config.drainTimeoutMs });
-  const clusterDrain = createDrainPropagation({ drain, peers: (environment.ELERA_PEERS ?? '').split(','), token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, log });
+  const clusterDrain = createDrainPropagation({ drain, peers: (environment.ELERA_PEERS ?? '').split(','), token: environment.ELERA_PEER_TOKEN ?? environment.ROOT_TOKEN, fetchImpl, log });
   const recover = async () => {
-    drain.end();
+    // Recovery must clear the cluster-wide drain as well as this process's
+    // local gate. Peer shutdowns can have propagated drain=true here while
+    // this node remained running.
+    clusterDrain.set(false);
     drained = false;
     setDrained(false);
     updateLocalSqlRoute(false);

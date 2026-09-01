@@ -20,6 +20,17 @@ test('includes the load-balancer endpoint in propagated drain context', async ()
 
 test('bridges drain state to the supervisor entrypoint', () => { const setDrained = jest.fn(); const traffic = createSupervisorTraffic({ telemetry: { recordEvent: jest.fn() }, identity: { name: 'node-a' }, config: { shutdownTimeoutMs: 10, drainTimeoutMs: 10 }, health: { status: async () => ({ ready: true }) }, routingBus: { publish: jest.fn() }, log: { info: jest.fn() }, environment: { ELERA_PEER_TOKEN: 'peer' }, getDb: () => undefined, setDrained }); traffic.drain.begin(); expect(setDrained).toHaveBeenCalledWith(true); });
 
+test('recovery propagates undrain after a peer outage drained this node', async () => {
+  const fetchImpl = jest.fn(async () => ({ ok: true }));
+  const publish = jest.fn();
+  const traffic = createSupervisorTraffic({ telemetry: { recordEvent: jest.fn() }, identity: { name: 'node-a' }, config: { startupTimeoutMs: 10, shutdownTimeoutMs: 10, drainTimeoutMs: 10 }, health: { status: async () => ({ ready: true }) }, routingBus: { publish }, log: { info: jest.fn() }, environment: { ELERA_PEER_TOKEN: 'peer', ELERA_PEERS: 'http://node-b' }, getDb: () => undefined, fetchImpl });
+  traffic.clusterDrain.set(true, true);
+  expect(traffic.getDrained()).toBe(true);
+  await traffic.recover();
+  expect(traffic.getDrained()).toBe(false);
+  expect(fetchImpl).toHaveBeenCalledWith('http://node-b/api/v1/traffic/undrain', expect.objectContaining({ method: 'POST' }));
+});
+
 test('recovers ordinary restart state and publishes recovery after readiness', async () => {
   const setDrained = jest.fn(); const publish = jest.fn();
   const traffic = createSupervisorTraffic({ telemetry: { recordEvent: jest.fn() }, identity: { name: 'node-a' }, config: { shutdownTimeoutMs: 10, drainTimeoutMs: 10 }, health: { status: async () => ({ ready: true }) }, routingBus: { publish }, log: { info: jest.fn() }, environment: { ROOT_TOKEN: 'root' }, getDb: () => undefined, setDrained });
