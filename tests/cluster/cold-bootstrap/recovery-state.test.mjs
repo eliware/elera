@@ -50,3 +50,8 @@ test('supports idempotent transitions and preserves falsy optional details as ab
   expect(state.set('joining', { reason: '', epoch: 0 })).toEqual({ state: 'joining' });
   expect(state.set('joining', { reason: 'still joining', epoch: 'e2' })).toEqual({ state: 'joining', reason: 'still joining', epoch: 'e2' });
 });
+
+test('allows a blocked recovery to resume as a normal Galera join', () => {
+  const state = createRecoveryState('blocked-ambiguous');
+  expect(state.set('joining', { reason: 'component reformed' })).toMatchObject({ state: 'joining', reason: 'component reformed' });
+});
