@@ -103,9 +103,10 @@ test('keeps original arguments when authorization returns no replacement', async
 });
 
 test('uses a valid clean marker and active Primary peer for ordinary join', async () => {
+  plan.mockClear();
   const consume = jest.fn(async () => ({ node: 'node-a', epoch: null, nonce: 'n' }));
   const result = await prepareSupervisorRecovery({ startupConfiguration: { initialIntent: { cluster: { members: [{ name: 'node-a' }, { name: 'node-b' }] } }, args: [] }, intentState: {}, config: { elera: true, dataDir: 'data', httpPort: 8080 }, identity: { name: 'node-a' }, health: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, log: {}, environment: {}, mariaProcess: {}, restartMarker: { consume } });
-  expect(result.startupDecision).toMatchObject({ mode: 'join', bootstrapComplete: true }); expect(consume).toHaveBeenCalled();
+  expect(result.startupDecision).toMatchObject({ mode: 'join', bootstrapComplete: true }); expect(consume).toHaveBeenCalled(); expect(plan).not.toHaveBeenCalled();
 });
 
 test('reads and consumes a clean-restart marker through the reader path', async () => {
