@@ -8,8 +8,11 @@ test('collects local state, recovers unknown sequence numbers, and reports healt
   const dir = await mkdtemp(join(tmpdir(), 'elera-evidence-'));
   try {
     await writeFile(join(dir, 'grastate.dat'), 'uuid: abc\nseqno: -1\nsafe_to_bootstrap: 0\n');
-    const evidence = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: dir, health: { status: async () => ({ ready: false, values: { wsrep_cluster_status: 'Non-Primary' } }) }, run: async () => 'WSREP: Recovered position: abc:12' });
+    let calls = 0;
+    const evidence = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: dir, health: { status: async () => ({ ready: false, values: { wsrep_cluster_status: 'Non-Primary' } }) }, run: async () => { calls += 1; return 'WSREP: Recovered position: abc:12'; } });
     await expect(evidence.local()).resolves.toMatchObject({ node: 'one', active: false, state: { recoveredSeqno: 12 }, generation: 1 });
+    await expect(evidence.local()).resolves.toMatchObject({ node: 'one', active: false, state: { recoveredSeqno: 12 }, generation: 2 });
+    expect(calls).toBe(1);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
@@ -48,5 +51,51 @@ test('handles recovered state, health failures, and rejected peers', async () =>
     await expect(evidence.local()).resolves.toMatchObject({ state: { savedSeqno: 12, recoveredSeqno: undefined }, active: false });
     const rejected = createColdBootstrapEvidence({ localNode: { name: 'one' }, dataDir: dir, health: {}, fetchImpl: async () => ({ ok: false, status: 503 }), token: 'token' });
     await expect(rejected.remote('http://peer')).rejects.toThrow('peer returned 503');
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('does not rerun a failed wsrep recovery probe for every live evidence request', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'elera-evidence-'));
+  try {
+    await writeFile(join(dir, 'grastate.dat'), 'uuid: abc\nseqno: -1\nsafe_to_bootstrap: 0\n');
+    let calls = 0;
+    const evidence = createColdBootstrapEvidence({
+      localNode: { name: 'one' },
+      dataDir: dir,
+      health: { status: async () => ({ ready: false, values: { wsrep_cluster_status: 'Non-Primary' } }) },
+      run: async () => { calls += 1; throw new Error('wsrep-recover timed out'); },
+    });
+
+    await expect(evidence.local()).rejects.toThrow('wsrep-recover timed out');
+    await expect(evidence.local()).rejects.toThrow('wsrep-recover timed out');
+    expect(calls).toBe(1);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('shares one in-flight wsrep recovery probe across concurrent live evidence requests', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'elera-evidence-'));
+  try {
+    await writeFile(join(dir, 'grastate.dat'), 'uuid: abc\nseqno: -1\nsafe_to_bootstrap: 0\n');
+    let calls = 0;
+    const releases = [];
+    const evidence = createColdBootstrapEvidence({
+      localNode: { name: 'one' },
+      dataDir: dir,
+      health: { status: async () => ({ ready: false, values: { wsrep_cluster_status: 'Non-Primary' } }) },
+      run: async () => {
+        calls += 1;
+        await new Promise((resolve) => { releases.push(resolve); });
+        throw new Error('wsrep-recover timed out');
+      },
+    });
+
+    const first = evidence.local();
+    const second = evidence.local();
+    for (let attempt = 0; attempt < 100 && (calls < 1 || releases.length < 1); attempt += 1) await new Promise((resolve) => setImmediate(resolve));
+    expect(releases).toHaveLength(1);
+    releases.forEach((release) => release());
+    await expect(first).rejects.toThrow('wsrep-recover timed out');
+    await expect(second).rejects.toThrow('wsrep-recover timed out');
+    expect(calls).toBe(1);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
