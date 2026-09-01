@@ -38,11 +38,12 @@ export function createSupervisorEntryComposition({ config, identity, lifecycle, 
   });
   const traffic = createSupervisorTraffic({ telemetry, identity, config, health, routingBus: routing.routingBus, log, getDb, setDrained });
   const coldState = getColdState();
+  const currentColdState = () => getColdState();
   const control = createSupervisorControlComposition({
     db: { query: (...args) => getDb()?.query?.(...args) }, ...domain, routingBundles: routing.routingBundles,
     routingEvent: routing.routingEvent, recovery, observationStore: domain.observationStore, health,
     clusterDrain: traffic.clusterDrain, lifecycle, telemetry, config, intentState: domain.intentState,
-    coldState: { ...coldState, coldEvidence: coldState.coldEvidence ?? coldEvidence }, processController: { start: (...args) => getMariaProcess()?.start?.(...args), stop: (...args) => getMariaProcess()?.stop?.(...args) }, applyIntent, environment, log,
+    coldState: { ...coldState, coldEvidence: coldState.coldEvidence ?? coldEvidence }, getColdRecoveryProtocol: () => currentColdState().coldRecoveryProtocol?.(), processController: { start: (...args) => getMariaProcess()?.start?.(...args), stop: (...args) => getMariaProcess()?.stop?.(...args) }, applyIntent, environment, log,
   });
   const probes = createSupervisorProbes({
     getStatus: () => health.status(), isDraining: () => traffic.drain.isDraining(),

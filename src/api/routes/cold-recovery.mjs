@@ -2,6 +2,7 @@ import { readBody } from '../http.mjs';
 
 const allowed = (auth, scope) => auth?.root || auth?.scopes?.includes('*') || auth?.scopes?.includes(scope);
 export async function handleColdRecoveryRoute({ method, path, request, response, protocol, auth, internal = false } = {}) {
+  if (!protocol && path.startsWith('/api/v1/cluster/cold-recovery/')) { if (!allowed(auth, 'recovery:read') && !internal) return false; response.json(503, { ok: false, operation: 'cluster.cold-recovery', error: 'recovery unavailable', code: 'RECOVERY_UNAVAILABLE' }); return true; }
   if (!protocol) return false;
   if (method === 'GET' && path === '/api/v1/cluster/cold-recovery/evidence') {
     if (!allowed(auth, 'recovery:read')) return false;

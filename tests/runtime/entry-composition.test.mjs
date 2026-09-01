@@ -20,6 +20,7 @@ test('composes collaborators and forwards live runtime dependencies', async () =
   const servers = [];
   let database;
   let drained = false;
+  let liveColdState = { drain: {}, clusterDrain: {} };
   const telemetry = { summary: () => ({}), start: jest.fn() };
   const recoveryState = { snapshot: () => ({}) };
   const lifecycle = { get: () => 'running' };
@@ -29,7 +30,7 @@ test('composes collaborators and forwards live runtime dependencies', async () =
     environment: { ELERA_CLUSTER_SIZE: '1', ROOT_TOKEN: 'root' }, getDb: () => database,
     setDrained: (value) => { drained = value; }, getDrained: () => drained,
     getTimers: () => ['peer', 'routing'], getMariaProcess: () => ({ start: jest.fn(), stop: jest.fn() }),
-    getColdState: () => ({ drain: {}, clusterDrain: {} }), applyIntent: jest.fn(), servers,
+    getColdState: () => liveColdState, applyIntent: jest.fn(), servers,
   });
   expect(result.health).toBeDefined();
   expect(result.routingEvent).toEqual(expect.any(Function));
@@ -37,6 +38,8 @@ test('composes collaborators and forwards live runtime dependencies', async () =
   firstManagedAuth = managedAuth;
   expect(servers).toHaveLength(1);
   expect(captured.control.coldState).toEqual(expect.objectContaining({ drain: {}, clusterDrain: {}, coldEvidence: expect.any(Function) }));
+  liveColdState = { ...liveColdState, coldRecoveryProtocol: () => ({ live: true }) };
+  expect(captured.control.getColdRecoveryProtocol()).toEqual({ live: true });
   result.lifecycleWiring({ errors: [] });
   expect(captured.lifecycle.getTimers()).toEqual(['peer', 'routing']);
   expect(captured.probes.getStatus()).toEqual({});
