@@ -104,6 +104,14 @@ test('starts normal non-blocked startup without the pending recovery listener', 
   expect(captured.pending).toBeDefined();
 });
 
+test('clears propagated cluster drain after normal rejoin startup', async () => {
+  recoveryResult = { ...defaultResult(), startupDecision: { mode: 'rejoin', reason: 'persisted member rejoin' } };
+  const recoverTraffic = jest.fn().mockResolvedValue(undefined);
+  await expect(startSupervisor({ ...dependencies(), recoverTraffic })).resolves.toBeUndefined();
+  expect(recoverTraffic).toHaveBeenCalledTimes(1);
+  expect(captured.runtimeOptions.startupDecision).toMatchObject({ mode: 'rejoin' });
+});
+
 test('awaits the shared HTTP listener before recovery preparation', async () => {
   recoveryResult = { ...defaultResult(), startupDecision: { mode: 'join', reason: 'active peer' } };
   const order = [];
