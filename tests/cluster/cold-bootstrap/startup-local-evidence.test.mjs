@@ -29,3 +29,22 @@ test('fails closed when recovery cannot report a sequence number', async () => {
   const evidence = createStartupLocalEvidence({ node: { name: 'a' }, dataDir: 'x', readState: async () => ({ uuid: 'c', seqno: -1, safeToBootstrap: false }), runRecover: async () => 'no recovered position' });
   await expect(evidence()).rejects.toThrow('wsrep-recover did not report a position');
 });
+
+test('does not rerun a failed wsrep recovery probe for every evidence request', async () => {
+  let calls = 0;
+  const evidence = createStartupLocalEvidence({ node: { name: 'a' }, dataDir: 'x', readState: async () => ({ uuid: 'c', seqno: -1, safeToBootstrap: false }), runRecover: async () => { calls += 1; throw new Error('recover unavailable'); } });
+  await expect(evidence()).rejects.toThrow('recover unavailable');
+  await expect(evidence()).rejects.toThrow('recover unavailable');
+  expect(calls).toBe(1);
+});
+
+test('shares one in-flight wsrep recovery probe across concurrent evidence requests', async () => {
+  let calls = 0;
+  let release;
+  const evidence = createStartupLocalEvidence({ node: { name: 'a' }, dataDir: 'x', readState: async () => ({ uuid: 'c', seqno: -1, safeToBootstrap: false }), runRecover: async () => { calls += 1; await new Promise((resolve) => { release = resolve; }); return 'Recovered position: c:42'; } });
+  const first = evidence(); const second = evidence();
+  await Promise.resolve();
+  expect(calls).toBe(1);
+  release();
+  await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+});
