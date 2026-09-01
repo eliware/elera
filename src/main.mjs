@@ -11,7 +11,7 @@ import { createCleanRestartMarker } from './runtime/clean-restart-marker.mjs';
 import { createSupervisorRecoveryJoiner } from './runtime/recovery-join-wiring.mjs';
 
 const config = loadSupervisorConfig();
-const identity = runtimeIdentity();
+const identity = runtimeIdentity({ name: process.env.RUNTIME_NODE_NAME });
 const dbEnv = supervisorDbEnvironment();
 const state = { db: undefined, drained: false, shuttingDown: false, restarting: false, bootstrapMaria: undefined, coldBootstrapLocal: undefined, coldBootstrapService: undefined, coldEvidence: undefined, coldRecoveryProtocol: undefined, peerTimer: undefined, routingTimer: undefined, mariaProcess: undefined, recoveryCompletion: undefined, applyIntent: undefined, signals: undefined };
 let signals;
