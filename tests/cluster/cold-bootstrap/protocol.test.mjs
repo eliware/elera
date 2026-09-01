@@ -50,6 +50,16 @@ test('allows an explicit forced authorization to bypass peer acknowledgements', 
   const plan = await protocol.plan();
   await expect(protocol.authorize({ epoch: plan.epoch, force: true })).resolves.toMatchObject({ phase: 'authorized', operatorForced: true, acknowledgements: new Set(['a', 'b', 'c']) });
 });
+test('allows a root-mediated temporary two-supervisor quorum', async () => {
+  const { protocol } = makeProtocol();
+  const plan = await protocol.plan();
+  await expect(protocol.authorize({ epoch: plan.epoch, force: true, supervisorQuorum: 2, acknowledgements: ['a', 'b'] })).resolves.toMatchObject({ phase: 'authorized', operatorForced: true, requiredAcknowledgements: 2, acknowledgements: new Set(['a', 'b']) });
+});
+test('rejects an invalid temporary supervisor quorum', async () => {
+  const { protocol } = makeProtocol();
+  const plan = await protocol.plan();
+  await expect(protocol.authorize({ epoch: plan.epoch, force: true, supervisorQuorum: 0 })).rejects.toMatchObject({ statusCode: 400 });
+});
 
 test('rejects stale or malformed evidence before candidate selection', async () => {
   const store = { async read() {}, async write() {} };

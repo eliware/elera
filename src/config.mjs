@@ -25,7 +25,7 @@ export function mariaDbArguments(config) {
     // Provider-level primary-component recovery is deliberately disabled. It
     // can promote multiple cold-starting nodes concurrently; the supervisor's
     // explicit recovery coordinator is the only bootstrap authority.
-    args.push('--wsrep-provider-options=pc.recovery=FALSE', '--wsrep-on=ON', '--wsrep-provider=/usr/lib/galera/libgalera_smm.so', `--wsrep-cluster-name=${config.intent.cluster.name}`, `--wsrep-cluster-address=gcomm://${members.map((item) => item.address).join(',')}`, `--wsrep-node-name=${local.name}`, `--wsrep-node-address=${local.address}`);
+    args.push('--wsrep-provider-options=pc.recovery=TRUE', '--wsrep-on=ON', '--wsrep-provider=/usr/lib/galera/libgalera_smm.so', `--wsrep-cluster-name=${config.intent.cluster.name}`, `--wsrep-cluster-address=gcomm://${members.map((item) => item.address).join(',')}`, `--wsrep-node-name=${local.name}`, `--wsrep-node-address=${local.address}`);
   }
   return args;
 }

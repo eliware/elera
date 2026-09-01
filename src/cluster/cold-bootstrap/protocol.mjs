@@ -63,12 +63,14 @@ export function createColdRecoveryProtocol({ nodes, localEvidence, fetchEvidence
       current = undefined;
       return this.plan();
     },
-    async authorize({ epoch, acknowledgements = [], force = false } = {}) {
-      debug('Authorizing recovery epoch', { epoch, acknowledgements, force });
+    async authorize({ epoch, acknowledgements = [], force = false, supervisorQuorum } = {}) {
+      debug('Authorizing recovery epoch', { epoch, acknowledgements, force, supervisorQuorum });
       const existing = await read();
       if (!existing || existing.epoch !== epoch || !validateRecoveryEpoch(existing, existing.clusterId)) throw Object.assign(new Error('unknown or stale recovery epoch'), { statusCode: 409 });
-      const acknowledgementsBy = force ? existing.quorum.slice() : [...new Set(Array.isArray(acknowledgements) ? acknowledgements : [])].sort();
-      current = transitionRecoveryEpoch(existing, 'authorized', { acknowledgements: acknowledgementsBy, acknowledgementsBy, ...(force ? { operatorForced: true } : {}), authorizedAt: now().toISOString() });
+      const requestedQuorum = supervisorQuorum ?? existing.quorum.length;
+      if (!Number.isInteger(requestedQuorum) || requestedQuorum < 1 || requestedQuorum > existing.quorum.length) throw Object.assign(new Error('supervisor quorum must be between one and the configured member count'), { statusCode: 400 });
+      const acknowledgementsBy = force && supervisorQuorum === undefined ? existing.quorum.slice() : [...new Set(Array.isArray(acknowledgements) ? acknowledgements : [])].sort();
+      current = transitionRecoveryEpoch(existing, 'authorized', { acknowledgements: acknowledgementsBy, acknowledgementsBy, requiredAcknowledgements: requestedQuorum, ...(force ? { operatorForced: true } : {}), authorizedAt: now().toISOString() });
       await persist(current, existing.epoch);
       await publishEvent({ type: 'recovery.bootstrap-authorized', epoch: current.epoch, acknowledgements: acknowledgementsBy });
       return current;
