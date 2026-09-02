@@ -25,8 +25,8 @@ test('composes collaborators and forwards live runtime dependencies', async () =
   const recoveryState = { snapshot: () => ({}) };
   const lifecycle = { get: () => 'running' };
   const result = createSupervisorEntryComposition({
-    config: { dataDir: 'tests/.tmp', timeoutMs: 100, elera: false, clusterSize: 1 },
-    identity: { name: 'node' }, lifecycle, telemetry, recoveryState, recovery: {}, log: {},
+    config: { dataDir: 'tests/.tmp', timeoutMs: 100, elera: false, clusterSize: 1, intent: { cluster: { members: [{ name: 'node.example.test', address: 'node.example.test' }] } } },
+    identity: { name: 'node.example.test' }, lifecycle, telemetry, recoveryState, recovery: {}, log: {},
     environment: { ELERA_CLUSTER_SIZE: '1', ROOT_TOKEN: 'root' }, getDb: () => database,
     setDrained: (value) => { drained = value; }, getDrained: () => drained,
     getTimers: () => ['peer', 'routing'], getMariaProcess: () => ({ start: jest.fn(), stop: jest.fn() }),
@@ -54,8 +54,7 @@ test('composes collaborators and forwards live runtime dependencies', async () =
   expect(captured.control.db.query('select')).toBeUndefined();
   expect(result.traffic.getDrained()).toBe(false);
   expect(drained).toBe(false);
-  const defaults = createSupervisorEntryComposition({ config: { dataDir: 'tests/.tmp' }, identity: {}, lifecycle, telemetry, recoveryState, recovery: {}, log: {}, getDb: () => undefined, setDrained: () => {}, getDrained: () => false, getTimers: () => [] });
-  expect(defaults).toBeDefined();
+  expect(() => createSupervisorEntryComposition({ config: { dataDir: 'tests/.tmp' }, identity: {}, lifecycle, telemetry, recoveryState, recovery: {}, log: {}, getDb: () => undefined, setDrained: () => {}, getDrained: () => false, getTimers: () => [] })).toThrow('entry composition requires validated config');
   captured.control.applyIntent({});
 });
 

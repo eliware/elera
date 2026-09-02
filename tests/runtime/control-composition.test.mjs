@@ -69,7 +69,7 @@ test('composes safely when optional cold-recovery providers are absent', () => {
   const result = createSupervisorControlComposition({
     db: { query: jest.fn() }, metadata: {}, managed: {}, applications: {}, reconciler: {}, artifactStore: {}, routingBundles: { lease: jest.fn() }, routingEvent: jest.fn(),
     recovery: {}, observationStore: { all: () => [] }, health: { status: async () => ({}), cacheInfo: () => ({}) }, clusterDrain: {}, lifecycle: { get: () => 'idle' },
-    telemetry: { summary: () => ({}), details: () => ({}) }, config: { runtimeNodeName: 'node-a', dataDir: 'data' }, intentState: {}, coldState,
+    telemetry: { summary: () => ({}), details: () => ({}) }, config: { runtimeNodeName: 'node-a.example.test', dataDir: 'data' }, intentState: {}, coldState,
     processController: { stop: jest.fn(), start: jest.fn() }, applyIntent: jest.fn(), environment: {}, log: {}
   });
   expect(result.options.getColdBootstrap()).toBeUndefined();

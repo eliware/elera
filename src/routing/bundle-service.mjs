@@ -47,8 +47,8 @@ export function createRoutingBundleService({ managed, observationStore, identity
         return { valid: false, error: error.message };
       }
       const routes = bundle.routes;
-      validateBundle(bundle);
-      return { valid: true, application: bundle.application, database: bundle.database, bundleVersion: bundle.bundleVersion, writer: bundle.writer, routeCount: routes.balanced.length };
+      const normalized = validateBundle(bundle);
+      return { valid: true, application: normalized.application, database: normalized.database, bundleVersion: normalized.bundleVersion, writer: normalized.writer, routeCount: normalized.routes.balanced.length };
     },
     async rebalance(request = {}) {
       const key = request.application ?? 'default';

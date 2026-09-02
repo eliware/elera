@@ -1,12 +1,12 @@
 import { expect, jest, test } from '@jest/globals';
 
 const captured = {};
-const defaultResult = () => ({ initialIntent: { cluster: { members: [{ name: 'node-a' }, { name: 'node-b' }] } }, args: ['--datadir=/data'], localEvidence: { local: {} }, members: [{ name: 'node-a' }, { name: 'node-b' }], startupDecision: { mode: 'blocked', reason: 'all nodes require recovery' }, coldRecoveryProtocol: { complete: jest.fn() }, recoveryCompletion: {} });
+const defaultResult = () => ({ initialIntent: { cluster: { members: [{ name: 'node-a.example.test' }, { name: 'node-b.example.test' }] } }, args: ['--datadir=/data'], localEvidence: { local: {} }, members: [{ name: 'node-a.example.test' }, { name: 'node-b.example.test' }], startupDecision: { mode: 'blocked', reason: 'all nodes require recovery' }, coldRecoveryProtocol: { complete: jest.fn() }, recoveryCompletion: {} });
 let recoveryResult = defaultResult();
 let runtimeFailure;
 let processFailure;
 jest.unstable_mockModule('../../src/runtime/startup-configuration.mjs', () => ({
-  loadSupervisorStartupConfiguration: jest.fn(async () => ({ initialIntent: { cluster: { members: [{ name: 'node-a' }, { name: 'node-b' }] } }, args: ['--datadir=/data'] }))
+  loadSupervisorStartupConfiguration: jest.fn(async () => ({ initialIntent: { cluster: { members: [{ name: 'node-a.example.test' }, { name: 'node-b.example.test' }] } }, args: ['--datadir=/data'] }))
 }));
 jest.unstable_mockModule('../../src/runtime/recovery-startup.mjs', () => ({
   prepareSupervisorRecovery: jest.fn(async () => recoveryResult)
@@ -24,7 +24,7 @@ const { startSupervisor } = await import('../../src/runtime/startup-coordinator.
 
 function dependencies() {
   return {
-    config: { elera: true, httpPort: 8080, dataDir: '/data' }, identity: { name: 'node-a' }, log: { info: jest.fn(), warn: jest.fn() },
+    config: { elera: true, httpPort: 8080, dataDir: '/data' }, identity: { name: 'node-a.example.test' }, log: { info: jest.fn(), warn: jest.fn() },
     loadEnvironmentIntent: jest.fn(), intentState: { apply: jest.fn() }, routingEnvironment: {}, recoveryState: { set: jest.fn() }, recoveryAudit: {}, health: {},
     environment: { ROOT_TOKEN: 'root' }, dbEnv: {}, probes: {}, routingEvent: jest.fn(), routingBus: {}, sharedRoutingAssignments: {}, observationStore: {},
     getDrained: () => false, cleanRestartIntent: {}, telemetry: { start: jest.fn() }, state: { mariaProcess: {} }
@@ -37,7 +37,7 @@ test('blocked initialized startup wires recovery readiness and completion handof
   expect(captured.pending.recoveryRequired).toBe(true);
   expect(captured.pending.recoveryProtocol).toBeDefined();
   expect(captured.pending.onRecoveryComplete).toBe(onRecoveryComplete);
-  await captured.pending.onRecoveryBootstrap({ epoch: 7, winner: { node: 'node-a' }, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] });
+  await captured.pending.onRecoveryBootstrap({ epoch: 7, winner: { node: 'node-a.example.test' }, clusterId: 'cluster-a', quorum: ['node-a.example.test', 'node-b.example.test'] });
   expect(captured.pending.recoveryProtocol.complete).not.toHaveBeenCalled();
   await captured.pending.onRecoveryComplete({ epoch: 7, phase: 'complete' });
   expect(onRecoveryComplete).toHaveBeenCalledWith({ epoch: 7, phase: 'complete' });
@@ -49,12 +49,12 @@ test('starts the local recovery winner and runtime after authorized bootstrap', 
   const state = { mariaProcess: {} };
   const recoverTraffic = jest.fn().mockResolvedValue(undefined);
   const result = await startSupervisor({ ...dependencies(), state, recoverTraffic });
-  await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a' }, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] });
+  await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a.example.test' }, clusterId: 'cluster-a', quorum: ['node-a.example.test', 'node-b.example.test'] });
   expect(captured.processController.start).toHaveBeenCalledWith(expect.arrayContaining(['--wsrep-new-cluster']));
   expect(captured.pendingRuntime.shutdown).toHaveBeenCalledTimes(1);
   expect(recoveryResult.startupServer.close).toHaveBeenCalledTimes(1);
   expect(recoverTraffic).toHaveBeenCalledTimes(1);
-  await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a' }, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] });
+  await captured.pending.onRecoveryBootstrap({ epoch: 8, winner: { node: 'node-a.example.test' }, clusterId: 'cluster-a', quorum: ['node-a.example.test', 'node-b.example.test'] });
   expect(captured.pendingRuntime.shutdown).toHaveBeenCalledTimes(1);
   expect(recoveryResult.startupServer.close).toHaveBeenCalledTimes(1);
   expect(result).toEqual({ pending: true });
@@ -65,7 +65,7 @@ test('keeps a non-winning recovery node in pending mode', async () => {
   const state = { mariaProcess: {} };
   const onRecoveryBootstrap = jest.fn().mockResolvedValue(false);
   await startSupervisor({ ...dependencies(), state, onRecoveryBootstrap });
-  await captured.pending.onRecoveryBootstrap({ epoch: 9, winner: { node: 'node-b' } });
+  await captured.pending.onRecoveryBootstrap({ epoch: 9, winner: { node: 'node-b.example.test' } });
   expect(captured.processController.start).not.toHaveBeenCalled();
   expect(onRecoveryBootstrap).toHaveBeenCalled();
 });
@@ -74,7 +74,7 @@ test('runs the joiner coordinator only after local winner runtime startup', asyn
   recoveryResult = defaultResult();
   const recoverJoiners = jest.fn().mockResolvedValue(undefined);
   await startSupervisor({ ...dependencies(), state: { mariaProcess: {} }, recoverJoiners });
-  await captured.pending.onRecoveryBootstrap({ epoch: 15, winner: { node: 'node-a' }, clusterId: 'cluster-a' });
+  await captured.pending.onRecoveryBootstrap({ epoch: 15, winner: { node: 'node-a.example.test' }, clusterId: 'cluster-a' });
   expect(recoverJoiners).toHaveBeenCalledWith(expect.objectContaining({ bootstrap: expect.objectContaining({ epoch: 15 }), runtime: expect.any(Object) }));
 });
 
@@ -83,7 +83,7 @@ test('does not run the joiner coordinator on a non-winning node', async () => {
   const recoverJoiners = jest.fn();
   captured.runtimeOptions = undefined;
   await startSupervisor({ ...dependencies(), state: { mariaProcess: {} }, recoverJoiners });
-  await captured.pending.onRecoveryBootstrap({ epoch: 16, winner: { node: 'node-b' } });
+  await captured.pending.onRecoveryBootstrap({ epoch: 16, winner: { node: 'node-b.example.test' } });
   expect(recoverJoiners).not.toHaveBeenCalled();
   expect(captured.runtimeOptions).toBeUndefined();
 });
@@ -92,8 +92,8 @@ test('wires an authenticated join request to join startup and runtime', async ()
   recoveryResult = defaultResult();
   await startSupervisor({ ...dependencies(), state: { mariaProcess: {} } });
   captured.processController.start.mockClear();
-  await expect(captured.pending.onRecoveryJoin({ winnerAddress: 'node-a', epoch: 17, clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] })).resolves.toMatchObject({ node: 'node-a', status: 'ready' });
-  expect(captured.processController.start).toHaveBeenCalledWith(expect.arrayContaining(['--wsrep-cluster-address=gcomm://node-a']));
+  await expect(captured.pending.onRecoveryJoin({ winnerAddress: 'node-a.example.test', epoch: 17, clusterId: 'cluster-a', quorum: ['node-a.example.test', 'node-b.example.test'] })).resolves.toMatchObject({ node: 'node-a.example.test', status: 'ready' });
+  expect(captured.processController.start).toHaveBeenCalledWith(expect.arrayContaining(['--wsrep-cluster-address=gcomm://node-a.example.test']));
   expect(captured.runtimeOptions.startupDecision).toMatchObject({ mode: 'join', bootstrapComplete: true, epoch: 17 });
 });
 
@@ -124,7 +124,7 @@ test('awaits the shared HTTP listener before recovery preparation', async () => 
 });
 
 test('starts ordinary local bootstrap and records its initial recovery state', async () => {
-  recoveryResult = { ...defaultResult(), startupDecision: { mode: 'bootstrap', localWinner: true, epoch: 13, recoveryEpoch: { clusterId: 'cluster-a', quorum: ['node-a', 'node-b'] } } };
+  recoveryResult = { ...defaultResult(), startupDecision: { mode: 'bootstrap', localWinner: true, epoch: 13, recoveryEpoch: { clusterId: 'cluster-a', quorum: ['node-a.example.test', 'node-b.example.test'] } } };
   const deps = dependencies();
   await expect(startSupervisor(deps)).resolves.toBeUndefined();
   expect(deps.recoveryState.set).toHaveBeenCalledWith('bootstrapping', { epoch: 13 });
@@ -159,7 +159,7 @@ test('wires cold-bootstrap and startup-service callbacks', async () => {
 test('invokes the default recovery bootstrap callback during local recovery', async () => {
   recoveryResult = defaultResult();
   await expect(startSupervisor({ ...dependencies(), state: { mariaProcess: {} } })).resolves.toEqual({ pending: true });
-  await captured.pending.onRecoveryBootstrap({ epoch: 14, winner: { node: 'node-a' } });
+  await captured.pending.onRecoveryBootstrap({ epoch: 14, winner: { node: 'node-a.example.test' } });
   expect(captured.processController.start).toHaveBeenCalled();
 });
 
@@ -174,7 +174,7 @@ test('propagates runtime startup failures after recovery handoff', async () => {
   runtimeFailure = new Error('runtime start failed');
   const state = { mariaProcess: {} };
   await startSupervisor({ ...dependencies(), state });
-  await expect(captured.pending.onRecoveryBootstrap({ epoch: 10, winner: { node: 'node-a' } })).rejects.toThrow('runtime start failed');
+  await expect(captured.pending.onRecoveryBootstrap({ epoch: 10, winner: { node: 'node-a.example.test' } })).rejects.toThrow('runtime start failed');
   runtimeFailure = undefined;
 });
 
@@ -182,7 +182,7 @@ test('propagates MariaDB process-start failures during recovery handoff', async 
   recoveryResult = defaultResult();
   processFailure = new Error('mariadbd start failed');
   await startSupervisor({ ...dependencies(), state: { mariaProcess: {} } });
-  await expect(captured.pending.onRecoveryBootstrap({ epoch: 11, winner: { node: 'node-a' } })).rejects.toThrow('mariadbd start failed');
+  await expect(captured.pending.onRecoveryBootstrap({ epoch: 11, winner: { node: 'node-a.example.test' } })).rejects.toThrow('mariadbd start failed');
   processFailure = undefined;
 });
 
@@ -190,5 +190,5 @@ test('propagates recovery callback failures after runtime startup', async () => 
   recoveryResult = defaultResult();
   const callbackFailure = new Error('recovery callback failed');
   await startSupervisor({ ...dependencies(), state: { mariaProcess: {} }, onRecoveryBootstrap: jest.fn().mockRejectedValue(callbackFailure) });
-  await expect(captured.pending.onRecoveryBootstrap({ epoch: 12, winner: { node: 'node-a' } })).rejects.toThrow('recovery callback failed');
+  await expect(captured.pending.onRecoveryBootstrap({ epoch: 12, winner: { node: 'node-a.example.test' } })).rejects.toThrow('recovery callback failed');
 });

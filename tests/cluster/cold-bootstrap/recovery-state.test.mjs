@@ -13,7 +13,7 @@ test('exposes state and resets optional details on transition', () => {
   expect(state.get()).toBe('pending');
   state.set('collecting-evidence', { reason: 'scan', epoch: 'e' });
   expect(state.get()).toBe('collecting-evidence');
-  expect(state.set('awaiting-quorum')).toEqual({ state: 'awaiting-quorum' });
+  expect(state.set('awaiting-quorum')).toEqual({ state: 'awaiting-quorum', epoch: 'e' });
 });
 test('allows recovery to recollect evidence after an outage', () => {
   const state = createRecoveryState('cluster-unavailable');
@@ -39,7 +39,7 @@ test('supports every valid recovery path and rejects invalid state names', () =>
   bootstrap.set('bootstrapping');
   bootstrap.set('complete');
   bootstrap.set('cluster-unavailable');
-  bootstrap.set('blocked-ambiguous');
+  expect(() => bootstrap.set('blocked-ambiguous')).toThrow('invalid recovery transition');
   bootstrap.set('collecting-evidence');
   expect(() => bootstrap.set('complete')).toThrow('invalid recovery transition');
 
@@ -51,7 +51,7 @@ test('supports every valid recovery path and rejects invalid state names', () =>
 
 test('supports idempotent transitions and preserves falsy optional details as absent', () => {
   const state = createRecoveryState('joining');
-  expect(state.set('joining', { reason: '', epoch: 0 })).toEqual({ state: 'joining' });
+  expect(state.set('joining', { reason: '', epoch: 0 })).toEqual({ state: 'joining', reason: '', epoch: 0 });
   expect(state.set('joining', { reason: 'still joining', epoch: 'e2' })).toEqual({ state: 'joining', reason: 'still joining', epoch: 'e2' });
 });
 

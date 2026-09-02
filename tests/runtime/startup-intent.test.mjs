@@ -10,7 +10,7 @@ test('prefers persisted startup intent', async () => {
 
 test('loads environment intent without injecting legacy identity variables', async () => {
   let received;
-  const identity = { name: 'node.example.test' };
+  const identity = { name: fixture.cluster.members[0].name };
   const result = await loadStartupIntent({ intentState: { read: async () => undefined }, loadEnvironmentIntent: (value, actualIdentity) => { received = [value, actualIdentity]; return structuredClone(fixture); }, identity });
   expect(received).toEqual([process.env, identity]);
   expect(result).toEqual(fixture);

@@ -11,7 +11,7 @@ describe('control API', () => {
     const queries = [];
     const db = { query: async (sql) => { queries.push(sql); if (sql.includes('SHOW GRANTS')) return [[{ grant: 'GRANT USAGE ON *.* TO `app`@`%`' }]]; if (sql.includes('mysql.user')) return [[{ User: 'app', Host: '%', plugin: 'mysql_native_password', account_locked: 'N', password_expired: 'N' }]]; return [[]]; } };
     let drained = false; let bootstrapped = false;
-    const api = createControlApi({ db, getStatus: async () => ({ ready: false, values: { wsrep_local_state_comment: 'Joining' } }), getConfig: () => ({ elera: true, clusterSize: 3, runtimeNodeName: 'elera-0' }), getTraffic: () => ({ drained }), setDrain: (value) => { drained = value; }, bootstrap: async () => { bootstrapped = true; }, environment: { ROOT_TOKEN: 'root_token_here' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
+    const api = createControlApi({ db, getStatus: async () => ({ ready: false, values: { wsrep_local_state_comment: 'Joining' } }), getConfig: () => ({ elera: true, clusterSize: 3, runtimeNodeName: 'elera-0.cluster.local' }), getTraffic: () => ({ drained }), setDrain: (value) => { drained = value; }, bootstrap: async () => { bootstrapped = true; }, environment: { ROOT_TOKEN: 'root_token_here' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
     const call = async (method, url, body) => { const out = response(); await api.handler(request(method, url, body), out); return { out, value: JSON.parse(out.body) }; };
     expect((await call('GET', '/api/v1/status')).out.status).toBe(200);
     expect((await call('GET', '/api/v1/config')).value.data.elera).toBe(true);
@@ -48,7 +48,7 @@ describe('control API', () => {
   test('translates route failures and rejects unavailable bootstrap', async () => {
     const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => { throw new Error('status unavailable'); }, getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here', ELERA_CLUSTER_MODE: '0' }, log: { error: jest.fn() }, dataDir: 'C:\\missing' });
     const out = response(); await api.handler(request('GET', '/api/v1/cluster/status'), out); expect(out.status).toBe(500);
-    const noBootstrap = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: false }), getConfig: () => ({ elera: true, clusterSize: 3, runtimeNodeName: 'elera-0' }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here' }, log: { error: jest.fn() } });
+    const noBootstrap = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => ({ ready: false }), getConfig: () => ({ elera: true, clusterSize: 3, runtimeNodeName: 'elera-0.cluster.local' }), getTraffic: () => ({}), setDrain: () => {}, environment: { ROOT_TOKEN: 'root_token_here' }, log: { error: jest.fn() } });
     const unavailable = response(); await noBootstrap.handler(request('POST', '/api/v1/cluster/bootstrap', { confirm: true }), unavailable); expect(unavailable.status).toBe(503);
   });
   test('plans and applies safe intent changes while rejecting unsafe ones', async () => {

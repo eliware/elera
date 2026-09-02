@@ -66,7 +66,7 @@ test('closes cleanly when no routing clients are connected', async () => {
 });
 
 test('broadcasts shutdown before closing an established client', async () => {
-  const stream = createRoutingStream({ token: 'secret', nodeIdentity: { name: 'elera-0', address: '10.0.0.60' }, getEvent: () => ({ type: 'routing.update', version: 1 }), bus: bus(), loadBalancerEndpoint: 'http://elera.example' });
+  const stream = createRoutingStream({ token: 'secret', nodeIdentity: { name: 'elera-0.example.test', address: '10.0.0.60' }, getEvent: () => ({ type: 'routing.update', version: 1 }), bus: bus(), loadBalancerEndpoint: 'http://elera.example' });
   const server = http.createServer();
   server.on('upgrade', (request, socket, head) => stream.upgrade(request, socket, head));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -77,7 +77,7 @@ test('broadcasts shutdown before closing an established client', async () => {
   await new Promise((resolve, reject) => { client.once('open', resolve); client.once('error', reject); });
   await stream.shutdown({ reason: 'SIGTERM', reconnectDeadlineMs: 60000 });
   await expect(closed).resolves.toEqual({ code: 1012, reason: 'supervisor restarting' });
-  expect(events).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'routing.update' }), expect.objectContaining({ type: 'routing.shutdown', reason: 'SIGTERM', reconnect: true, reconnectDeadlineMs: 60000, loadBalancerEndpoint: 'http://elera.example', nodeIdentity: { name: 'elera-0', address: '10.0.0.60' } })]));
+  expect(events).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'routing.update' }), expect.objectContaining({ type: 'routing.shutdown', reason: 'SIGTERM', reconnect: true, reconnectDeadlineMs: 60000, loadBalancerEndpoint: 'http://elera.example', nodeIdentity: { name: 'elera-0.example.test', address: '10.0.0.60' } })]));
   await new Promise((resolve) => server.close(resolve));
 });
 

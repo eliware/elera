@@ -7,7 +7,7 @@ test('reads persisted state and recovers an unavailable sequence number', async 
 });
 
 test('requires evidence dependencies', () => expect(() => createStartupLocalEvidence({ node: { name: nodeName }, dataDir: 'x' })).toThrow('startup local evidence dependencies require a FQDN identity'));
-test('requires an options object', () => expect(() => createStartupLocalEvidence()).toThrow('startup local evidence dependencies are required'));
+test('requires an options object', () => expect(() => createStartupLocalEvidence()).toThrow('startup local evidence dependencies require a FQDN identity'));
 
 test('preserves a valid persisted sequence number without recovery', async () => {
   const runRecover = async () => { throw new Error('must not run'); }; const evidence = createStartupLocalEvidence({ node: { name: nodeName }, dataDir: 'x', readState: async () => ({ uuid: 'c', seqno: 7, safeToBootstrap: false }), runRecover });

@@ -27,9 +27,9 @@ test('does not run wsrep recovery for an active peer with an unknown saved seque
 });
 
 test('forwards authenticated remote evidence and validates dependencies', async () => {
-  const fetchImpl = async (url, options) => { expect(url).toBe('http://peer/api/v1/cluster/cold-bootstrap/evidence'); expect(options.headers.authorization).toBe('Bearer token'); return { ok: true, async json() { return { data: { node: 'peer.example.test' } }; } }; };
+  const fetchImpl = async (url, options) => { expect(url).toBe('http://peer.example.test/api/v1/cluster/cold-bootstrap/evidence'); expect(options.headers.authorization).toBe('Bearer token'); return { ok: true, async json() { return { data: { node: 'peer.example.test' } }; } }; };
   const evidence = createColdBootstrapEvidence({ localNode: { name: 'one.example.test' }, dataDir: '/tmp', health: {}, fetchImpl, token: 'token' });
-  await expect(evidence.remote('http://peer/')).resolves.toEqual({ node: 'peer.example.test' });
+  await expect(evidence.remote('http://peer.example.test/')).resolves.toEqual({ node: 'peer.example.test' });
   await expect(evidence.remote('http://peer.example.test')).resolves.toEqual({ node: 'peer.example.test' });
   expect(() => createColdBootstrapEvidence()).toThrow('local evidence');
 });
@@ -50,7 +50,7 @@ test('handles recovered state, health failures, and rejected peers', async () =>
     const evidence = createColdBootstrapEvidence({ localNode: { name: 'one.example.test' }, dataDir: dir, health: { status: async () => { throw new Error('down'); } } });
     await expect(evidence.local()).resolves.toMatchObject({ state: { savedSeqno: 12, recoveredSeqno: undefined }, active: false });
     const rejected = createColdBootstrapEvidence({ localNode: { name: 'one.example.test' }, dataDir: dir, health: {}, fetchImpl: async () => ({ ok: false, status: 503 }), token: 'token' });
-    await expect(rejected.remote('http://peer.example.test')).rejects.toThrow('peer returned 503');
+    await expect(rejected.remote('http://peer.example.test')).rejects.toThrow('status=503');
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

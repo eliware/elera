@@ -2,31 +2,31 @@
   "routing.topology": {
     "type": "routing.topology",
     "version": 7,
-    "node": "elera-0",
-    "context": { "nodeIdentity": { "name": "elera-0", "address": "10.0.0.60" }, "ports": { "sql": 3306, "http": 8080 }, "clusterCondition": "Primary", "refreshAfter": "2026-08-30T12:00:30.000Z" },
-    "topology": { "nodes": [{ "nodeId": "elera-0", "address": "10.0.0.60", "sqlPort": 3306, "state": "ready", "draining": false }] },
+    "node": "elera-0.cluster.local",
+    "context": { "nodeIdentity": { "name": "elera-0.cluster.local", "address": "10.0.0.60" }, "ports": { "sql": 3306, "http": 8080 }, "clusterCondition": "Primary", "refreshAfter": "2026-08-30T12:00:30.000Z" },
+    "topology": { "nodes": [{ "nodeId": "elera-0.cluster.local", "address": "10.0.0.60", "sqlPort": 3306, "state": "ready", "draining": false }] },
     "generatedAt": "2026-08-30T12:00:00.000Z"
   },
   "routing.drain": {
     "type": "routing.drain",
     "version": 1756555200000,
-    "node": "elera-0",
-    "context": { "nodeIdentity": { "name": "elera-0", "address": "10.0.0.60" }, "reconnectDeadlineMs": 60000, "loadBalancerEndpoint": "https://lb.example" },
+    "node": "elera-0.cluster.local",
+    "context": { "nodeIdentity": { "name": "elera-0.cluster.local", "address": "10.0.0.60" }, "reconnectDeadlineMs": 60000, "loadBalancerEndpoint": "https://lb.example" },
     "generatedAt": "2026-08-30T12:00:00.000Z"
   },
   "routing.recovery": {
     "type": "routing.recovery",
     "version": 1756555260000,
-    "node": "elera-0",
-    "context": { "nodeIdentity": { "name": "elera-0", "address": "10.0.0.60" }, "reconnectDeadlineMs": 60000, "loadBalancerEndpoint": "https://lb.example" },
+    "node": "elera-0.cluster.local",
+    "context": { "nodeIdentity": { "name": "elera-0.cluster.local", "address": "10.0.0.60" }, "reconnectDeadlineMs": 60000, "loadBalancerEndpoint": "https://lb.example" },
     "generatedAt": "2026-08-30T12:01:00.000Z"
   },
   "routing.shutdown": {
     "type": "routing.shutdown",
     "version": 9,
     "reconnect": true,
-    "node": "elera-0",
-    "nodeIdentity": { "name": "elera-0", "address": "10.0.0.60" },
+    "node": "elera-0.cluster.local",
+    "nodeIdentity": { "name": "elera-0.cluster.local", "address": "10.0.0.60" },
     "loadBalancerEndpoint": "https://lb.example",
     "reason": "SIGTERM",
     "reconnectDeadlineMs": 60000,

@@ -8,14 +8,14 @@ test('routes the complete control surface through its composed handlers', async 
   const status = { ready: true, values: {} }; const store = { snapshot: () => [], upsert: () => ({ accepted: true }) };
   const managed = { listDatabases: async () => [], listIdentities: async () => [], createDatabase: async () => ({}), createIdentity: async () => ({}), rotateIdentity: async () => ({}), issueToken: async () => ({}), revokeToken: async () => ({}), revokeIdentity: async () => ({}), lease: async () => ({ database: 'app', identity: 'id', username: 'u', password: 'p', routes: { primary: [{ host: 'db', port: 3306 }] }, expiresAt: '2099-01-01' }), authenticate: async () => null };
   const reconciler = { plan: async () => ({}), apply: async () => ({}), verify: async () => ({ verified: true }) };
-  const api = createControlApi({ db: { query: async () => [[]] }, getStatus: async () => status, getTraffic: () => ({}), setDrain: jest.fn(), bootstrap: async () => {}, lifecycle: { execute: async () => ({ status: 'completed' }) }, getActiveIntent: Object.assign(async () => ({}), { apply: async () => ({}), verify: async () => ({ verified: true }) }), leaseCredentials: async () => ({ credentials: { username: 'u', password: 'p' }, database: 'app', routes: { primary: [{ host: 'db', port: 3306 }] }, expiresAt: '2099-01-01' }), routingBundles: { get: async () => ({}) }, routingEvent: jest.fn(), metadata: { status: async () => ({}), initialize: async () => ({}), verify: async () => ({ verified: true }), authenticate: async () => null }, managed, reconciler, observationStore: store, environment: { ROOT_TOKEN: 'root_token_here', ELERA_CLUSTER_MODE: '1', MARIADB_DATABASE: 'app', MARIADB_USER: 'u' } });
+  const api = createControlApi({ identity: { name: 'node.example.test' }, db: { query: async () => [[]] }, getStatus: async () => status, getTraffic: () => ({}), setDrain: jest.fn(), bootstrap: async () => {}, lifecycle: { execute: async () => ({ status: 'completed' }) }, getActiveIntent: Object.assign(async () => ({}), { apply: async () => ({}), verify: async () => ({ verified: true }) }), leaseCredentials: async () => ({ credentials: { username: 'u', password: 'p' }, database: 'app', routes: { primary: [{ host: 'db', port: 3306 }] }, expiresAt: '2099-01-01' }), routingBundles: { get: async () => ({}) }, routingEvent: jest.fn(), metadata: { status: async () => ({}), initialize: async () => ({}), verify: async () => ({ verified: true }), authenticate: async () => null }, managed, reconciler, observationStore: store, environment: { ROOT_TOKEN: 'root_token_here', ELERA_CLUSTER_MODE: '1', MARIADB_DATABASE: 'app', MARIADB_USER: 'u' } });
   const calls = [['POST', '/api/v1/config/apply', { confirm: true }], ['POST', '/api/v1/config/verify'], ['GET', '/api/v1/metadata/status'], ['POST', '/api/v1/metadata/initialize', { confirm: true }], ['POST', '/api/v1/metadata/verify'], ['GET', '/api/v1/cluster/observations'], ['GET', '/api/v1/cluster/quorum'], ['GET', '/api/v1/cluster/topology'], ['POST', '/api/v1/cluster/observations'], ['POST', '/api/v1/cluster/lifecycle/plan', { action: 'drain' }], ['POST', '/api/v1/cluster/lifecycle/apply', { action: 'drain' }], ['POST', '/api/v1/credentials/lease', { database: 'app', identity: 'id' }], ['POST', '/api/v1/credentials/refresh', { identity: 'id' }], ['POST', '/api/v1/credentials/revoke', { identity: 'id' }], ['GET', '/api/v1/routes'], ['POST', '/api/v1/routes/refresh'], ['GET', '/api/v1/routing/bundle?identity=id'], ['GET', '/api/v1/routing/resync?application=app']];
   for (const [method, url, body] of calls) { const out = response(); await api.handler(request(method, url, body), out); expect(out.status).toBeGreaterThanOrEqual(200); }
 });
 
 test('does not invoke cold bootstrap while composing an unrelated request', async () => {
   const coldBootstrap = jest.fn();
-  const api = createControlApi({
+  const api = createControlApi({ identity: { name: 'node.example.test' },
     environment: { ROOT_TOKEN: 'root_token_here' },
     getStatus: async () => ({ ready: false, values: {} }),
     getColdBootstrapLocal: () => coldBootstrap,
@@ -29,7 +29,7 @@ test('does not invoke cold bootstrap while composing an unrelated request', asyn
 test('dispatches app-admin provisioning endpoints through the composed API', async () => {
   const managed = { createDatabase: jest.fn(async () => ({ database: 'billing' })), createIdentity: jest.fn(async () => ({ identity: 'runtime' })), issueToken: jest.fn(async () => ({ token: 'secret' })), authenticate: jest.fn(async () => ({ application: 'billing', scopes: ['app:admin'] })) };
   const applications = { create: jest.fn(), issueAdminToken: jest.fn() };
-  const api = createControlApi({ managed, applications, environment: { ROOT_TOKEN: 'root' }, log: { error: jest.fn() } });
+  const api = createControlApi({ identity: { name: 'node.example.test' }, managed, applications, environment: { ROOT_TOKEN: 'root' }, log: { error: jest.fn() } });
   for (const [url, body] of [['/api/v1/databases', { application: 'billing', database: 'billing' }], ['/api/v1/identities', { application: 'billing', database: 'billing', identity: 'runtime' }], ['/api/v1/tokens', { application: 'billing', identity: 'runtime', name: 'runtime', scopes: ['database:read'] }]]) {
     const out = response();
     await api.handler({ ...request('POST', url, body), headers: { authorization: 'Bearer app-admin' } }, out);
@@ -39,12 +39,12 @@ test('dispatches app-admin provisioning endpoints through the composed API', asy
 });
 
 test('handles authentication, unavailable services, and request errors', async () => {
-  const out = response(); const api = createControlApi({ environment: { ROOT_TOKEN: 'root' }, log: { error: jest.fn() } });
+  const out = response(); const api = createControlApi({ identity: { name: 'node.example.test' }, environment: { ROOT_TOKEN: 'root' }, log: { error: jest.fn() } });
   await api.handler({ method: 'GET', url: '/api/v1/status', headers: {} }, out); expect(out.status).toBe(401);
   const bad = response(); await api.handler({ method: 'GET', url: '/not-api', headers: {} }, bad); expect(bad.status).toBe(0);
 
   const authorizedRequest = (method, url, body = {}) => ({ ...request(method, url, body), headers: { authorization: 'Bearer root' } });
-  const makeApi = (overrides = {}) => createControlApi({
+  const makeApi = (overrides = {}) => createControlApi({ identity: { name: 'node.example.test' },
     db: { query: async () => [[]] }, getStatus: async () => ({ ready: false }),
     leaseCredentials: undefined, managed: undefined, environment: { ROOT_TOKEN: 'root', ELERA_CLUSTER_MODE: '0' },
     log: { error: jest.fn() }, ...overrides
@@ -55,7 +55,7 @@ test('handles authentication, unavailable services, and request errors', async (
   const revoke = response(); await unavailable.handler(authorizedRequest('POST', '/api/v1/credentials/revoke', { identity: 'id' }), revoke); expect(revoke.status).toBe(501);
   const failed = makeApi({ leaseCredentials: async () => { throw Object.assign(new Error('bad request'), { statusCode: 422 }); } }); const failedOut = response(); await failed.handler(authorizedRequest('POST', '/api/v1/credentials/lease', { database: 'app', identity: 'id' }), failedOut); expect(failedOut.status).toBe(422);
   const managed = makeApi({ managed: { lease: async () => ({ database: 'app', identity: 'id', username: 'u', password: 'p', host: 'db', port: 3306, routes: { primary: [{ host: 'db', port: 3306 }], balanced: [{ host: 'db', port: 3306 }] }, expiresAt: '2099-01-01' }), revokeIdentity: async () => ({ revoked: true }) } });
-  const refreshOut = response(); await managed.handler(authorizedRequest('POST', '/api/v1/credentials/refresh', { identity: 'id' }), refreshOut); expect(refreshOut.status).toBe(200);
+  const refreshOut = response(); await managed.handler(authorizedRequest('POST', '/api/v1/credentials/refresh', { application: 'app', database: 'app', identity: 'id' }), refreshOut); expect(refreshOut.status).toBe(200);
   const unknownOut = response(); await managed.handler(authorizedRequest('GET', '/api/v1/unknown'), unknownOut); expect(unknownOut.status).toBe(404);
   const errorOut = response(); const failing = makeApi({ getStatus: async () => { throw new Error('status failure'); } }); await failing.handler(authorizedRequest('GET', '/api/v1/cluster/status'), errorOut); expect(errorOut.status).toBe(500);
   const requestIdOut = response(); const requestWithId = authorizedRequest('GET', '/api/v1/unknown'); requestWithId.headers['x-request-id'] = 'test-request'; await managed.handler(requestWithId, requestIdOut); expect(requestIdOut.status).toBe(404);
@@ -74,7 +74,7 @@ test('exposes recovery and routing administration through the authenticated API'
     validate: jest.fn(async ({ application }) => ({ valid: true, application })),
     rebalance: jest.fn(async ({ application }) => ({ recalculated: true, application })),
   };
-  const api = createControlApi({
+  const api = createControlApi({ identity: { name: 'node.example.test' },
     environment: { ROOT_TOKEN: 'root' },
     recovery,
     routingBundles,

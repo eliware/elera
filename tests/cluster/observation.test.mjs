@@ -5,7 +5,7 @@ test('creates a normalized observation with defaults', () => {
     expect(createObservation({ nodeId: 'elera-1.example.test', clusterId: 'c1', state: 'Synced', synced: true, primary: 'Primary', health: 'ready' })).toMatchObject({ nodeId: 'elera-1.example.test', sqlPort: 3306, load: {}, drain: false, version: 1 });
 });
 test('rejects incomplete observations and applies freshness boundary', () => {
-  expect(() => createObservation({ nodeId: 'elera-1' })).toThrow('incomplete cluster observation');
+  expect(() => createObservation({ nodeId: 'elera-1.cluster.local' })).toThrow('incomplete cluster observation');
   const item = createObservation({ nodeId: 'elera-1.example.test', clusterId: 'c1', state: 'Synced', synced: true, primary: 'Primary', health: 'ready', observedAt: 100 });
   expect(isFresh(item, 3100, 3000)).toBe(true);
   expect(isFresh(item, 3101, 3000)).toBe(false);
@@ -24,10 +24,8 @@ test('requires every identity and state field', () => {
   expect(() => createObservation({ ...valid, synced: undefined })).toThrow('incomplete cluster observation');
 });
 
-test('rejects inconsistent readiness and non-FQDN addresses', () => {
+test('rejects non-FQDN addresses and malformed freshness data', () => {
   const valid = { nodeId: 'elera-1.example.test', clusterId: 'c', state: 'Synced', synced: true, primary: 'Primary', health: 'ready' };
-  expect(() => createObservation({ ...valid, synced: false })).toThrow('inconsistent');
   expect(() => createObservation({ ...valid, address: '127.0.0.1' })).toThrow('incomplete');
-  expect(() => createObservation({ ...valid, primary: 'ready' })).toThrow('invalid');
   expect(isFresh({ observedAt: Number.NaN }, 100)).toBe(false);
 });

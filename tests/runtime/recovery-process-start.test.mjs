@@ -1,7 +1,7 @@
 import { expect, jest, test } from '@jest/globals';
 import { startAuthorizedRecoveryProcess } from '../../src/runtime/recovery-process-start.mjs';
 
-const base = () => ({ bootstrap: { epoch: 2, winner: { node: 'node-a' } }, identity: { name: 'node-a' }, args: ['--datadir=/data'], mariaProcess: { start: jest.fn(async () => {}) }, recoveryState: { set: jest.fn() } });
+const base = () => ({ bootstrap: { epoch: 2, winner: { node: 'node-a.example.test' } }, identity: { name: 'node-a.example.test' }, args: ['--datadir=/data'], mariaProcess: { start: jest.fn(async () => {}) }, recoveryState: { set: jest.fn() } });
 
 test('starts the authorized local winner with new-cluster arguments', async () => {
   const value = base();
@@ -11,7 +11,7 @@ test('starts the authorized local winner with new-cluster arguments', async () =
 });
 
 test('hands a non-winning recovery decision back to the caller', async () => {
-  const value = { ...base(), bootstrap: { epoch: 2, winner: { node: 'node-b' } } };
+  const value = { ...base(), bootstrap: { epoch: 2, winner: { node: 'node-b.example.test' } } };
   const handoff = jest.fn(async () => false);
   await expect(startAuthorizedRecoveryProcess({ ...value, onRecoveryBootstrap: handoff })).resolves.toBe(false);
   expect(handoff).toHaveBeenCalledWith(value.bootstrap);

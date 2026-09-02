@@ -26,6 +26,6 @@ test('rejects each malformed evidence field', () => {
   for (const item of [
     { ...fresh, node: '' }, { ...fresh, uuid: '' }, { ...fresh, seqno: 1.2 },
     { ...fresh, generation: 0 }, { ...fresh, generation: '1' },
-    { ...fresh, active: 1 }, { ...fresh, observedAt: 'invalid' }, { ...fresh, dataDirectory: {} }, { ...fresh, node: 'elera-0' },
+    { ...fresh, active: 1 }, { ...fresh, observedAt: 'invalid' }, { ...fresh, dataDirectory: {} }, { ...fresh, node: 'elera-0.example.test' },
   ]) expect(() => validateRecoveryEvidence([item])).toThrow('malformed');
 });

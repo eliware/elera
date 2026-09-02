@@ -4,10 +4,10 @@ import { createSupervisorColdBootstrap } from '../../src/runtime/cold-bootstrap-
 test('wires local and remote cold-bootstrap execution', async () => {
   let options;
   const fetchImpl = jest.fn(async () => ({ ok: true, json: async () => ({ completed: true }) }));
-  const coordinator = createSupervisorColdBootstrap({ members: [{ name: 'node-b', url: 'http://node-b' }], localEvidence: {}, remoteEvidence: jest.fn(), bootstrapLocal: jest.fn(), config: { timeoutMs: 10 }, environment: { ROOT_TOKEN: 'root', ELERA_PEER_TOKEN: 'peer' }, log: {}, fetchImpl, createCoordinator: (value) => { options = value; return { marker: true }; } });
+  const coordinator = createSupervisorColdBootstrap({ members: [{ name: 'node-b.example.test', url: 'http://node-b.example.test' }], localEvidence: {}, remoteEvidence: jest.fn(), bootstrapLocal: jest.fn(), config: { timeoutMs: 10 }, environment: { ROOT_TOKEN: 'root', ELERA_PEER_TOKEN: 'peer' }, log: {}, fetchImpl, createCoordinator: (value) => { options = value; return { marker: true }; } });
   expect(coordinator).toEqual({ marker: true });
-  await expect(options.bootstrapRemote({ url: 'http://node-b' })).resolves.toEqual({ completed: true });
-  expect(fetchImpl).toHaveBeenCalledWith('http://node-b/api/v1/cluster/cold-bootstrap/local', expect.objectContaining({ method: 'POST' }));
+  await expect(options.bootstrapRemote({ url: 'http://node-b.example.test' })).resolves.toEqual({ completed: true });
+  expect(fetchImpl).toHaveBeenCalledWith('http://node-b.example.test/api/v1/cluster/cold-bootstrap/local', expect.objectContaining({ method: 'POST' }));
 });
 
 test('rejects failed remote cold-bootstrap responses', async () => {

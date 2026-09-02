@@ -2,8 +2,8 @@ import { expect, test } from '@jest/globals';
 import { createSupervisorBundle, validateSupervisorBundle } from '../../../src/internal/routing/bundle.mjs';
 
 const routes = {
-  primary: [{ host: 'elera-0', port: 3306 }],
-  balanced: [{ host: 'elera-1', port: 3306, weight: 1 }],
+  primary: [{ host: 'elera-0.cluster.local', port: 3306 }],
+  balanced: [{ host: 'elera-1.cluster.local', port: 3306, weight: 1 }],
 };
 
 test('builds a normalized supervisor bundle', () => {
@@ -15,13 +15,13 @@ test('builds a normalized supervisor bundle', () => {
     password: 'secret',
     routes,
     expiresAt: '2099-01-01T00:00:00Z',
-    nodeIdentity: { name: 'elera-0' },
+    nodeIdentity: { name: 'elera-0.example.test' },
     ports: { sql: 3306, http: 8080 },
   });
 
-  expect(bundle).toMatchObject({ apiVersion: 'v1', application: 'billing', database: 'billing_db', identity: 'writer', bundleVersion: 1, nodeIdentity: 'elera-0', ports: { sql: 3306, http: 8080 } });
-  expect(bundle.routes.primary[0].nodeId).toBe('elera-0');
-  expect(bundle.routes.balanced[0].nodeId).toBe('elera-1');
+  expect(bundle).toMatchObject({ apiVersion: 'v1', application: 'billing', database: 'billing_db', identity: 'writer', bundleVersion: 1, nodeIdentity: 'elera-0.cluster.local', ports: { sql: 3306, http: 8080 } });
+  expect(bundle.routes.primary[0].nodeId).toBe('elera-0.cluster.local');
+  expect(bundle.routes.balanced[0].nodeId).toBe('elera-1.cluster.local');
   expect(bundle.writer).toEqual(bundle.routes.primary[0]);
   expect(bundle.failover).toEqual([]);
   expect(bundle.readers).toEqual(bundle.routes.balanced);
@@ -38,7 +38,7 @@ test('omits an explicitly empty physical database', () => {
 
 test('preserves explicit assignments and metadata', () => {
   const writer = { host: 'writer', port: 3306, nodeId: 'node-w' };
-  const failover = [{ host: 'backup', port: 3306, nodeId: 'node-b' }];
+  const failover = [{ host: 'backup', port: 3306, nodeId: 'node-b.example.test' }];
   const bundle = createSupervisorBundle({
     application: 'app', database: 'db', identity: 'id', username: 'u', password: 'p', routes,
     writer, failover, readers: [writer], bundleVersion: 4, refreshAfter: '2098-01-01T00:00:00Z',

@@ -1,6 +1,7 @@
 export function createRecoveryAudit(log = {}) {
   return {
     event(details) {
+      details = details && typeof details === 'object' ? details : {};
       const level = details.type === 'recovery.refused' ? 'warn' : 'info';
       log[level]?.(`cold-recovery.${details.type?.replace(/^recovery\./, '') ?? 'event'}`, details);
     },

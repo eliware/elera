@@ -1,10 +1,10 @@
 import { afterEach, expect, jest, test } from "@jest/globals";
-import os from "node:os";
 import { createPendingInitServer as createPendingInitServerImpl } from "../../../src/lifecycle/pending-init/server.mjs";
 
 const listen = (server) => new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve(server.address().port)));
 const close = (server) => new Promise((resolve) => server.close(resolve));
 const createPendingInitServer = (options = {}) => createPendingInitServerImpl({ identity: { name: "elera-0.cluster.local" }, ...options });
+const clusteredEnvironment = { ROOT_TOKEN: 'root', SUPERVISOR_INTENT_JSON: JSON.stringify({ apiVersion: 'elera.eliware.dev/v1alpha1', kind: 'SupervisorIntent', cluster: { name: 'lab', members: [{ name: 'elera-0.cluster.local', address: 'elera-0.cluster.local' }, { name: 'elera-1.cluster.local', address: 'elera-1.cluster.local' }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }) };
 let server;
 afterEach(async () => { if (server?.listening) await close(server); server = undefined; });
 
@@ -47,13 +47,13 @@ test('rejects an unauthorized recovery authorization request', async () => {
 });
 
 test('dispatches an authenticated recovery join handoff without initialization', async () => {
-  const onRecoveryJoin = jest.fn().mockResolvedValue({ node: 'elera-1', status: 'joining' });
+  const onRecoveryJoin = jest.fn().mockResolvedValue({ node: 'elera-1.cluster.local', status: 'joining' });
   const initialize = jest.fn();
-  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: 'root' }, recoveryRequired: true, initialize, onRecoveryJoin }));
+  ({ server } = createPendingInitServer({ environment: clusteredEnvironment, recoveryRequired: true, initialize, onRecoveryJoin }));
   const port = await listen(server);
-  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, node: 'elera-1' }) });
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, node: 'elera-1.cluster.local' }) });
   expect(response.status).toBe(202);
-  expect(onRecoveryJoin).toHaveBeenCalledWith({ epoch: 4, node: 'elera-1' });
+  expect(onRecoveryJoin).toHaveBeenCalledWith({ epoch: 4, node: 'elera-1.cluster.local' });
   expect(initialize).not.toHaveBeenCalled();
 });
 
@@ -62,35 +62,35 @@ test('rejects unauthorized, malformed, and failed recovery join handoffs', async
   let port = await listen(server);
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST' })).status).toBe(401);
   await close(server); server = undefined;
-  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: 'root' }, recoveryRequired: true, onRecoveryJoin: jest.fn().mockRejectedValue(Object.assign(new Error('join refused'), { statusCode: 409, code: 'JOIN_REFUSED' })) }));
+  ({ server } = createPendingInitServer({ environment: clusteredEnvironment, recoveryRequired: true, onRecoveryJoin: jest.fn().mockRejectedValue(Object.assign(new Error('join refused'), { statusCode: 409, code: 'JOIN_REFUSED' })) }));
   port = await listen(server);
   const malformed = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: '{' });
   expect(malformed.status).toBe(400);
-  const failed = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: '{}' });
+  const failed = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ node: 'elera-1.cluster.local', epoch: 1 }) });
   expect(failed.status).toBe(409);
   expect(await failed.json()).toMatchObject({ code: 'JOIN_REFUSED' });
 });
 
 test('uses the default recovery join handoff and maps untyped failures', async () => {
-  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: 'root' }, recoveryRequired: true }));
+  ({ server } = createPendingInitServer({ environment: clusteredEnvironment, recoveryRequired: true }));
   let port = await listen(server);
-  const defaultResponse = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: '{}' });
+  const defaultResponse = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ node: 'elera-1.cluster.local', epoch: 1 }) });
   expect(defaultResponse.status).toBe(202);
   await close(server); server = undefined;
-  ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: 'root' }, recoveryRequired: true, onRecoveryJoin: jest.fn().mockRejectedValue(new Error('join failed')) }));
+  ({ server } = createPendingInitServer({ environment: clusteredEnvironment, recoveryRequired: true, onRecoveryJoin: jest.fn().mockRejectedValue(new Error('join failed')) }));
   port = await listen(server);
-  const failed = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: '{}' });
+  const failed = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/join`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ node: 'elera-1.cluster.local', epoch: 1 }) });
   expect(failed.status).toBe(409);
 });
 
 test("pending recovery serves authenticated cold-bootstrap evidence", async () => {
-  const coldEvidence = jest.fn().mockResolvedValue({ node: "elera-2", active: false });
+  const coldEvidence = jest.fn().mockResolvedValue({ node: "elera-2.cluster.local", active: false });
   ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: "root" }, coldEvidence }));
   const port = await listen(server);
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`)).status).toBe(401);
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-bootstrap/evidence`, { headers: { authorization: "Bearer root" } });
   expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({ ok: true, data: { node: "elera-2" } });
+  expect(await response.json()).toMatchObject({ ok: true, data: { node: "elera-2.cluster.local" } });
   expect(coldEvidence).toHaveBeenCalledTimes(1);
 });
 
@@ -158,7 +158,7 @@ test("pending clustered initialization selects only the first declared member fo
   const initialize = jest.fn().mockResolvedValue(undefined);
   const onInitialized = jest.fn();
   const environment = { ROOT_TOKEN: "root", SUPERVISOR_INTENT_JSON: JSON.stringify({ apiVersion: "elera.eliware.dev/v1alpha1", kind: "SupervisorIntent", cluster: { name: "lab", members: [{ name: "elera-0.cluster.local", address: "elera-0.cluster.local" }, { name: "elera-1.cluster.local", address: "elera-1.cluster.local" }, { name: "elera-2.cluster.local", address: "elera-2.cluster.local" }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }) };
-  ({ server } = createPendingInitServer({ environment, initialize, onInitialized }));
+  ({ server } = createPendingInitServer({ environment, identity: { name: 'elera-0.cluster.local' }, initialize, onInitialized }));
   const port = await listen(server);
   const response = await fetch(`http://127.0.0.1:${port}/api/v1/initialization/apply`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ confirm: true }) });
   expect(response.status).toBe(202);
@@ -170,7 +170,7 @@ test("pending clustered initialization leaves non-authority members pending unti
   const initialize = jest.fn().mockResolvedValue(undefined);
   const onInitialized = jest.fn();
   const environment = { ROOT_TOKEN: "root", SUPERVISOR_INTENT_JSON: JSON.stringify({ apiVersion: "elera.eliware.dev/v1alpha1", kind: "SupervisorIntent", cluster: { name: "lab", members: [{ name: "elera-0.cluster.local", address: "elera-0.cluster.local" }, { name: "elera-1.cluster.local", address: "elera-1.cluster.local" }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }) };
-  ({ server } = createPendingInitServer({ environment, initialize, onInitialized }));
+  ({ server } = createPendingInitServer({ environment, identity: { name: 'elera-1.cluster.local' }, initialize, onInitialized }));
   const port = await listen(server);
   await fetch(`http://127.0.0.1:${port}/api/v1/initialization/apply`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ confirm: true }) });
   await new Promise((resolve) => setImmediate(resolve));
@@ -183,8 +183,8 @@ test("pending clustered initialization leaves non-authority members pending unti
 
 test("pending clustered initialization can derive the authority node identity", async () => {
   const initialize = jest.fn().mockResolvedValue(undefined); const onInitialized = jest.fn();
-  const environment = { ROOT_TOKEN: "root", SUPERVISOR_INTENT_JSON: JSON.stringify({ apiVersion: "elera.eliware.dev/v1alpha1", kind: "SupervisorIntent", cluster: { name: "lab", members: [{ name: os.hostname(), address: "a" }, { name: "elera-1", address: "b" }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }) };
-  ({ server } = createPendingInitServer({ environment, initialize, onInitialized }));
+  const environment = { ROOT_TOKEN: "root", SUPERVISOR_INTENT_JSON: JSON.stringify({ apiVersion: "elera.eliware.dev/v1alpha1", kind: "SupervisorIntent", cluster: { name: "lab", members: [{ name: "elera-0.cluster.local", address: "elera-0.cluster.local" }, { name: "elera-1.cluster.local", address: "elera-1.cluster.local" }] }, mariadb: { port: 3306 }, routing: { healthIntervalMs: 1000 }, drain: { queryTimeoutMs: 1 } }) };
+  ({ server } = createPendingInitServer({ environment, identity: { name: "elera-0.cluster.local" }, initialize, onInitialized }));
   const port = await listen(server);
   await fetch(`http://127.0.0.1:${port}/api/v1/initialization/apply`, { method: "POST", headers: { authorization: "Bearer root", "content-type": "application/json" }, body: JSON.stringify({ confirm: true }) });
   await new Promise((resolve) => setImmediate(resolve));
@@ -221,12 +221,12 @@ test("pending initialization reports concurrent and failed operations", async ()
 });
 
 test('initialized recovery mode exposes recovery diagnostics instead of initialization instructions', async () => {
-  const recoveryProtocol = { status: jest.fn().mockResolvedValue({ phase: 'blocked' }), evidence: jest.fn().mockResolvedValue([{ node: 'elera-0' }]), plan: jest.fn().mockResolvedValue({ mode: 'join' }), retry: jest.fn().mockResolvedValue({ mode: 'join' }) };
+  const recoveryProtocol = { status: jest.fn().mockResolvedValue({ phase: 'blocked' }), evidence: jest.fn().mockResolvedValue([{ node: 'elera-0.cluster.local' }]), plan: jest.fn().mockResolvedValue({ mode: 'join' }), retry: jest.fn().mockResolvedValue({ mode: 'join' }) };
   ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: 'root' }, recoveryRequired: true, recoveryReason: 'peer evidence unavailable', recoveryProtocol }));
   const port = await listen(server);
   const headers = { authorization: 'Bearer root' };
   expect(await (await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/status`, { headers })).json()).toMatchObject({ data: { phase: 'blocked' } });
-  expect(await (await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/evidence`, { headers })).json()).toMatchObject({ data: [{ node: 'elera-0' }] });
+  expect(await (await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/evidence`, { headers })).json()).toMatchObject({ data: [{ node: 'elera-0.cluster.local' }] });
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/plan`, { method: 'POST', headers })).status).toBe(200);
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/retry`, { method: 'POST', headers })).status).toBe(200);
   expect((await fetch(`http://127.0.0.1:${port}/unknown`)).json()).resolves.toMatchObject({ error: 'cluster recovery required; initialization is not permitted' });
@@ -242,13 +242,13 @@ test('initialized recovery mode blocks first-boot bootstrap and dispatches guard
   ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: 'root' }, initialize, recoveryRequired: true, recoveryProtocol }));
   const port = await listen(server);
   const headers = { authorization: 'Bearer root', 'content-type': 'application/json' };
-  const body = JSON.stringify({ node: 'elera-0', confirm: true });
+  const body = JSON.stringify({ node: 'elera-0.cluster.local', confirm: true });
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/bootstrap`, { method: 'POST', headers, body })).status).toBe(503);
   expect(initialize).not.toHaveBeenCalled();
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/authorize`, { method: 'POST', headers, body })).status).toBe(202);
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers, body })).status).toBe(202);
   expect((await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/complete`, { method: 'POST', headers, body })).status).toBe(202);
-  expect(recoveryProtocol.authorize).toHaveBeenCalledWith(expect.objectContaining({ node: 'elera-0' }));
+  expect(recoveryProtocol.authorize).toHaveBeenCalledWith(expect.objectContaining({ node: 'elera-0.cluster.local' }));
   expect(recoveryProtocol.beginBootstrap).toHaveBeenCalledWith(expect.objectContaining({ confirm: true }));
   expect(recoveryProtocol.complete).toHaveBeenCalledWith(expect.objectContaining({ confirm: true }));
 });
@@ -282,7 +282,7 @@ test('recovery bootstrap invokes its handoff only after protocol authorization s
   const recoveryProtocol = { beginBootstrap: jest.fn().mockResolvedValue({ phase: 'bootstrapping', epoch: 4 }) };
   ({ server } = createPendingInitServer({ environment: { ROOT_TOKEN: 'root' }, recoveryRequired: true, recoveryProtocol, onRecoveryBootstrap }));
   const port = await listen(server);
-  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0' }) });
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0.cluster.local' }) });
   expect(response.status).toBe(202);
   await new Promise((resolve) => setImmediate(resolve));
   expect(onRecoveryBootstrap).toHaveBeenCalledWith({ phase: 'bootstrapping', epoch: 4 });

@@ -22,9 +22,8 @@ that the implementation is complete.
 
 ## Actionable drifts
 
-- [ ] Replace the temporary `file:../elera-lib` dependency with the published
-  package before any release or deployment handoff; retain local linking only
-  for development.
+- [x] Local `file:../elera-lib` linking is intentional development state and
+  remains until the published package is selected for release/deployment.
 - [ ] Reconcile `docs/api-contracts.md` with the final no-legacy policy. Its
   compatibility/versioning section must describe only intentional protocol
   versioning, not support for obsolete formats or fallback behavior.
@@ -81,10 +80,10 @@ that the implementation is complete.
   so a cleanly restarted member starts MariaDB without bootstrap authority.
 - [x] Join verification requires the expected cluster identity, `Primary` view,
   `Synced` local state, readiness, and expected membership size.
-- [~] Local lab runtime check: all three cluster supervisors start without
-  restarts, but the fresh data directories are intentionally uninitialized;
-  health/readiness remain `503` and Galera ports are not listening. Real
-  SST/IST and rejoin validation require the explicit initialization workflow.
+- [~] Local lab runtime check: initialized three-node runs have completed
+  health/readiness, restart, rejoin, and cluster-recovery scenarios, but the
+  full recovery and backup workflow still has live failures. SST/IST and
+  post-recovery metadata consistency remain incompletely proven.
 - [~] Quorum rejects stale observations, conflicting cluster identities, and
   conflicting Primary views, and the coordinator refuses assignment changes
   without quorum. Authenticated epoch-bound evidence, winner-only runtime

@@ -4,13 +4,13 @@ import { createColdRecoveryProtocol } from '../../../src/cluster/cold-bootstrap/
 const evidence = (node, seqno) => ({ node, state: { uuid: 'cluster', seqno, safeToBootstrap: false }, active: false, generation: 1, observedAt: new Date().toISOString() });
 const makeProtocol = () => {
   const store = { value: undefined, read: jest.fn(async function () { return this.value; }), write: jest.fn(async function (value) { this.value = value; return value; }) };
-  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a', url: 'http://a', local: true }, { name: 'b', url: 'http://b' }, { name: 'c', url: 'http://c' }], localEvidence: async () => evidence('a', 3), fetchEvidence: async (url) => evidence(url.slice(-1), 2), store });
+  const protocol = createColdRecoveryProtocol({ nodes: [{ name: 'a.example.test', url: 'http://a.example.test', local: true }, { name: 'b.example.test', url: 'http://b.example.test' }, { name: 'c.example.test', url: 'http://c.example.test' }], localEvidence: async () => evidence('a.example.test', 3), fetchEvidence: async (url) => evidence(url.includes('b.example.test') ? 'b.example.test' : 'c.example.test', 2), store });
   return { protocol, store };
 };
 
 test('plans a deterministic epoch from complete peer evidence', async () => {
   const { protocol } = makeProtocol();
-  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, phase: 'evidence', winner: { node: 'a' }, quorum: ['a', 'b', 'c'] });
+  await expect(protocol.plan()).resolves.toMatchObject({ eligible: true, phase: 'evidence', winner: { node: 'a.example.test' }, quorum: ['a.example.test', 'b.example.test', 'c.example.test'] });
 });
 
 test('logs the full candidate decision after full evidence', async () => {

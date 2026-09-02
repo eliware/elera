@@ -7,7 +7,7 @@ describe('supervisor intent model', () => {
   test('plans no-op and reload changes', () => { expect(planIntent(fixture, fixture).change).toBe('no-op'); const changed = structuredClone(fixture); changed.routing.healthIntervalMs = 2000; expect(planIntent(changed, fixture).change).toBe('reload'); });
   test('rejects malformed intent', () => { expect(() => validateIntent({})).toThrow('invalid supervisor intent'); });
   test('rejects short, IP, and mismatched node endpoints', () => {
-    for (const member of [{ name: 'elera-0', address: 'elera-0' }, { name: 'node.example.test', address: '10.0.0.1' }, { name: 'a.example.test', address: 'b.example.test' }]) {
+    for (const member of [{ name: 'elera-0.example.test', address: 'elera-0.cluster.local' }, { name: 'node.example.test', address: '10.0.0.1' }, { name: 'a.example.test', address: 'b.example.test' }]) {
       const value = structuredClone(fixture); value.cluster.members = [member];
       expect(() => validateIntent(value)).toThrow('invalid supervisor intent');
     }
@@ -35,8 +35,8 @@ describe('supervisor intent model', () => {
 
   test('loads a valid serialized intent and applies configured timeout values', () => {
     const value = structuredClone(fixture);
-    expect(loadIntent({ SUPERVISOR_INTENT_JSON: JSON.stringify(value) })).toEqual(value);
-    const loaded = defaultIntent({ MARIADB_DATA_DIR: '/data', ELERA_QUERY_TIMEOUT_MS: '12', ELERA_DRAIN_TIMEOUT_MS: '34', ELERA_SHUTDOWN_TIMEOUT_MS: '56' });
+    expect(loadIntent({ SUPERVISOR_INTENT_JSON: JSON.stringify(value) }, { name: fixture.cluster.members[0].name })).toEqual(value);
+    const loaded = defaultIntent({ MARIADB_DATA_DIR: '/data', ELERA_QUERY_TIMEOUT_MS: '12', ELERA_DRAIN_TIMEOUT_MS: '34', ELERA_SHUTDOWN_TIMEOUT_MS: '56' }, { name: fixture.cluster.members[0].name });
     expect(loaded.mariadb.dataDir).toBe('/data');
     expect(loaded.drain).toMatchObject({ queryTimeoutMs: 12, drainTimeoutMs: 34, shutdownTimeoutMs: 56 });
     expect(defaultIntent(process.env, { name: 'node.example.test' })).toHaveProperty('cluster');

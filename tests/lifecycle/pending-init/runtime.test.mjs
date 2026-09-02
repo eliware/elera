@@ -51,7 +51,7 @@ test('recovery runtime closes its listener after the authorized bootstrap hook c
   active.add(runtime);
   await new Promise((resolve) => runtime.server.once('listening', resolve));
   const port = runtime.server.address().port;
-  await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0' }) });
+  await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0.cluster.local' }) });
   await new Promise((resolve) => setImmediate(resolve));
   expect(onRecoveryBootstrap).toHaveBeenCalled();
   expect(close).toHaveBeenCalledWith(runtime.server);
@@ -60,11 +60,11 @@ test('recovery runtime closes its listener after the authorized bootstrap hook c
 
 test('recovery runtime keeps the listener for a non-winning bootstrap decision', async () => {
   const close = jest.fn((server, callback) => server.close(callback));
-  const runtime = startPendingInitRuntime({ environment: { ...environments, ELERA_HTTP_PORT: '0' }, recoveryRequired: true, recoveryProtocol: { beginBootstrap: jest.fn().mockResolvedValue({ phase: 'bootstrapping', winner: { node: 'elera-0' } }) }, onRecoveryBootstrap: jest.fn().mockResolvedValue(false), listen: (server) => server.listen(0, '127.0.0.1'), close });
+  const runtime = startPendingInitRuntime({ environment: { ...environments, ELERA_HTTP_PORT: '0' }, recoveryRequired: true, recoveryProtocol: { beginBootstrap: jest.fn().mockResolvedValue({ phase: 'bootstrapping', winner: { node: 'elera-0.example.test' } }) }, onRecoveryBootstrap: jest.fn().mockResolvedValue(false), listen: (server) => server.listen(0, '127.0.0.1'), close });
   active.add(runtime);
   await new Promise((resolve) => runtime.server.once('listening', resolve));
   const port = runtime.server.address().port;
-  await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0' }) });
+  await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0.cluster.local' }) });
   await new Promise((resolve) => setImmediate(resolve));
   expect(close).not.toHaveBeenCalledWith(runtime.server);
 });
@@ -73,14 +73,14 @@ test('exposes the recovery join handoff through runtime wiring', async () => {
   const captured = {};
   const runtime = startPendingInitRuntime({ environment: environments, onRecoveryJoin: jest.fn().mockResolvedValue({ status: 'joining' }), createServerImpl: (options) => { captured.options = options; return { server: new EventEmitter() }; }, listen: () => {}, close: (_server, callback) => callback?.() });
   active.add(runtime);
-  await expect(captured.options.onRecoveryJoin({ node: 'elera-1' })).resolves.toEqual({ status: 'joining' });
+  await expect(captured.options.onRecoveryJoin({ node: 'elera-1.example.test' })).resolves.toEqual({ status: 'joining' });
 });
 
 test('provides the default recovery join handoff', async () => {
   const captured = {};
   const runtime = startPendingInitRuntime({ environment: environments, createServerImpl: (options) => { captured.options = options; return { server: new EventEmitter() }; }, listen: () => {}, close: (_server, callback) => callback?.() });
   active.add(runtime);
-  await expect(captured.options.onRecoveryJoin({ node: 'elera-1' })).resolves.toBeUndefined();
+  await expect(captured.options.onRecoveryJoin({ node: 'elera-1.example.test' })).resolves.toBeUndefined();
 });
 
 test('recovery runtime logs automatic retry failures', async () => {
@@ -100,7 +100,7 @@ test('recovery runtime logs bootstrap handoff failures after responding', async 
   active.add(runtime);
   await new Promise((resolve) => runtime.server.once('listening', resolve));
   const port = runtime.server.address().port;
-  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0' }) });
+  const response = await fetch(`http://127.0.0.1:${port}/api/v1/cluster/cold-recovery/bootstrap`, { method: 'POST', headers: { authorization: 'Bearer root', 'content-type': 'application/json' }, body: JSON.stringify({ epoch: 4, winner: 'elera-0.cluster.local' }) });
   expect(response.status).toBe(202);
   await new Promise((resolve) => setImmediate(resolve));
   expect(errorLog).toHaveBeenCalledWith('Pending recovery bootstrap handoff failed', expect.anything());

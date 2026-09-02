@@ -1,9 +1,9 @@
 import { clientSqlAddress, nodeAddress } from '../../src/routing/client-address.mjs';
 
 test('uses the machine FQDN for Elera client routes', () => {
-  const resolve = () => 'elera-0.elera-headless.elera.svc.cluster.local\n';
-  expect(clientSqlAddress({ ELERA_CLUSTER_MODE: '1', ELERA_NODE_ADDRESS: '10.244.0.1' }, resolve)).toBe('elera-0.elera-headless.elera.svc.cluster.local');
-  expect(clientSqlAddress({ ELERA_CLUSTER_MODE: '1', ELERA_NODE_ADDRESS: '10.244.0.1' }, resolve)).toBe('elera-0.elera-headless.elera.svc.cluster.local');
+  const resolve = () => 'elera-0.cluster.local.elera-headless.elera.svc.cluster.local\n';
+  expect(clientSqlAddress({ ELERA_CLUSTER_MODE: '1', ELERA_NODE_ADDRESS: '10.244.0.1' }, resolve)).toBe('elera-0.cluster.local.elera-headless.elera.svc.cluster.local');
+  expect(clientSqlAddress({ ELERA_CLUSTER_MODE: '1', ELERA_NODE_ADDRESS: '10.244.0.1' }, resolve)).toBe('elera-0.cluster.local.elera-headless.elera.svc.cluster.local');
 });
 
 test('falls back to the node address when FQDN discovery fails', () => {
